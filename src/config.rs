@@ -47,7 +47,7 @@ impl Config {
         s.merge(File::with_name(&format!("config/{}", env)).required(false))?;
 
         // Add in settings from the environment (with a prefix of STQ_USERS)
-        s.merge(Environment::with_prefix("STQ_NOTIF"))?;
+        s.merge(Environment::with_prefix("STQ_DELIV"))?;
 
         s.try_into()
     }
