@@ -1,0 +1,44 @@
+version: '3'
+services:
+  delivery:
+    image: delivery
+    build:
+      context: .
+      dockerfile: Dockerfile.delivery
+    container_name: delivery
+    working_dir: /app
+    command: ["sh", "-c", "/utils/wait_for_it.sh delivery-pg:5432 ; diesel migration run ; cargo run"]
+    volumes:
+      - ..:/app
+      - delivery_cargo_cache:/usr/local/cargo
+    environment:
+      - "DATABASE_URL=postgresql://delivery:delivery@delivery-pg/delivery"
+      - "RUST_LOG=delivery=debug"
+    expose:
+      - 8005
+    stdin_open: true
+    depends_on:
+      - delivery-pg
+    links:
+      - delivery-pg
+
+  delivery-pg:
+    image: postgres:10
+    container_name: delivery-pg
+    volumes:
+      - stq_delivery_postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=delivery
+      - POSTGRES_DB=delivery
+      - POSTGRES_PASSWORD=delivery
+    expose:
+      - 5432
+
+volumes:
+  delivery_cargo_cache:
+  stq_delivery_postgres_data:
+
+networks:
+  default:
+    external:
+      name: storiqa
