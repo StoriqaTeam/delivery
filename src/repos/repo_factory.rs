@@ -129,6 +129,8 @@ pub mod tests {
                 id: 123,
                 user_id: payload.user_id,
                 role: payload.role,
+                created_at: SystemTime::now(),
+                updated_at: SystemTime::now(),
             })
         }
 
@@ -137,6 +139,8 @@ pub mod tests {
                 id: 123,
                 user_id: user_id_arg,
                 role: UsersRole::User,
+                created_at: SystemTime::now(),
+                updated_at: SystemTime::now(),
             })
         }
     }
