@@ -63,7 +63,9 @@ pipeline:
     commands:
     - cargo build --release --locked
     when:
-      event: push
+      event:
+      - push
+      - tag
   package:
     image: plugins/docker
     repo: storiqateam/stq-delivery
