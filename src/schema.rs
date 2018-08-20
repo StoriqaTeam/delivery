@@ -12,6 +12,7 @@ table! {
         id -> Int4,
         company_id -> Varchar,
         country -> Varchar,
+        additional_info -> Nullable<Jsonb>,
     }
 }
 
