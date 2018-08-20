@@ -1,14 +1,14 @@
 table! {
-    company_delivery_from (id) {
+    delivery_from (id) {
         id -> Int4,
         company_id -> Varchar,
         country -> Varchar,
-        company_restriction -> Varchar,
+        restriction_name -> Varchar,
     }
 }
 
 table! {
-    company_delivery_to (id) {
+    delivery_to (id) {
         id -> Int4,
         company_id -> Varchar,
         country -> Varchar,
@@ -17,7 +17,7 @@ table! {
 }
 
 table! {
-    company_restrictions (id) {
+    restrictions (id) {
         id -> Int4,
         name -> Varchar,
         max_weight -> Nullable<Float8>,
@@ -36,8 +36,8 @@ table! {
 }
 
 allow_tables_to_appear_in_same_query!(
-    company_delivery_from,
-    company_delivery_to,
-    company_restrictions,
+    delivery_from,
+    delivery_to,
+    restrictions,
     user_roles,
 );

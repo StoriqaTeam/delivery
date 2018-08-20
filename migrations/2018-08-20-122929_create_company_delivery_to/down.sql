@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS company_delivery_to;
