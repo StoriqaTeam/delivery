@@ -2,9 +2,10 @@ pipeline:
   restore-cache:
     image: plugins/s3-cache:1
     pull: true
-    secrets: [ aws_access_key_id, aws_secret_access_key ]
-    mount:
-    - deps
+    secrets:
+    - aws_access_key_id
+    - aws_secret_access_key
+    mount: deps
     restore: true
     when:
       event:
@@ -63,27 +64,33 @@ pipeline:
     - cargo build --release --locked
     when:
       event: push
-      branch:
-      - master
-      - release
   package:
     image: plugins/docker
     repo: storiqateam/stq-delivery
+    dockerfile: docker/Dockerfile.run
     tags:
     - ${DRONE_BRANCH//\//_}
     - ${DRONE_BRANCH//\//_}${DRONE_BUILD_NUMBER}
-    username: stqcommon
-    password: "Tz-q6qDL#d3Mz8hm"
+    secrets:
+    - docker_username
+    - docker_password
+    when:
+      event: push
+  package:
+    image: plugins/docker
+    repo: storiqateam/stq-delivery
     dockerfile: docker/Dockerfile.run
+    tags:
+    - '${DRONE_TAG}'
+    - latest
+    secrets:
+    - docker_username
+    - docker_password
     when:
       event:
-      - push
       - tag
-      branch:
-      - master
-      - release
   deploy2nightly:
-    image: jackthestripper/drone_k8s_rollout:20180610
+    image: jackthestripper/drone_setimage
     namespace: default
     kind: deployment
     object: delivery
@@ -103,12 +110,12 @@ pipeline:
       branch: master
       event: push
   deploy2stage:
-    image: jackthestripper/drone_k8s_rollout:20180610
+    image: jackthestripper/drone_setimage
     namespace: default
     kind: deployment
     object: delivery
     img_names: storiqateam/stq-delivery
-    img_tags: ${DRONE_BRANCH//\//_}${DRONE_BUILD_NUMBER}
+    img_tags: '${DRONE_TAG}'
     img_cnts: delivery
     secrets:
     - source: k8s_stage_ca
@@ -120,15 +127,14 @@ pipeline:
     - source: k8s_stage_addr
       target: k8s_addr
     when:
-      branch: release
-      event: push
+      event: tag
 
 ###
 # Deploy to stable / production
 ###
 
   deploy2stable:
-    image: jackthestripper/drone_k8s_rollout:20180610
+    image: jackthestripper/drone_setimage
     namespace: default
     kind: deployment
     object: delivery
@@ -149,12 +155,12 @@ pipeline:
       event: deployment
       environment: stable
   deploy2production:
-    image: jackthestripper/drone_k8s_rollout:20180610
+    image: jackthestripper/drone_setimage
     namespace: default
     kind: deployment
     object: delivery
     img_names: storiqateam/stq-delivery
-    img_tags: ${DRONE_BRANCH//\//_}${DRONE_PARENT_BUILD_NUMBER}
+    img_tags: '${DRONE_TAG}'
     img_cnts: delivery
     secrets:
     - source: k8s_prod_ca
@@ -166,7 +172,6 @@ pipeline:
     - source: k8s_prod_addr
       target: k8s_addr
     when:
-      branch: release
       event: deployment
       environment: production
 
@@ -177,9 +182,10 @@ pipeline:
   rebuild-cache:
     image: plugins/s3-cache:1
     pull: true
-    secrets: [ aws_access_key_id, aws_secret_access_key ]
-    mount:
-    - deps
+    secrets:
+    - aws_access_key_id
+    - aws_secret_access_key
+    mount: deps
     rebuild: true
     when:
       event: push
