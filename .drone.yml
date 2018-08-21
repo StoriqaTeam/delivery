@@ -28,7 +28,7 @@ pipeline:
     when:
       event: pull_request
   test:
-    image: rust:1.26-stretch
+    image: rust:1.28.0-stretch
     environment:
     - RUN_MODE=k8s
     - CARGO_HOME=deps
@@ -57,7 +57,7 @@ pipeline:
 ###
 
   build:
-    image: rust:1.26-stretch
+    image: rust:1.28.0-stretch
     environment:
     - CARGO_HOME=deps
     commands:
