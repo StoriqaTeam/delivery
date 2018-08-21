@@ -49,7 +49,25 @@ pub struct ApplicationAcl {
 impl ApplicationAcl {
     pub fn new(roles: Vec<UsersRole>, user_id: UserId) -> Self {
         let mut hash = ::std::collections::HashMap::new();
-        hash.insert(UsersRole::Superuser, vec![permission!(Resource::UserRoles)]);
+
+        hash.insert(
+            UsersRole::Superuser,
+            vec![
+                permission!(Resource::UserRoles),
+                permission!(Resource::Restrictions),
+                permission!(Resource::DeliveryFrom),
+                permission!(Resource::DeliveryTo),
+            ],
+        );
+
+        hash.insert(
+            UsersRole::User,
+            vec![
+                permission!(Resource::Restrictions, Action::Read),
+                permission!(Resource::DeliveryFrom, Action::Read),
+                permission!(Resource::DeliveryTo, Action::Read),
+            ],
+        );
 
         ApplicationAcl {
             acls: Rc::new(hash),
@@ -69,7 +87,8 @@ impl<T> Acl<Resource, Action, Scope, FailureError, T> for ApplicationAcl {
         let empty: Vec<Permission> = Vec::new();
         let user_id = &self.user_id;
         let hashed_acls = self.acls.clone();
-        let acls = self.roles
+        let acls = self
+            .roles
             .iter()
             .flat_map(|role| hashed_acls.get(role).unwrap_or(&empty))
             .filter(|permission| (permission.resource == resource) && ((permission.action == action) || (permission.action == Action::All)))
@@ -83,7 +102,7 @@ impl<T> Acl<Resource, Action, Scope, FailureError, T> for ApplicationAcl {
     }
 }
 
-/// UnauthorizedAcl contains main logic for manipulation with recources
+/// UnauthorizedAcl contains main logic for manipulation with resources
 #[derive(Clone, Default)]
 pub struct UnauthorizedAcl;
 

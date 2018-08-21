@@ -11,6 +11,7 @@ use repos::*;
 
 pub trait ReposFactory<C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static>: Clone + Send + 'static {
     fn create_user_roles_repo<'a>(&self, db_conn: &'a C) -> Box<UserRolesRepo + 'a>;
+    fn create_restrictions_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<RestrictionsRepo + 'a>;
 }
 
 #[derive(Clone)]
@@ -53,6 +54,11 @@ impl<C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 
             Box::new(SystemACL::default()) as Box<Acl<Resource, Action, Scope, FailureError, UserRole>>,
             self.roles_cache.clone(),
         )) as Box<UserRolesRepo>
+    }
+
+    fn create_restrictions_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<RestrictionsRepo + 'a> {
+        let acl = self.get_acl(db_conn, user_id);
+        Box::new(RestrictionsRepoImpl::new(db_conn, acl)) as Box<RestrictionsRepo>
     }
 }
 
@@ -101,6 +107,10 @@ pub mod tests {
         fn create_user_roles_repo<'a>(&self, _db_conn: &'a C) -> Box<UserRolesRepo + 'a> {
             Box::new(UserRolesRepoMock::default()) as Box<UserRolesRepo>
         }
+
+        fn create_restrictions_repo<'a>(&self, _db_conn: &'a C, _user_id: Option<UserId>) -> Box<RestrictionsRepo + 'a> {
+            Box::new(RestrictionsRepoMock::default()) as Box<RestrictionsRepo>
+        }
     }
 
     #[derive(Clone, Default)]
@@ -141,6 +151,47 @@ pub mod tests {
                 role: UsersRole::User,
                 created_at: SystemTime::now(),
                 updated_at: SystemTime::now(),
+            })
+        }
+    }
+
+    #[derive(Clone, Default)]
+    pub struct RestrictionsRepoMock;
+
+    impl RestrictionsRepo for RestrictionsRepoMock {
+        fn create(&self, payload: NewRestriction) -> RepoResult<Restriction> {
+            Ok(Restriction {
+                id: 1,
+                name: "restriction_mock".to_string(),
+                max_weight: 0f64,
+                max_size: 0f64,
+            })
+        }
+
+        fn get_by_name(&self, restriction_name: String) -> RepoResult<Restriction> {
+            Ok(Restriction {
+                id: 1,
+                name: restriction_name,
+                max_weight: 0f64,
+                max_size: 0f64,
+            })
+        }
+
+        fn update(&self, restriction_name: String, payload: UpdateRestriction) -> RepoResult<Restriction> {
+            Ok(Restriction {
+                id: 1,
+                name: restriction_name,
+                max_weight: payload.max_weight,
+                max_size: payload.max_size,
+            })
+        }
+
+        fn delete(&self, restriction_name: String) -> RepoResult<Restriction> {
+            Ok(Restriction {
+                id: 1,
+                name: "restriction_mock".to_string(),
+                max_weight: 0f64,
+                max_size: 0f64,
             })
         }
     }
