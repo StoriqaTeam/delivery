@@ -20,8 +20,8 @@ table! {
     restrictions (id) {
         id -> Int4,
         name -> Varchar,
-        max_weight -> Nullable<Float8>,
-        max_size -> Nullable<Float8>,
+        max_weight -> Float8,
+        max_size -> Float8,
     }
 }
 
