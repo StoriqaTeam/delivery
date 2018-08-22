@@ -22,7 +22,7 @@ pub trait RestrictionService {
     fn get_by_name(&self, restriction_name: String) -> ServiceFuture<Restriction>;
 
     /// Update a restriction
-    fn update(&self, restriction_name: String, payload: UpdateRestriction) -> ServiceFuture<Restriction>;
+    fn update(&self, payload: UpdateRestriction) -> ServiceFuture<Restriction>;
 
     /// Delete a restriction
     fn delete(&self, restriction_name: String) -> ServiceFuture<Restriction>;
@@ -102,7 +102,7 @@ impl<
         )
     }
 
-    fn update(&self, restriction_name: String, payload: UpdateRestriction) -> ServiceFuture<Restriction> {
+    fn update(&self, payload: UpdateRestriction) -> ServiceFuture<Restriction> {
         let db_pool = self.db_pool.clone();
         let repo_factory = self.repo_factory.clone();
         let user_id = self.user_id;
@@ -115,7 +115,7 @@ impl<
                         .map_err(|e| e.context(Error::Connection).into())
                         .and_then(move |conn| {
                             let restrictions_repo = repo_factory.create_restrictions_repo(&*conn, user_id);
-                            restrictions_repo.update(restriction_name, payload)
+                            restrictions_repo.update(payload)
                         })
                 })
                 .map_err(|e| e.context("Service Restrictions, update endpoint error occured.").into()),

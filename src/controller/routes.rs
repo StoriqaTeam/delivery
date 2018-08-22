@@ -8,7 +8,6 @@ pub enum Route {
     UserRole(UserId),
     DefaultRole(UserId),
     Restrictions,
-    Restriction(String),
 }
 
 pub fn create_route_parser() -> RouteParser<Route> {

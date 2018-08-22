@@ -150,37 +150,37 @@ pub mod tests {
     pub struct RestrictionsRepoMock;
 
     impl RestrictionsRepo for RestrictionsRepoMock {
-        fn create(&self, _payload: NewRestriction) -> RepoResult<Restriction> {
+        fn create(&self, payload: NewRestriction) -> RepoResult<Restriction> {
             Ok(Restriction {
                 id: 1,
-                name: "restriction_mock".to_string(),
-                max_weight: 0f64,
-                max_size: 0f64,
-            })
-        }
-
-        fn get_by_name(&self, restriction_name: String) -> RepoResult<Restriction> {
-            Ok(Restriction {
-                id: 1,
-                name: restriction_name,
-                max_weight: 0f64,
-                max_size: 0f64,
-            })
-        }
-
-        fn update(&self, restriction_name: String, payload: UpdateRestriction) -> RepoResult<Restriction> {
-            Ok(Restriction {
-                id: 1,
-                name: restriction_name,
+                name: payload.name,
                 max_weight: payload.max_weight,
                 max_size: payload.max_size,
             })
         }
 
-        fn delete(&self, restriction_name: String) -> RepoResult<Restriction> {
+        fn get_by_name(&self, name: String) -> RepoResult<Restriction> {
             Ok(Restriction {
                 id: 1,
-                name: restriction_name,
+                name: name,
+                max_weight: 0f64,
+                max_size: 0f64,
+            })
+        }
+
+        fn update(&self, payload: UpdateRestriction) -> RepoResult<Restriction> {
+            Ok(Restriction {
+                id: 1,
+                name: payload.name,
+                max_weight: payload.max_weight,
+                max_size: payload.max_size,
+            })
+        }
+
+        fn delete(&self, name: String) -> RepoResult<Restriction> {
+            Ok(Restriction {
+                id: 1,
+                name: name,
                 max_weight: 0f64,
                 max_size: 0f64,
             })

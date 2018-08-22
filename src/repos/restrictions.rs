@@ -31,13 +31,13 @@ pub trait RestrictionsRepo {
     fn create(&self, payload: NewRestriction) -> RepoResult<Restriction>;
 
     /// Get a restriction
-    fn get_by_name(&self, restriction_name: String) -> RepoResult<Restriction>;
+    fn get_by_name(&self, name: String) -> RepoResult<Restriction>;
 
     /// Update a restriction
-    fn update(&self, restriction_name: String, payload: UpdateRestriction) -> RepoResult<Restriction>;
+    fn update(&self, payload: UpdateRestriction) -> RepoResult<Restriction>;
 
     /// Delete a restriction
-    fn delete(&self, restriction_name: String) -> RepoResult<Restriction>;
+    fn delete(&self, name: String) -> RepoResult<Restriction>;
 }
 
 /// Implementation of UserRoles trait
@@ -71,44 +71,36 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             .map_err(|e: FailureError| e.context(format!("create new restriction {:?}.", payload)).into())
     }
 
-    fn get_by_name(&self, restriction_name: String) -> RepoResult<Restriction> {
-        debug!("get restriction by name {:?}.", restriction_name);
-        self.execute_query(restrictions.filter(name.eq(restriction_name.clone())))
+    fn get_by_name(&self, name_: String) -> RepoResult<Restriction> {
+        debug!("get restriction by name {:?}.", name_);
+        self.execute_query(restrictions.filter(name.eq(name_.clone())))
             .and_then(|restriction| {
                 acl::check(&*self.acl, Resource::Restrictions, Action::Read, self, Some(&restriction)).map(|_| restriction)
             })
-            .map_err(|e: FailureError| {
-                e.context(format!("Getting restriction with name {:?} failed.", restriction_name))
-                    .into()
-            })
+            .map_err(|e: FailureError| e.context(format!("Getting restriction with name {:?} failed.", name_)).into())
     }
 
-    fn update(&self, restriction_name: String, payload: UpdateRestriction) -> RepoResult<Restriction> {
-        debug!("Updating restriction with name {} and payload {:?}.", restriction_name, payload);
-        self.execute_query(restrictions.filter(name.eq(restriction_name.clone())))
+    fn update(&self, payload: UpdateRestriction) -> RepoResult<Restriction> {
+        debug!("Updating restriction payload {:?}.", payload);
+        self.execute_query(restrictions.filter(name.eq(payload.name.clone())))
             .and_then(|restriction: Restriction| acl::check(&*self.acl, Resource::Restrictions, Action::Update, self, Some(&restriction)))
             .and_then(|_| {
-                let filter = restrictions.filter(name.eq(restriction_name.clone()));
+                let filter = restrictions.filter(name.eq(payload.name.clone()));
 
                 let query = diesel::update(filter).set(&payload);
                 query.get_result::<Restriction>(self.db_conn).map_err(From::from)
             })
-            .map_err(|e: FailureError| {
-                e.context(format!(
-                    "Updating restriction with name {} and payload {:?} failed.",
-                    restriction_name, payload
-                )).into()
-            })
+            .map_err(|e: FailureError| e.context(format!("Updating restrictionpayload {:?} failed.", payload)).into())
     }
 
-    fn delete(&self, restriction_name: String) -> RepoResult<Restriction> {
-        debug!("delete restriction {:?}.", restriction_name);
+    fn delete(&self, name_: String) -> RepoResult<Restriction> {
+        debug!("delete restriction {:?}.", name);
         acl::check(&*self.acl, Resource::Restrictions, Action::Delete, self, None)?;
-        let filter = restrictions.filter(name.eq(restriction_name.clone()));
+        let filter = restrictions.filter(name.eq(name_.clone()));
         let query = diesel::delete(filter);
         query
             .get_result(self.db_conn)
-            .map_err(move |e| e.context(format!("delete restriction {:?}.", restriction_name)).into())
+            .map_err(move |e| e.context(format!("delete restriction {:?}.", name_)).into())
     }
 }
 

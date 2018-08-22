@@ -153,11 +153,11 @@ impl<
                 )
             }
 
-            // GET /restrictions/<restriction_name>
+            // GET /restrictions/<name>
             (&Get, Some(Route::Restrictions)) => {
                 debug!("User with id = '{:?}' is requesting  // GET /restrictions", user_id);
-                if let Some(restriction_name) = parse_query!(req.query().unwrap_or_default(), "restriction_name" => String) {
-                    serialize_future(restrictions_service.get_by_name(restriction_name))
+                if let Some(name) = parse_query!(req.query().unwrap_or_default(), "name" => String) {
+                    serialize_future(restrictions_service.get_by_name(name))
                 } else {
                     Box::new(future::err(
                         format_err!("Parsing query parameters // GET /restrictions failed!")
@@ -167,40 +167,32 @@ impl<
                 }
             }
 
-            // DELETE /restrictions/<restriction_name>
+            // DELETE /restrictions/<name>
             (&Delete, Some(Route::Restrictions)) => {
-                debug!("User with id = '{:?}' is requesting  // GET /restrictions", user_id);
-                if let Some(restriction_name) = parse_query!(req.query().unwrap_or_default(), "restriction_name" => String) {
-                    serialize_future(restrictions_service.delete(restriction_name))
+                debug!("User with id = '{:?}' is requesting  // DELETE /restrictions", user_id);
+                if let Some(name) = parse_query!(req.query().unwrap_or_default(), "name" => String) {
+                    serialize_future(restrictions_service.delete(name))
                 } else {
                     Box::new(future::err(
-                        format_err!("Parsing query parameters // GET /restrictions failed!")
+                        format_err!("Parsing query parameters // DELETE /restrictions failed!")
                             .context(Error::Parse)
                             .into(),
                     ))
                 }
             }
 
-            // PUT /restrictions/<restriction_name>
+            // PUT /restrictions
             (&Put, Some(Route::Restrictions)) => {
-                debug!("User with id = '{:?}' is requesting  // GET /restrictions", user_id);
-                if let Some(restriction_name) = parse_query!(req.query().unwrap_or_default(), "restriction_name" => String) {
-                    serialize_future(
-                        parse_body::<UpdateRestriction>(req.body())
-                            .map_err(|e| {
-                                e.context("Parsing body // PUT /restrictions in UpdateRestriction failed!")
-                                    .context(Error::Parse)
-                                    .into()
-                            })
-                            .and_then(move |update_restriction| restrictions_service.update(restriction_name, update_restriction)),
-                    )
-                } else {
-                    Box::new(future::err(
-                        format_err!("Parsing query parameters // GET /restrictions failed!")
-                            .context(Error::Parse)
-                            .into(),
-                    ))
-                }
+                debug!("User with id = '{:?}' is requesting  // PUT /restrictions", user_id);
+                serialize_future(
+                    parse_body::<UpdateRestriction>(req.body())
+                        .map_err(|e| {
+                            e.context("Parsing body // PUT /restrictions in UpdateRestriction failed!")
+                                .context(Error::Parse)
+                                .into()
+                        })
+                        .and_then(move |update_restriction| restrictions_service.update(update_restriction)),
+                )
             }
 
             // Fallback
