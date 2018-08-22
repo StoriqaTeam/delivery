@@ -7,6 +7,7 @@ pub enum Route {
     UserRoles,
     UserRole(UserId),
     DefaultRole(UserId),
+    Restrictions,
 }
 
 pub fn create_route_parser() -> RouteParser<Route> {
@@ -32,5 +33,8 @@ pub fn create_route_parser() -> RouteParser<Route> {
             .map(UserId)
             .map(Route::DefaultRole)
     });
+
+    router.add_route(r"^/restrictions$", || Route::Restrictions);
+
     router
 }

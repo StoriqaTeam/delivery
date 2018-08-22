@@ -11,6 +11,7 @@ use repos::*;
 
 pub trait ReposFactory<C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static>: Clone + Send + 'static {
     fn create_user_roles_repo<'a>(&self, db_conn: &'a C) -> Box<UserRolesRepo + 'a>;
+    fn create_restrictions_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<RestrictionsRepo + 'a>;
 }
 
 #[derive(Clone)]
@@ -54,6 +55,11 @@ impl<C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 
             self.roles_cache.clone(),
         )) as Box<UserRolesRepo>
     }
+
+    fn create_restrictions_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<RestrictionsRepo + 'a> {
+        let acl = self.get_acl(db_conn, user_id);
+        Box::new(RestrictionsRepoImpl::new(db_conn, acl)) as Box<RestrictionsRepo>
+    }
 }
 
 #[cfg(test)]
@@ -74,21 +80,12 @@ pub mod tests {
     use diesel::ConnectionResult;
     use diesel::QueryResult;
     use diesel::Queryable;
-    use futures_cpupool::CpuPool;
-    use r2d2;
     use r2d2::ManageConnection;
-    use serde_json;
-    use tokio_core::reactor::Handle;
 
-    use stq_http;
-    use stq_http::client::Config as HttpConfig;
-    use stq_static_resources::*;
     use stq_types::*;
 
-    use config::Config;
     use models::*;
     use repos::*;
-    use services::*;
     use std::time::SystemTime;
 
     pub const MOCK_REPO_FACTORY: ReposFactoryMock = ReposFactoryMock {};
@@ -100,6 +97,10 @@ pub mod tests {
     impl<C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> ReposFactory<C> for ReposFactoryMock {
         fn create_user_roles_repo<'a>(&self, _db_conn: &'a C) -> Box<UserRolesRepo + 'a> {
             Box::new(UserRolesRepoMock::default()) as Box<UserRolesRepo>
+        }
+
+        fn create_restrictions_repo<'a>(&self, _db_conn: &'a C, _user_id: Option<UserId>) -> Box<RestrictionsRepo + 'a> {
+            Box::new(RestrictionsRepoMock::default()) as Box<RestrictionsRepo>
         }
     }
 
@@ -141,6 +142,47 @@ pub mod tests {
                 role: UsersRole::User,
                 created_at: SystemTime::now(),
                 updated_at: SystemTime::now(),
+            })
+        }
+    }
+
+    #[derive(Clone, Default)]
+    pub struct RestrictionsRepoMock;
+
+    impl RestrictionsRepo for RestrictionsRepoMock {
+        fn create(&self, payload: NewRestriction) -> RepoResult<Restriction> {
+            Ok(Restriction {
+                id: 1,
+                name: payload.name,
+                max_weight: payload.max_weight,
+                max_size: payload.max_size,
+            })
+        }
+
+        fn get_by_name(&self, name: String) -> RepoResult<Restriction> {
+            Ok(Restriction {
+                id: 1,
+                name: name,
+                max_weight: 0f64,
+                max_size: 0f64,
+            })
+        }
+
+        fn update(&self, payload: UpdateRestriction) -> RepoResult<Restriction> {
+            Ok(Restriction {
+                id: 1,
+                name: payload.name,
+                max_weight: payload.max_weight,
+                max_size: payload.max_size,
+            })
+        }
+
+        fn delete(&self, name: String) -> RepoResult<Restriction> {
+            Ok(Restriction {
+                id: 1,
+                name: name,
+                max_weight: 0f64,
+                max_size: 0f64,
             })
         }
     }

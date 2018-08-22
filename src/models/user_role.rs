@@ -4,7 +4,7 @@ use stq_types::{UserId, UsersRole};
 
 use schema::user_roles;
 
-#[derive(Serialize, Queryable, Insertable, Debug)]
+#[derive(Serialize, Deserialize, Queryable, Insertable, Debug)]
 #[table_name = "user_roles"]
 pub struct UserRole {
     pub id: i32,

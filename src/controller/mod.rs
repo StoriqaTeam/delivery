@@ -12,7 +12,7 @@ use futures::prelude::*;
 use futures_cpupool::CpuPool;
 use hyper::header::Authorization;
 use hyper::server::Request;
-use hyper::{Delete, Get, Post};
+use hyper::{Delete, Get, Post, Put};
 use r2d2::{ManageConnection, Pool};
 
 use stq_http::client::ClientHandle;
@@ -28,6 +28,7 @@ use config;
 use errors::Error;
 use models::*;
 use repos::repo_factory::*;
+use services::restrictions::{RestrictionService, RestrictionServiceImpl};
 use services::user_roles::{UserRolesService, UserRolesServiceImpl};
 
 /// Controller handles route parsing and calling `Service` layer
@@ -84,6 +85,8 @@ impl<
         debug!("User with id = '{:?}' is requesting {}", user_id, req.path());
 
         let user_roles_service = UserRolesServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), self.repo_factory.clone());
+        let restrictions_service =
+            RestrictionServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), user_id, self.repo_factory.clone());
 
         let path = req.path().to_string();
 
@@ -134,6 +137,62 @@ impl<
                     user_id, user_id_arg
                 );
                 serialize_future(user_roles_service.delete_default(user_id_arg))
+            }
+
+            // POST /restrictions
+            (&Post, Some(Route::Restrictions)) => {
+                debug!("User with id = '{:?}' is requesting  // POST /restrictions", user_id);
+                serialize_future(
+                    parse_body::<NewRestriction>(req.body())
+                        .map_err(|e| {
+                            e.context("Parsing body // POST /restrictions in NewRestriction failed!")
+                                .context(Error::Parse)
+                                .into()
+                        })
+                        .and_then(move |new_restriction| restrictions_service.create(new_restriction)),
+                )
+            }
+
+            // GET /restrictions/<name>
+            (&Get, Some(Route::Restrictions)) => {
+                debug!("User with id = '{:?}' is requesting  // GET /restrictions", user_id);
+                if let Some(name) = parse_query!(req.query().unwrap_or_default(), "name" => String) {
+                    serialize_future(restrictions_service.get_by_name(name))
+                } else {
+                    Box::new(future::err(
+                        format_err!("Parsing query parameters // GET /restrictions failed!")
+                            .context(Error::Parse)
+                            .into(),
+                    ))
+                }
+            }
+
+            // DELETE /restrictions/<name>
+            (&Delete, Some(Route::Restrictions)) => {
+                debug!("User with id = '{:?}' is requesting  // DELETE /restrictions", user_id);
+                if let Some(name) = parse_query!(req.query().unwrap_or_default(), "name" => String) {
+                    serialize_future(restrictions_service.delete(name))
+                } else {
+                    Box::new(future::err(
+                        format_err!("Parsing query parameters // DELETE /restrictions failed!")
+                            .context(Error::Parse)
+                            .into(),
+                    ))
+                }
+            }
+
+            // PUT /restrictions
+            (&Put, Some(Route::Restrictions)) => {
+                debug!("User with id = '{:?}' is requesting  // PUT /restrictions", user_id);
+                serialize_future(
+                    parse_body::<UpdateRestriction>(req.body())
+                        .map_err(|e| {
+                            e.context("Parsing body // PUT /restrictions in UpdateRestriction failed!")
+                                .context(Error::Parse)
+                                .into()
+                        })
+                        .and_then(move |update_restriction| restrictions_service.update(update_restriction)),
+                )
             }
 
             // Fallback
