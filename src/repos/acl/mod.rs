@@ -38,7 +38,7 @@ pub fn check<T>(
     })
 }
 
-/// ApplicationAcl contains main logic for manipulation with recources
+/// ApplicationAcl contains main logic for manipulation with resources
 #[derive(Clone)]
 pub struct ApplicationAcl {
     acls: Rc<HashMap<UsersRole, Vec<Permission>>>,
@@ -109,12 +109,20 @@ pub struct UnauthorizedAcl;
 impl<T> Acl<Resource, Action, Scope, FailureError, T> for UnauthorizedAcl {
     fn allows(
         &self,
-        _resource: Resource,
-        _action: Action,
+        resource: Resource,
+        action: Action,
         _scope_checker: &CheckScope<Scope, T>,
         _obj: Option<&T>,
     ) -> Result<bool, FailureError> {
-        Ok(false)
+        if action == Action::Read {
+            match resource {
+                Resource::Restrictions | Resource::DeliveryFrom | Resource::DeliveryTo => Ok(true),
+                _ => Ok(false),
+            }
+        } else {
+            error!("Denied unauthorized request to do {} on {}.", action, resource);
+            Ok(false)
+        }
     }
 }
 

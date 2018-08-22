@@ -12,28 +12,96 @@ pub mod common;
 use hyper::Method;
 
 use lib::models::*;
+use stq_types::*;
+
 use std::result;
 use stq_http::client::{self, ClientHandle as HttpClientHandle};
-use stq_types::*;
-use tokio_core::reactor::Core;
 
-static MOCK_RESTRICTION_NAME: &'static str = "restriction_mock";
 static MOCK_RESTRICTION_ENDPOINT: &'static str = "restrictions";
 
-fn create_new_restriction() -> NewRestriction {
-    NewRestriction {
-        name: MOCK_RESTRICTION_NAME.to_string(),
-        max_weight: 0f64,
-        max_size: 0f64,
-    }
-}
-
-fn create_update_restriction() -> UpdateRestriction {
+fn create_update_restriction(rest: String) -> UpdateRestriction {
     UpdateRestriction {
-        name: MOCK_RESTRICTION_NAME.to_string(),
+        name: rest,
         max_weight: 1f64,
         max_size: 1f64,
     }
+}
+
+// super user
+fn create_restriction(
+    name: String,
+    core: &mut tokio_core::reactor::Core,
+    http_client: &HttpClientHandle,
+    base_url: String,
+) -> result::Result<Restriction, client::Error> {
+    let new_restriction = NewRestriction {
+        name: name,
+        max_weight: 0f64,
+        max_size: 0f64,
+    };
+
+    let user_id = UserId(1);
+
+    let body: String = serde_json::to_string(&new_restriction).unwrap().to_string();
+    let create_result = core.run(http_client.request_with_auth_header::<Restriction>(
+        Method::Post,
+        format!("{}/{}", base_url, MOCK_RESTRICTION_ENDPOINT.to_string()),
+        Some(body),
+        Some(user_id.to_string()),
+    ));
+
+    create_result
+}
+
+fn create_user_role(
+    user_id: UserId,
+    core: &mut tokio_core::reactor::Core,
+    http_client: &HttpClientHandle,
+    base_url: String,
+) -> result::Result<UserRole, client::Error> {
+    let new_role = NewUserRole {
+        user_id,
+        role: UsersRole::User,
+    };
+
+    let super_user_id = UserId(1);
+
+    let body: String = serde_json::to_string(&new_role).unwrap().to_string();
+    core.run(http_client.request_with_auth_header::<UserRole>(
+        Method::Post,
+        format!("{}/{}", base_url, "user_roles"),
+        Some(body),
+        Some(super_user_id.to_string()),
+    ))
+}
+
+fn delete_role(
+    user_id: UserId,
+    core: &mut tokio_core::reactor::Core,
+    http_client: &HttpClientHandle,
+    url: String,
+) -> result::Result<UserRole, client::Error> {
+    let super_user_id = UserId(1);
+    core.run(http_client.request_with_auth_header::<UserRole>(
+        Method::Delete,
+        format!("{}/{}/{}", url, "roles/default", user_id.to_string()),
+        None,
+        Some(super_user_id.to_string()),
+    ))
+}
+
+// super user
+fn delete_restriction(
+    core: &mut tokio_core::reactor::Core,
+    http_client: &HttpClientHandle,
+    url: String,
+) -> result::Result<Restriction, client::Error> {
+    let user_id = UserId(1);
+    core.run(http_client.request_with_auth_header::<Restriction>(Method::Delete, url, None, Some(user_id.to_string())))
+}
+
+fn get_url_request(base_url: String, rest: String) -> String {
+    format!("{}/{}?restriction_name={}", base_url, MOCK_RESTRICTION_ENDPOINT, rest)
 }
 
 // test restriction by superuser
@@ -42,121 +110,122 @@ fn test_restriction_superuser_crud() {
     let (mut core, http_client) = common::make_utils();
     let base_url = common::setup();
     let user_id = UserId(1);
-    let url_rud = format!("{}/{}/by-name/{}", base_url, MOCK_RESTRICTION_ENDPOINT, MOCK_RESTRICTION_NAME);
-    
+    let restriction_name = "rest_super_user_mock".to_string();
+    let url_rud = get_url_request(base_url.clone(), restriction_name.clone());
+
     // create
-    println!("run create new restriction");
-    let new_restriction = create_new_restriction();
-    let body: String = serde_json::to_string(&new_restriction).unwrap().to_string();
-    let create_result = core.run(http_client.request_with_auth_header::<Restriction>(
-            Method::Post,
-            format!("{}/{}", base_url, MOCK_RESTRICTION_ENDPOINT.to_string()),
-            Some(body),
-            Some(user_id.to_string()),
-        ));
+    println!("run create new restriction {}", restriction_name);
+    let create_result = create_restriction(restriction_name.clone(), &mut core, &http_client, base_url.clone());
     println!("{:?}", create_result);
     assert!(create_result.is_ok());
 
     // read
-    println!("run read restriction");
-    let read_result = core.run(http_client.request_with_auth_header::<Restriction>(
-            Method::Get,
-            url_rud.clone(),
-            None,
-            Some(user_id.to_string()),
-        ));
+    println!("run read restriction {}", restriction_name);
+    let read_result =
+        core.run(http_client.request_with_auth_header::<Restriction>(Method::Get, url_rud.clone(), None, Some(user_id.to_string())));
     println!("{:?}", read_result);
     assert!(read_result.is_ok());
 
     // update
-    println!("run update restriction");
-    let update_restriction = create_update_restriction();
+    println!("run update restriction {}", restriction_name);
+    let update_restriction = create_update_restriction(restriction_name.clone());
     let update_body: String = serde_json::to_string(&update_restriction).unwrap().to_string();
     let update_result = core.run(http_client.request_with_auth_header::<Restriction>(
-            Method::Put,
-            url_rud.clone(),
-            Some(update_body),
-            Some(user_id.to_string()),
-        ));
+        Method::Put,
+        url_rud.clone(),
+        Some(update_body),
+        Some(user_id.to_string()),
+    ));
     println!("{:?}", update_result);
     assert!(update_result.is_ok());
 
     // delete
-    println!("run delete restriction");
-    let delete_result = core.run(http_client.request_with_auth_header::<Restriction>(
-            Method::Get,
-            url_rud.clone(),
-            None,
-            Some(user_id.to_string()),
-        ));
+    println!("run delete restriction {}", restriction_name);
+    let delete_result = delete_restriction(&mut core, &http_client, url_rud.clone());
     assert!(delete_result.is_ok());
 }
 
-/*// test restriction by regular user
+// test restriction by regular user
 #[test]
 fn test_restriction_regular_user_crud() {
+    let (mut core, http_client) = common::make_utils();
     let base_url = common::setup();
-    let restrictions = init_restrictions_paths();
-    let user_id = UserId(123);
 
-    let mut rpc = RpcClient::new(base_url.clone(), Some(user_id));
-    for restriction in restrictions.iter() {
-        let restriction_result = rpc.request_restriction(Method::Get, restriction.clone(), None);
-        assert!(restriction_result.is_err());
-    }
-}
+    // create user for test acl
+    let user_id = UserId(1123);
+    let create_role_result = create_user_role(user_id.clone(), &mut core, &http_client, base_url.clone());
+    assert!(create_role_result.is_ok());
 
-// test restriction without authorization data
-#[test]
-fn test_restriction_unauthorized_crud() {
-    let base_url = common::setup();
-    let restrictions = init_restrictions_paths();
+    let restriction_name = "rest_regular_user_mock".to_string();
+    let url_rud = get_url_request(base_url.clone(), restriction_name.clone());
 
-    let mut rpc = RpcClient::new(base_url.clone(), None);
-    for restriction in restrictions.iter() {
-        let restriction_result = rpc.request_restriction(Method::Get, restriction.clone(), None);
-        assert!(restriction_result.is_err());
-    }
-}*/
+    // create by super for test
+    println!("run create new restriction {}", restriction_name);
+    let create_result = create_restriction(restriction_name.clone(), &mut core, &http_client, base_url.clone());
+    println!("{:?}", create_result);
+    assert!(create_result.is_ok());
 
-/*// test update restriction by superuser
-#[test]
-fn test_update_restriction_superuser() {
-    let base_url = common::setup();
-    let restrictions = init_restrictions_paths();
-    let user_id = UserId(1);
+    // read
+    println!("run read restriction {}", restriction_name);
+    let read_result =
+        core.run(http_client.request_with_auth_header::<Restriction>(Method::Get, url_rud.clone(), None, Some(user_id.to_string())));
+    println!("{:?}", read_result);
+    assert!(read_result.is_ok());
 
-    let mut rpc = RpcClient::new(base_url.clone(), Some(user_id));
-    for restriction in restrictions.iter() {
-        let restriction_result = rpc.request_restriction(Method::Put, restriction.clone(), Some(create_restriction_mock()));
-        assert!(restriction_result.is_ok());
-    }
-}
+    // update
+    println!("run update restriction {}", restriction_name);
+    let update_restriction = create_update_restriction(restriction_name.clone());
+    let update_body: String = serde_json::to_string(&update_restriction).unwrap().to_string();
+    let update_result = core.run(http_client.request_with_auth_header::<Restriction>(
+        Method::Put,
+        url_rud.clone(),
+        Some(update_body),
+        Some(user_id.to_string()),
+    ));
+    println!("{:?}", update_result);
+    assert!(update_result.is_err());
 
-// test update restriction by regular user
-#[test]
-fn test_update_restriction_regular_user() {
-    let base_url = common::setup();
-    let restrictions = init_restrictions_paths();
-    let user_id = UserId(123);
+    // delete by super for test
+    println!("run delete restriction {}", restriction_name);
+    let delete_result = delete_restriction(&mut core, &http_client, url_rud.clone());
+    assert!(delete_result.is_ok());
 
-    let mut rpc = RpcClient::new(base_url.clone(), Some(user_id));
-    for restriction in restrictions.iter() {
-        let restriction_result = rpc.request_restriction(Method::Put, restriction.clone(), Some(create_restriction_mock()));
-        assert!(restriction_result.is_err());
-    }
+    // delete user role
+    let delete_result = delete_role(user_id.clone(), &mut core, &http_client, base_url.clone());
+    assert!(delete_result.is_ok());
 }
 
 // test update restriction without authorization data
 #[test]
 fn test_update_restriction_unauthorized() {
+    let (mut core, http_client) = common::make_utils();
     let base_url = common::setup();
-    let restrictions = init_restrictions_paths();
+    let restriction_name = "rest_no_user_mock".to_string();
+    let url_rud = get_url_request(base_url.clone(), restriction_name.clone());
 
-    let mut rpc = RpcClient::new(base_url.clone(), None);
-    for restriction in restrictions.iter() {
-        let restriction_result = rpc.request_restriction(Method::Put, restriction.clone(), Some(create_restriction_mock()));
-        assert!(restriction_result.is_err());
-    }
+    // create by super for test
+    println!("run create new restriction {}", restriction_name);
+    let create_result = create_restriction(restriction_name.clone(), &mut core, &http_client, base_url.clone());
+    println!("{:?}", create_result);
+    assert!(create_result.is_ok());
+
+    // read
+    println!("run read restriction {}", restriction_name);
+    let read_result = core.run(http_client.request_with_auth_header::<Restriction>(Method::Get, url_rud.clone(), None, None));
+    println!("{:?}", read_result);
+    assert!(read_result.is_ok());
+
+    // update
+    println!("run update restriction {}", restriction_name);
+    let update_restriction = create_update_restriction(restriction_name.clone());
+    let update_body: String = serde_json::to_string(&update_restriction).unwrap().to_string();
+    let update_result =
+        core.run(http_client.request_with_auth_header::<Restriction>(Method::Put, url_rud.clone(), Some(update_body), None));
+    println!("{:?}", update_result);
+    assert!(update_result.is_err());
+
+    // delete by super for test
+    println!("run delete restriction {}", restriction_name);
+    let delete_result = delete_restriction(&mut core, &http_client, url_rud.clone());
+    assert!(delete_result.is_ok());
 }
-*/

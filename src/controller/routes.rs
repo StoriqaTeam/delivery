@@ -35,14 +35,6 @@ pub fn create_route_parser() -> RouteParser<Route> {
             .map(Route::DefaultRole)
     });
 
-    // restrictions/:name route
-    router.add_route_with_params(r"^/restrictions/by-name/([a-zA-Z0-9-_]+)$", |params| {
-        params
-            .get(0)
-            .and_then(|restriction_name| restriction_name.parse().ok())
-            .map(Route::Restriction)
-    });
-
     router.add_route(r"^/restrictions$", || Route::Restrictions);
 
     router

@@ -80,21 +80,12 @@ pub mod tests {
     use diesel::ConnectionResult;
     use diesel::QueryResult;
     use diesel::Queryable;
-    use futures_cpupool::CpuPool;
-    use r2d2;
     use r2d2::ManageConnection;
-    use serde_json;
-    use tokio_core::reactor::Handle;
 
-    use stq_http;
-    use stq_http::client::Config as HttpConfig;
-    use stq_static_resources::*;
     use stq_types::*;
 
-    use config::Config;
     use models::*;
     use repos::*;
-    use services::*;
     use std::time::SystemTime;
 
     pub const MOCK_REPO_FACTORY: ReposFactoryMock = ReposFactoryMock {};
@@ -159,7 +150,7 @@ pub mod tests {
     pub struct RestrictionsRepoMock;
 
     impl RestrictionsRepo for RestrictionsRepoMock {
-        fn create(&self, payload: NewRestriction) -> RepoResult<Restriction> {
+        fn create(&self, _payload: NewRestriction) -> RepoResult<Restriction> {
             Ok(Restriction {
                 id: 1,
                 name: "restriction_mock".to_string(),
@@ -189,7 +180,7 @@ pub mod tests {
         fn delete(&self, restriction_name: String) -> RepoResult<Restriction> {
             Ok(Restriction {
                 id: 1,
-                name: "restriction_mock".to_string(),
+                name: restriction_name,
                 max_weight: 0f64,
                 max_size: 0f64,
             })

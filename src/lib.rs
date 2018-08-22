@@ -26,7 +26,7 @@ extern crate serde_json;
 extern crate sha3;
 extern crate tokio_core;
 extern crate uuid;
-
+#[macro_use]
 extern crate stq_http;
 extern crate stq_logging;
 extern crate stq_router;
