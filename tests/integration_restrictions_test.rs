@@ -61,7 +61,9 @@ fn create_user_role(
 ) -> result::Result<UserRole, client::Error> {
     let new_role = NewUserRole {
         user_id,
-        role: UsersRole::User,
+        name: StoresRole::User,
+        id: RoleId::new(),
+        data: None,
     };
 
     let super_user_id = UserId(1);
@@ -69,7 +71,7 @@ fn create_user_role(
     let body: String = serde_json::to_string(&new_role).unwrap().to_string();
     core.run(http_client.request_with_auth_header::<UserRole>(
         Method::Post,
-        format!("{}/{}", base_url, "user_roles"),
+        format!("{}/{}", base_url, "roles"),
         Some(body),
         Some(super_user_id.to_string()),
     ))
@@ -80,11 +82,11 @@ fn delete_role(
     core: &mut tokio_core::reactor::Core,
     http_client: &HttpClientHandle,
     url: String,
-) -> result::Result<UserRole, client::Error> {
+) -> result::Result<Vec<UserRole>, client::Error> {
     let super_user_id = UserId(1);
-    core.run(http_client.request_with_auth_header::<UserRole>(
+    core.run(http_client.request_with_auth_header::<Vec<UserRole>>(
         Method::Delete,
-        format!("{}/{}/{}", url, "roles/default", user_id.to_string()),
+        format!("{}/roles/by-user-id/{}", url, user_id.to_string()),
         None,
         Some(super_user_id.to_string()),
     ))

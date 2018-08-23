@@ -26,13 +26,12 @@ table! {
 }
 
 table! {
-    user_roles (id) {
-        id -> Int4,
+    roles (id) {
+        id -> Uuid,
         user_id -> Int4,
-        role -> Varchar,
-        created_at -> Timestamp,
-        updated_at -> Timestamp,
+        name -> Varchar,
+        data -> Nullable<Jsonb>,
     }
 }
 
-allow_tables_to_appear_in_same_query!(delivery_from, delivery_to, restrictions, user_roles,);
+allow_tables_to_appear_in_same_query!(delivery_from, delivery_to, restrictions, roles,);

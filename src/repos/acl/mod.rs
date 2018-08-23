@@ -14,7 +14,7 @@ use std::rc::Rc;
 use errors::Error;
 use failure::Error as FailureError;
 
-use stq_types::{UserId, UsersRole};
+use stq_types::{StoresRole, UserId};
 
 use self::legacy_acl::{Acl, CheckScope};
 
@@ -41,17 +41,17 @@ pub fn check<T>(
 /// ApplicationAcl contains main logic for manipulation with resources
 #[derive(Clone)]
 pub struct ApplicationAcl {
-    acls: Rc<HashMap<UsersRole, Vec<Permission>>>,
-    roles: Vec<UsersRole>,
+    acls: Rc<HashMap<StoresRole, Vec<Permission>>>,
+    roles: Vec<StoresRole>,
     user_id: UserId,
 }
 
 impl ApplicationAcl {
-    pub fn new(roles: Vec<UsersRole>, user_id: UserId) -> Self {
+    pub fn new(roles: Vec<StoresRole>, user_id: UserId) -> Self {
         let mut hash = ::std::collections::HashMap::new();
 
         hash.insert(
-            UsersRole::Superuser,
+            StoresRole::Superuser,
             vec![
                 permission!(Resource::UserRoles),
                 permission!(Resource::Restrictions),
@@ -61,7 +61,7 @@ impl ApplicationAcl {
         );
 
         hash.insert(
-            UsersRole::User,
+            StoresRole::User,
             vec![
                 permission!(Resource::Restrictions, Action::Read),
                 permission!(Resource::DeliveryFrom, Action::Read),

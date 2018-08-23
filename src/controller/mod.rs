@@ -27,6 +27,7 @@ use self::routes::Route;
 use config;
 use errors::Error;
 use models::*;
+use repos::acl::RolesCacheImpl;
 use repos::repo_factory::*;
 use services::restrictions::{RestrictionService, RestrictionServiceImpl};
 use services::user_roles::{UserRolesService, UserRolesServiceImpl};
@@ -44,6 +45,8 @@ where
     pub cpu_pool: CpuPool,
     pub route_parser: Arc<RouteParser<Route>>,
     pub repo_factory: F,
+    pub roles_cache: RolesCacheImpl,
+
     pub http_client: ClientHandle,
 }
 
@@ -54,7 +57,14 @@ impl<
     > ControllerImpl<T, M, F>
 {
     /// Create a new controller based on services
-    pub fn new(db_pool: Pool<M>, config: config::Config, cpu_pool: CpuPool, http_client: ClientHandle, repo_factory: F) -> Self {
+    pub fn new(
+        db_pool: Pool<M>,
+        config: config::Config,
+        cpu_pool: CpuPool,
+        http_client: ClientHandle,
+        roles_cache: RolesCacheImpl,
+        repo_factory: F,
+    ) -> Self {
         let route_parser = Arc::new(routes::create_route_parser());
         Self {
             db_pool,
@@ -63,6 +73,7 @@ impl<
             route_parser,
             repo_factory,
             http_client,
+            roles_cache,
         }
     }
 }
@@ -84,59 +95,33 @@ impl<
 
         debug!("User with id = '{:?}' is requesting {}", user_id, req.path());
 
-        let user_roles_service = UserRolesServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), self.repo_factory.clone());
+        let cached_roles = self.roles_cache.clone();
+
+        let user_roles_service =
+            UserRolesServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), cached_roles, self.repo_factory.clone());
         let restrictions_service =
             RestrictionServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), user_id, self.repo_factory.clone());
 
         let path = req.path().to_string();
 
         match (&req.method().clone(), self.route_parser.test(req.path())) {
-            // GET /user_role/<user_id>
-            (&Get, Some(Route::UserRole(user_id_arg))) => {
-                debug!("User with id = '{:?}' is requesting  // GET /user_role/{}", user_id, user_id_arg);
-                serialize_future(user_roles_service.get_roles(user_id_arg))
+            (Get, Some(Route::RolesByUserId { user_id })) => {
+                debug!("Received request to get roles by user id {}", user_id);
+                serialize_future({ user_roles_service.get_roles(user_id) })
             }
-            // POST /user_roles
-            (&Post, Some(Route::UserRoles)) => {
-                debug!("User with id = '{:?}' is requesting  // POST /user_roles", user_id);
-                serialize_future(
-                    parse_body::<NewUserRole>(req.body())
-                        .map_err(|e| {
-                            e.context("Parsing body // POST /user_roles in NewUserRole failed!")
-                                .context(Error::Parse)
-                                .into()
-                        })
-                        .and_then(move |new_role| user_roles_service.create(new_role)),
-                )
+            (Post, Some(Route::Roles)) => serialize_future({
+                parse_body::<NewUserRole>(req.body()).and_then(move |data| {
+                    debug!("Received request to create role {:?}", data);
+                    user_roles_service.create(data)
+                })
+            }),
+            (Delete, Some(Route::RolesByUserId { user_id })) => {
+                debug!("Received request to delete role by user id {}", user_id);
+                serialize_future({ user_roles_service.delete_by_user_id(user_id) })
             }
-            // DELETE /user_roles
-            (&Delete, Some(Route::UserRoles)) => {
-                debug!("User with id = '{:?}' is requesting  // DELETE /user_roles", user_id);
-                serialize_future(
-                    parse_body::<OldUserRole>(req.body())
-                        .map_err(|e| {
-                            e.context("Parsing body // DELETE /user_roles/<user_role_id> in OldUserRole failed!")
-                                .context(Error::Parse)
-                                .into()
-                        })
-                        .and_then(move |old_role| user_roles_service.delete(old_role)),
-                )
-            }
-            // POST /roles/default/<user_id>
-            (&Post, Some(Route::DefaultRole(user_id_arg))) => {
-                debug!(
-                    "User with id = '{:?}' is requesting  // POST /roles/default/{}",
-                    user_id, user_id_arg
-                );
-                serialize_future(user_roles_service.create_default(user_id_arg))
-            }
-            // DELETE /roles/default/<user_id>
-            (&Delete, Some(Route::DefaultRole(user_id_arg))) => {
-                debug!(
-                    "User with id = '{:?}' is requesting  // DELETE /roles/default/{}",
-                    user_id, user_id_arg
-                );
-                serialize_future(user_roles_service.delete_default(user_id_arg))
+            (Delete, Some(Route::RoleById { id })) => {
+                debug!("Received request to delete role by id {}", id);
+                serialize_future({ user_roles_service.delete_by_id(id) })
             }
 
             // POST /restrictions
