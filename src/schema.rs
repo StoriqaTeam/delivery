@@ -34,4 +34,9 @@ table! {
     }
 }
 
-allow_tables_to_appear_in_same_query!(delivery_from, delivery_to, restrictions, roles,);
+allow_tables_to_appear_in_same_query!(
+    delivery_from,
+    delivery_to,
+    restrictions,
+    roles,
+);

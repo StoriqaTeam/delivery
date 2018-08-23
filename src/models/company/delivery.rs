@@ -1,7 +1,7 @@
 use schema::delivery_from;
 use schema::delivery_to;
 
-use super::DeliveryCompany;
+use stq_static_resources::DeliveryCompany;
 
 use serde_json;
 
@@ -38,7 +38,7 @@ pub struct OldDeliveryFrom {
     pub restriction_name: String,
 }
 
-#[derive(Serialize, Queryable, Insertable, Debug)]
+#[derive(Serialize, Deserialize, Associations, Queryable, Debug)]
 #[table_name = "delivery_to"]
 pub struct DeliveryTo {
     pub id: i32,

@@ -8,12 +8,19 @@ pub enum Route {
     RoleById { id: RoleId },
     RolesByUserId { user_id: UserId },
     Restrictions,
+    DeliveryTo,
+    DeliveryToFiltersCompany,
+    DeliveryToFiltersCountry,
 }
 
 pub fn create_route_parser() -> RouteParser<Route> {
     let mut route_parser = RouteParser::default();
 
     route_parser.add_route(r"^/restrictions$", || Route::Restrictions);
+
+    route_parser.add_route(r"^/delivery_to$", || Route::DeliveryTo);
+    route_parser.add_route(r"^/delivery_to/search/filters/company$", || Route::DeliveryToFiltersCompany);
+    route_parser.add_route(r"^/delivery_to/search/filters/country$", || Route::DeliveryToFiltersCountry);
 
     route_parser.add_route(r"^/roles$", || Route::Roles);
     route_parser.add_route_with_params(r"^/roles/by-user-id/(\d+)$", |params| {

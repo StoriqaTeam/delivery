@@ -31,8 +31,6 @@ extern crate stq_http;
 extern crate stq_logging;
 extern crate stq_router;
 extern crate stq_static_resources;
-#[macro_use]
-extern crate stq_diesel_macro_derive;
 extern crate stq_types;
 
 pub mod config;
@@ -87,6 +85,7 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: &Option
     let http_config = stq_http::client::Config {
         http_client_retries: config.client.http_client_retries,
         http_client_buffer_size: config.client.http_client_buffer_size,
+        timeout_duration_ms: config.client.timeout_duration_ms,
     };
     let client = stq_http::client::Client::new(&http_config, &handle);
     let client_handle = client.handle();
