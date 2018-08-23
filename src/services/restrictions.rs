@@ -19,16 +19,16 @@ pub trait RestrictionService {
     fn create(&self, payload: NewRestriction) -> ServiceFuture<Restriction>;
 
     /// Get a restriction
-    fn get_by_name(&self, restriction_name: String) -> ServiceFuture<Restriction>;
+    fn get_by_name(&self, name: String) -> ServiceFuture<Restriction>;
 
     /// Update a restriction
     fn update(&self, payload: UpdateRestriction) -> ServiceFuture<Restriction>;
 
     /// Delete a restriction
-    fn delete(&self, restriction_name: String) -> ServiceFuture<Restriction>;
+    fn delete(&self, name: String) -> ServiceFuture<Restriction>;
 }
 
-/// Restriction services, responsible for UserRole-related CRUD operations
+/// Restriction services, responsible for CRUD operations
 pub struct RestrictionServiceImpl<
     T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static,
     M: ManageConnection<Connection = T>,
@@ -82,7 +82,7 @@ impl<
         )
     }
 
-    fn get_by_name(&self, restriction_name: String) -> ServiceFuture<Restriction> {
+    fn get_by_name(&self, name: String) -> ServiceFuture<Restriction> {
         let db_pool = self.db_pool.clone();
         let repo_factory = self.repo_factory.clone();
         let user_id = self.user_id;
@@ -95,7 +95,7 @@ impl<
                         .map_err(|e| e.context(Error::Connection).into())
                         .and_then(move |conn| {
                             let restrictions_repo = repo_factory.create_restrictions_repo(&*conn, user_id);
-                            restrictions_repo.get_by_name(restriction_name)
+                            restrictions_repo.get_by_name(name)
                         })
                 })
                 .map_err(|e| e.context("Service Restrictions, get_by_name endpoint error occured.").into()),
@@ -122,7 +122,7 @@ impl<
         )
     }
 
-    fn delete(&self, restriction_name: String) -> ServiceFuture<Restriction> {
+    fn delete(&self, name: String) -> ServiceFuture<Restriction> {
         let db_pool = self.db_pool.clone();
         let repo_factory = self.repo_factory.clone();
         let user_id = self.user_id;
@@ -135,7 +135,7 @@ impl<
                         .map_err(|e| e.context(Error::Connection).into())
                         .and_then(move |conn| {
                             let restrictions_repo = repo_factory.create_restrictions_repo(&*conn, user_id);
-                            restrictions_repo.delete(restriction_name)
+                            restrictions_repo.delete(name)
                         })
                 })
                 .map_err(|e| e.context("Service Restrictions, delete endpoint error occured.").into()),
