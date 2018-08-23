@@ -4,37 +4,30 @@ use stq_types::*;
 /// List of all routes with params for the app
 #[derive(Clone, Debug, PartialEq)]
 pub enum Route {
-    UserRoles,
-    UserRole(UserId),
-    DefaultRole(UserId),
+    Roles,
+    RoleById { id: RoleId },
+    RolesByUserId { user_id: UserId },
     Restrictions,
 }
 
 pub fn create_route_parser() -> RouteParser<Route> {
-    let mut router = RouteParser::default();
+    let mut route_parser = RouteParser::default();
 
-    // User_roles Routes
-    router.add_route(r"^/user_roles$", || Route::UserRoles);
+    route_parser.add_route(r"^/restrictions$", || Route::Restrictions);
 
-    // User_roles/:id route
-    router.add_route_with_params(r"^/user_roles/(\d+)$", |params| {
+    route_parser.add_route(r"^/roles$", || Route::Roles);
+    route_parser.add_route_with_params(r"^/roles/by-user-id/(\d+)$", |params| {
         params
             .get(0)
-            .and_then(|string_id| string_id.parse::<i32>().ok())
-            .map(UserId)
-            .map(Route::UserRole)
+            .and_then(|string_id| string_id.parse().ok())
+            .map(|user_id| Route::RolesByUserId { user_id })
     });
-
-    // roles/default/:id route
-    router.add_route_with_params(r"^/roles/default/(\d+)$", |params| {
+    route_parser.add_route_with_params(r"^/roles/by-id/([a-zA-Z0-9-]+)$", |params| {
         params
             .get(0)
-            .and_then(|string_id| string_id.parse::<i32>().ok())
-            .map(UserId)
-            .map(Route::DefaultRole)
+            .and_then(|string_id| string_id.parse().ok())
+            .map(|id| Route::RoleById { id })
     });
 
-    router.add_route(r"^/restrictions$", || Route::Restrictions);
-
-    router
+    route_parser
 }

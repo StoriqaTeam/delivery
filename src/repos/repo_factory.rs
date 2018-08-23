@@ -28,7 +28,7 @@ impl ReposFactoryImpl {
         &self,
         id: UserId,
         db_conn: &'a C,
-    ) -> Vec<UsersRole> {
+    ) -> Vec<StoresRole> {
         self.create_user_roles_repo(db_conn).list_for_user(id).ok().unwrap_or_default()
     }
 
@@ -86,7 +86,6 @@ pub mod tests {
 
     use models::*;
     use repos::*;
-    use std::time::SystemTime;
 
     pub const MOCK_REPO_FACTORY: ReposFactoryMock = ReposFactoryMock {};
     pub static MOCK_USER_ID: UserId = UserId(1);
@@ -108,40 +107,37 @@ pub mod tests {
     pub struct UserRolesRepoMock;
 
     impl UserRolesRepo for UserRolesRepoMock {
-        fn list_for_user(&self, user_id_value: UserId) -> RepoResult<Vec<UsersRole>> {
+        fn list_for_user(&self, user_id_value: UserId) -> RepoResult<Vec<StoresRole>> {
             Ok(match user_id_value.0 {
-                1 => vec![UsersRole::Superuser],
-                _ => vec![UsersRole::User],
+                1 => vec![StoresRole::Superuser],
+                _ => vec![StoresRole::User],
             })
         }
 
         fn create(&self, payload: NewUserRole) -> RepoResult<UserRole> {
             Ok(UserRole {
-                id: 123,
+                id: RoleId::new(),
                 user_id: payload.user_id,
-                role: payload.role,
-                created_at: SystemTime::now(),
-                updated_at: SystemTime::now(),
+                name: payload.name,
+                data: None,
             })
         }
 
-        fn delete(&self, payload: OldUserRole) -> RepoResult<UserRole> {
-            Ok(UserRole {
-                id: 123,
-                user_id: payload.user_id,
-                role: payload.role,
-                created_at: SystemTime::now(),
-                updated_at: SystemTime::now(),
-            })
-        }
-
-        fn delete_by_user_id(&self, user_id_arg: UserId) -> RepoResult<UserRole> {
-            Ok(UserRole {
-                id: 123,
+        fn delete_by_user_id(&self, user_id_arg: UserId) -> RepoResult<Vec<UserRole>> {
+            Ok(vec![UserRole {
+                id: RoleId::new(),
                 user_id: user_id_arg,
-                role: UsersRole::User,
-                created_at: SystemTime::now(),
-                updated_at: SystemTime::now(),
+                name: StoresRole::User,
+                data: None,
+            }])
+        }
+
+        fn delete_by_id(&self, id: RoleId) -> RepoResult<UserRole> {
+            Ok(UserRole {
+                id: id,
+                user_id: UserId(1),
+                name: StoresRole::User,
+                data: None,
             })
         }
     }

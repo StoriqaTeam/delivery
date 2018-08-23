@@ -3,15 +3,15 @@ use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use stq_types::{UserId, UsersRole};
+use stq_types::{StoresRole, UserId};
 
 #[derive(Default, Clone)]
 pub struct RolesCacheImpl {
-    roles_cache: Arc<Mutex<HashMap<UserId, Vec<UsersRole>>>>,
+    roles_cache: Arc<Mutex<HashMap<UserId, Vec<StoresRole>>>>,
 }
 
 impl RolesCacheImpl {
-    pub fn get(&self, user_id: UserId) -> Vec<UsersRole> {
+    pub fn get(&self, user_id: UserId) -> Vec<StoresRole> {
         let mut hash_map = self.roles_cache.lock().unwrap();
         match hash_map.entry(user_id) {
             Entry::Occupied(o) => o.get().clone(),
@@ -34,7 +34,7 @@ impl RolesCacheImpl {
         hash_map.contains_key(&id)
     }
 
-    pub fn add_roles(&self, id: UserId, roles: &[UsersRole]) {
+    pub fn add_roles(&self, id: UserId, roles: &[StoresRole]) {
         let mut hash_map = self.roles_cache.lock().unwrap();
         hash_map.insert(id, roles.to_vec());
     }
