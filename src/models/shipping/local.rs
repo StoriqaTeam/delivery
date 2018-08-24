@@ -2,7 +2,7 @@ use failure::Error as FailureError;
 use failure::Fail;
 use serde_json;
 
-use stq_types::{BaseProductId, ProductPrice};
+use stq_types::{BaseProductId, ProductPrice, StoreId};
 
 use errors::Error;
 use models::DeliveryCompany;
@@ -16,22 +16,27 @@ pub struct LocalShippingRaw {
     pub pickup: bool,
     pub country: String,
     pub companies: serde_json::Value,
+    pub store_id: StoreId,
+    pub pickup_price: Option<f64>,
 }
 
 #[derive(Serialize, Deserialize, Insertable, Clone, Debug)]
 #[table_name = "local_shipping"]
 pub struct NewLocalShippingRaw {
     pub base_product_id: BaseProductId,
+    pub store_id: StoreId,
     pub pickup: bool,
     pub country: String,
+    pub pickup_price: Option<f64>,
     pub companies: serde_json::Value,
 }
 
 #[derive(Serialize, Deserialize, Insertable, AsChangeset, Clone, Debug)]
 #[table_name = "local_shipping"]
 pub struct UpdateLocalShippingRaw {
-    pub pickup: Option<bool>,
     pub country: Option<String>,
+    pub pickup: Option<bool>,
+    pub pickup_price: Option<f64>,
     pub companies: Option<serde_json::Value>,
 }
 
@@ -46,7 +51,9 @@ pub struct LocalShippingCompany {
 pub struct LocalShipping {
     pub id: i32,
     pub base_product_id: BaseProductId,
+    pub store_id: StoreId,
     pub pickup: bool,
+    pub pickup_price: Option<f64>,
     pub companies: Vec<LocalShippingCompany>,
 }
 
@@ -57,7 +64,9 @@ impl LocalShipping {
         Ok(Self {
             id: shipping.id,
             base_product_id: shipping.base_product_id,
+            store_id: shipping.store_id,
             pickup: shipping.pickup,
+            pickup_price: shipping.pickup_price,
             companies,
         })
     }
@@ -66,8 +75,10 @@ impl LocalShipping {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct NewLocalShipping {
     pub base_product_id: BaseProductId,
+    pub store_id: StoreId,
     pub pickup: bool,
     pub country: String,
+    pub pickup_price: Option<f64>,
     pub companies: Vec<LocalShippingCompany>,
 }
 
@@ -77,7 +88,9 @@ impl NewLocalShipping {
             serde_json::to_value(self.companies).map_err(|e| e.context("Can not parse companies from value").context(Error::Parse))?;
         Ok(NewLocalShippingRaw {
             base_product_id: self.base_product_id,
+            store_id: self.store_id,
             pickup: self.pickup,
+            pickup_price: self.pickup_price,
             country: self.country,
             companies,
         })
@@ -87,6 +100,7 @@ impl NewLocalShipping {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct UpdateLocalShipping {
     pub pickup: Option<bool>,
+    pub pickup_price: Option<f64>,
     pub country: Option<String>,
     pub companies: Option<Vec<LocalShippingCompany>>,
 }
@@ -103,6 +117,7 @@ impl UpdateLocalShipping {
         Ok(UpdateLocalShippingRaw {
             companies,
             pickup: self.pickup,
+            pickup_price: self.pickup_price,
             country: self.country,
         })
     }

@@ -12,6 +12,8 @@ use repos::*;
 pub trait ReposFactory<C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static>: Clone + Send + 'static {
     fn create_user_roles_repo<'a>(&self, db_conn: &'a C) -> Box<UserRolesRepo + 'a>;
     fn create_restrictions_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<RestrictionsRepo + 'a>;
+    fn create_local_shippings_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<LocalShippingRepo + 'a>;
+    fn create_international_shippings_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<InternationalShippingRepo + 'a>;
 }
 
 #[derive(Clone)]
@@ -60,6 +62,16 @@ impl<C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 
         let acl = self.get_acl(db_conn, user_id);
         Box::new(RestrictionsRepoImpl::new(db_conn, acl)) as Box<RestrictionsRepo>
     }
+
+    fn create_local_shippings_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<LocalShippingRepo + 'a> {
+        let acl = self.get_acl(db_conn, user_id);
+        Box::new(LocalShippingRepoImpl::new(db_conn, acl)) as Box<LocalShippingRepo>
+    }
+
+    fn create_international_shippings_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<InternationalShippingRepo + 'a> {
+        let acl = self.get_acl(db_conn, user_id);
+        Box::new(InternationalShippingRepoImpl::new(db_conn, acl)) as Box<InternationalShippingRepo>
+    }
 }
 
 #[cfg(test)]
@@ -101,6 +113,18 @@ pub mod tests {
         fn create_restrictions_repo<'a>(&self, _db_conn: &'a C, _user_id: Option<UserId>) -> Box<RestrictionsRepo + 'a> {
             Box::new(RestrictionsRepoMock::default()) as Box<RestrictionsRepo>
         }
+
+        fn create_local_shippings_repo<'a>(&self, _db_conn: &'a C, _user_id: Option<UserId>) -> Box<LocalShippingRepo + 'a> {
+            Box::new(LocalShippingRepoMock::default()) as Box<LocalShippingRepo>
+        }
+
+        fn create_international_shippings_repo<'a>(
+            &self,
+            _db_conn: &'a C,
+            _user_id: Option<UserId>,
+        ) -> Box<InternationalShippingRepo + 'a> {
+            Box::new(InternationalShippingRepoMock::default()) as Box<InternationalShippingRepo>
+        }
     }
 
     #[derive(Clone, Default)]
@@ -138,6 +162,104 @@ pub mod tests {
                 user_id: UserId(1),
                 name: StoresRole::User,
                 data: None,
+            })
+        }
+    }
+
+    #[derive(Clone, Default)]
+    pub struct InternationalShippingRepoMock;
+
+    impl InternationalShippingRepo for InternationalShippingRepoMock {
+        /// Create a new local_shipping
+        fn create(&self, payload: NewInternationalShipping) -> RepoResult<InternationalShipping> {
+            Ok(InternationalShipping {
+                id: 1,
+                base_product_id: payload.base_product_id,
+                store_id: payload.store_id,
+                companies: payload.companies,
+            })
+        }
+
+        /// Get a local_shipping
+        fn get_by_base_product_id(&self, base_product_id: BaseProductId) -> RepoResult<InternationalShipping> {
+            Ok(InternationalShipping {
+                id: 1,
+                base_product_id: base_product_id,
+                store_id: StoreId(1),
+                companies: vec![],
+            })
+        }
+
+        /// Update a local_shipping
+        fn update(&self, base_product_id_arg: BaseProductId, payload: UpdateInternationalShipping) -> RepoResult<InternationalShipping> {
+            Ok(InternationalShipping {
+                id: 1,
+                base_product_id: base_product_id_arg,
+                store_id: StoreId(1),
+                companies: payload.companies.unwrap_or_default(),
+            })
+        }
+
+        /// Delete a local_shipping
+        fn delete(&self, base_product_id_arg: BaseProductId) -> RepoResult<InternationalShipping> {
+            Ok(InternationalShipping {
+                id: 1,
+                base_product_id: base_product_id_arg,
+                store_id: StoreId(1),
+                companies: vec![],
+            })
+        }
+    }
+
+    #[derive(Clone, Default)]
+    pub struct LocalShippingRepoMock;
+
+    impl LocalShippingRepo for LocalShippingRepoMock {
+        /// Create a new local_shipping
+        fn create(&self, payload: NewLocalShipping) -> RepoResult<LocalShipping> {
+            Ok(LocalShipping {
+                id: 1,
+                base_product_id: payload.base_product_id,
+                store_id: payload.store_id,
+                pickup: payload.pickup,
+                pickup_price: payload.pickup_price,
+                companies: payload.companies,
+            })
+        }
+
+        /// Get a local_shipping
+        fn get_by_base_product_id(&self, base_product_id: BaseProductId) -> RepoResult<LocalShipping> {
+            Ok(LocalShipping {
+                id: 1,
+                base_product_id: base_product_id,
+                store_id: StoreId(1),
+                pickup: false,
+                pickup_price: None,
+                companies: vec![],
+            })
+        }
+
+        /// Update a local_shipping
+        fn update(&self, base_product_id_arg: BaseProductId, payload: UpdateLocalShipping) -> RepoResult<LocalShipping> {
+            Ok(LocalShipping {
+                id: 1,
+                base_product_id: base_product_id_arg,
+                store_id: StoreId(1),
+                pickup: payload.pickup.unwrap_or_default(),
+                pickup_price: payload.pickup_price,
+                companies: payload.companies.unwrap_or_default(),
+            })
+        }
+
+        /// Delete a local_shipping
+        fn delete(&self, base_product_id_arg: BaseProductId) -> RepoResult<LocalShipping> {
+            Ok(LocalShipping {
+                id: 1,
+                base_product_id: base_product_id_arg,
+                store_id: StoreId(1),
+                pickup: false,
+                pickup_price: None,
+                companies: vec![],
             })
         }
     }

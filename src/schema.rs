@@ -21,6 +21,7 @@ table! {
         id -> Int4,
         base_product_id -> Int4,
         companies -> Jsonb,
+        store_id -> Int4,
     }
 }
 
@@ -31,6 +32,8 @@ table! {
         pickup -> Bool,
         country -> Varchar,
         companies -> Jsonb,
+        store_id -> Int4,
+        pickup_price -> Nullable<Float8>,
     }
 }
 
