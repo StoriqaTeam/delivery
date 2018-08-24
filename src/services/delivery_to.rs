@@ -11,7 +11,7 @@ use errors::Error;
 use stq_types::UserId;
 
 use super::types::ServiceFuture;
-use models::company::{DeliveryTo, NewDeliveryTo, OldDeliveryTo, UpdateDeliveryTo};
+use models::company::{DeliveryTo, NewDeliveryTo, UpdateDeliveryTo};
 use repos::ReposFactory;
 use stq_static_resources::DeliveryCompany;
 
@@ -19,17 +19,17 @@ pub trait DeliveryToService {
     /// Creates new delivery_to
     fn create(&self, payload: NewDeliveryTo) -> ServiceFuture<DeliveryTo>;
 
-    /// Returns list of deliveries supported by the company, limited by `from` parameters
+    /// Returns list of deliveries supported by the company, limited by `from` parameter
     fn list_by_company(&self, from: DeliveryCompany) -> ServiceFuture<Vec<DeliveryTo>>;
 
-    /// Returns list of deliveries supported by the country, limited by `from` parameters
+    /// Returns list of deliveries supported by the country, limited by `from` parameter
     fn list_by_country(&self, from: String) -> ServiceFuture<Vec<DeliveryTo>>;
 
     /// Update a delivery_to
     fn update(&self, payload: UpdateDeliveryTo) -> ServiceFuture<DeliveryTo>;
 
     /// Delete a delivery_to
-    fn delete(&self, payload: OldDeliveryTo) -> ServiceFuture<DeliveryTo>;
+    fn delete(&self, company_id: DeliveryCompany, country: String) -> ServiceFuture<DeliveryTo>;
 }
 
 /// DeliveryTo services, responsible for CRUD operations
@@ -146,7 +146,7 @@ impl<
         )
     }
 
-    fn delete(&self, payload: OldDeliveryTo) -> ServiceFuture<DeliveryTo> {
+    fn delete(&self, company_id: DeliveryCompany, country: String) -> ServiceFuture<DeliveryTo> {
         let db_pool = self.db_pool.clone();
         let repo_factory = self.repo_factory.clone();
         let user_id = self.user_id;
@@ -159,7 +159,7 @@ impl<
                         .map_err(|e| e.context(Error::Connection).into())
                         .and_then(move |conn| {
                             let delivery_to_repo = repo_factory.create_delivery_to_repo(&*conn, user_id);
-                            delivery_to_repo.delete(payload)
+                            delivery_to_repo.delete(company_id, country)
                         })
                 })
                 .map_err(|e| e.context("Service DeliveryTo, delete endpoint error occured.").into()),

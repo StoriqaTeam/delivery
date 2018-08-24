@@ -3,7 +3,7 @@
 //! the dimensions of the goods.
 
 use super::types::RepoResult;
-use models::company::{DeliveryTo, DeliveryToRaw, NewDeliveryTo, OldDeliveryTo, UpdateDeliveryTo};
+use models::company::{DeliveryTo, DeliveryToRaw, NewDeliveryTo, UpdateDeliveryTo};
 
 use diesel;
 use diesel::connection::AnsiTransactionManager;
@@ -31,17 +31,17 @@ pub trait DeliveryToRepo {
     /// Create a new delivery
     fn create(&self, payload: NewDeliveryTo) -> RepoResult<DeliveryTo>;
 
-    /// Returns list of deliveries supported by the company, limited by `from` parameters
+    /// Returns list of deliveries supported by the company, limited by `from` parameter
     fn list_by_company(&self, from: DeliveryCompany) -> RepoResult<Vec<DeliveryTo>>;
 
-    /// Returns list of deliveries supported by the country, limited by `from` parameters
+    /// Returns list of deliveries supported by the country, limited by `from` parameter
     fn list_by_country(&self, from: String) -> RepoResult<Vec<DeliveryTo>>;
 
     /// Update a delivery
     fn update(&self, payload: UpdateDeliveryTo) -> RepoResult<DeliveryTo>;
 
     /// Delete a delivery
-    fn delete(&self, payload: OldDeliveryTo) -> RepoResult<DeliveryTo>;
+    fn delete(&self, company_id: DeliveryCompany, country: String) -> RepoResult<DeliveryTo>;
 }
 
 /// Implementation of UserRoles trait
@@ -148,18 +148,20 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             .map_err(|e: FailureError| e.context(format!("Updating delivery_to payload {:?} failed.", payload)).into())
     }
 
-    fn delete(&self, payload: OldDeliveryTo) -> RepoResult<DeliveryTo> {
-        debug!("delete delivery {:?}.", payload);
-        let OldDeliveryTo {
-            company_id: company_id_,
-            country: country_,
-        } = payload.clone();
+    fn delete(&self, company_id_: DeliveryCompany, country_: String) -> RepoResult<DeliveryTo> {
+        debug!("delete delivery company_id: {} country: {}.", company_id_, country_);
+
         acl::check(&*self.acl, Resource::DeliveryTo, Action::Delete, self, None)?;
-        let filter = delivery_to.filter(company_id.eq(company_id_)).filter(country.eq(country_));
+        let filter = delivery_to
+            .filter(company_id.eq(company_id_.clone()))
+            .filter(country.eq(country_.clone()));
         let query = diesel::delete(filter);
         query
             .get_result::<DeliveryToRaw>(self.db_conn)
-            .map_err(move |e| e.context(format!("delete delivery {:?}.", payload)).into())
+            .map_err(move |e| {
+                e.context(format!("delete delivery company_id: {} country: {}.", company_id_, country_))
+                    .into()
+            })
             .and_then(DeliveryTo::from_raw)
     }
 }

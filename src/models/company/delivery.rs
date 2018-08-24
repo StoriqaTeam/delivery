@@ -33,14 +33,6 @@ pub struct UpdateDeliveryFrom {
     pub restriction_name: String,
 }
 
-#[derive(Serialize, Deserialize, Insertable, Clone, Debug)]
-#[table_name = "delivery_from"]
-pub struct OldDeliveryFrom {
-    pub company_id: DeliveryCompany,
-    pub country: String,
-    pub restriction_name: String,
-}
-
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct AdditionalInfo {
     data: String,
@@ -143,11 +135,4 @@ impl UpdateDeliveryTo {
             additional_info,
         })
     }
-}
-
-#[derive(Serialize, Deserialize, Insertable, Clone, Debug)]
-#[table_name = "delivery_to"]
-pub struct OldDeliveryTo {
-    pub company_id: DeliveryCompany,
-    pub country: String,
 }

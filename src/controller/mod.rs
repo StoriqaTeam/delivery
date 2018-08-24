@@ -250,15 +250,17 @@ impl<
             // DELETE /delivery_to
             (&Delete, Some(Route::DeliveryTo)) => {
                 debug!("User with id = '{:?}' is requesting  // DELETE /delivery_to", user_id);
-                serialize_future(
-                    parse_body::<OldDeliveryTo>(req.body())
-                        .map_err(|e| {
-                            e.context("Parsing body // DELETE /delivery_to in OldDeliveryTo failed!")
-                                .context(Error::Parse)
-                                .into()
-                        })
-                        .and_then(move |old_delivery| delivery_to_service.delete(old_delivery)),
-                )
+                if let (Some(company_id), Some(country)) =
+                    parse_query!(req.query().unwrap_or_default(), "company_id" => DeliveryCompany, "country" => String)
+                {
+                    serialize_future(delivery_to_service.delete(company_id, country))
+                } else {
+                    Box::new(future::err(
+                        format_err!("Parsing query parameters // DELETE /delivery_to failed!")
+                            .context(Error::Parse)
+                            .into(),
+                    ))
+                }
             }
 
             // Fallback

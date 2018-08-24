@@ -250,11 +250,11 @@ pub mod tests {
             })
         }
 
-        fn delete(&self, payload: OldDeliveryTo) -> RepoResult<DeliveryTo> {
+        fn delete(&self, company_id: DeliveryCompany, country: String) -> RepoResult<DeliveryTo> {
             Ok(DeliveryTo {
                 id: 1,
-                company_id: payload.company_id,
-                country: payload.country,
+                company_id,
+                country,
                 additional_info: None,
             })
         }

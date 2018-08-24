@@ -104,10 +104,8 @@ fn delete_delivery_to(
 ) -> result::Result<DeliveryTo, client::Error> {
     let user_id = UserId(1);
 
-    let payload = OldDeliveryTo { company_id, country };
-
-    let body: String = serde_json::to_string(&payload).unwrap().to_string();
-    core.run(http_client.request_with_auth_header::<DeliveryTo>(Method::Delete, url, Some(body), Some(user_id.to_string())))
+    let url = format!("{}?company_id={}&country={}", url, company_id, country);
+    core.run(http_client.request_with_auth_header::<DeliveryTo>(Method::Delete, url, None, Some(user_id.to_string())))
 }
 
 fn get_url_request_by_filter_company(base_url: String, company_id: DeliveryCompany) -> String {
