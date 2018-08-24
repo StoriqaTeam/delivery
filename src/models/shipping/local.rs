@@ -5,7 +5,7 @@ use serde_json;
 use stq_types::{BaseProductId, ProductPrice};
 
 use errors::Error;
-use models::DeliveryCompany;
+use stq_static_resources::DeliveryCompany;
 use schema::local_shipping;
 
 #[derive(Serialize, Queryable, Insertable, Debug)]
