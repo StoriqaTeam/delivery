@@ -3,7 +3,7 @@
 //! the dimensions of the goods.
 
 use super::types::RepoResult;
-use models::company::{DeliveryTo, NewDeliveryTo, OldDeliveryTo, UpdateDeliveryTo};
+use models::company::{DeliveryTo, DeliveryToRaw, NewDeliveryTo, OldDeliveryTo, UpdateDeliveryTo};
 
 use diesel;
 use diesel::connection::AnsiTransactionManager;
@@ -63,10 +63,12 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> DeliveryToRepo for DeliveryToRepoImpl<'a, T> {
     fn create(&self, payload: NewDeliveryTo) -> RepoResult<DeliveryTo> {
         debug!("create new delivery {:?}.", payload);
+        let payload = payload.to_raw()?;
         let query = diesel::insert_into(delivery_to).values(&payload);
         query
-            .get_result::<DeliveryTo>(self.db_conn)
+            .get_result::<DeliveryToRaw>(self.db_conn)
             .map_err(From::from)
+            .and_then(DeliveryTo::from_raw)
             .and_then(|delivery| {
                 acl::check(&*self.acl, Resource::DeliveryTo, Action::Create, self, Some(&delivery)).and_then(|_| Ok(delivery))
             })
@@ -80,6 +82,12 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         query
             .get_results(self.db_conn)
             .map_err(From::from)
+            .and_then(|deliveries_raw: Vec<DeliveryToRaw>| {
+                deliveries_raw
+                    .into_iter()
+                    .map(|delivery_raw| DeliveryTo::from_raw(delivery_raw))
+                    .collect()
+            })
             .and_then(|deliveries_res: Vec<DeliveryTo>| {
                 for delivery in &deliveries_res {
                     acl::check(&*self.acl, Resource::DeliveryTo, Action::Read, self, Some(&delivery))?;
@@ -101,6 +109,12 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         query
             .get_results(self.db_conn)
             .map_err(From::from)
+            .and_then(|deliveries_raw: Vec<DeliveryToRaw>| {
+                deliveries_raw
+                    .into_iter()
+                    .map(|delivery_raw| DeliveryTo::from_raw(delivery_raw))
+                    .collect()
+            })
             .and_then(|deliveries_res: Vec<DeliveryTo>| {
                 for delivery in &deliveries_res {
                     acl::check(&*self.acl, Resource::DeliveryTo, Action::Read, self, Some(&delivery))?;
@@ -115,18 +129,23 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 
     fn update(&self, payload: UpdateDeliveryTo) -> RepoResult<DeliveryTo> {
         debug!("Updating delivery payload {:?}.", payload);
+        let payload = payload.to_raw()?;
         self.execute_query(
             delivery_to
                 .filter(company_id.eq(payload.company_id.clone()))
                 .filter(country.eq(payload.country.clone())),
-        ).and_then(|delivery: DeliveryTo| acl::check(&*self.acl, Resource::DeliveryTo, Action::Update, self, Some(&delivery)))
+        ).and_then(DeliveryTo::from_raw)
+            .and_then(|delivery: DeliveryTo| acl::check(&*self.acl, Resource::DeliveryTo, Action::Update, self, Some(&delivery)))
             .and_then(|_| {
                 let filtered = delivery_to
                     .filter(company_id.eq(payload.company_id.clone()))
                     .filter(country.eq(payload.country.clone()));
 
-                let query = diesel::update(filtered).set(&payload);
-                query.get_result::<DeliveryTo>(self.db_conn).map_err(From::from)
+                let query = diesel::update(filtered).set(additional_info.eq(&payload.additional_info));
+                query
+                    .get_result::<DeliveryToRaw>(self.db_conn)
+                    .map_err(From::from)
+                    .and_then(DeliveryTo::from_raw)
             })
             .map_err(|e: FailureError| e.context(format!("Updating delivery_to payload {:?} failed.", payload)).into())
     }
@@ -141,8 +160,9 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         let filter = delivery_to.filter(company_id.eq(company_id_)).filter(country.eq(country_));
         let query = diesel::delete(filter);
         query
-            .get_result(self.db_conn)
+            .get_result::<DeliveryToRaw>(self.db_conn)
             .map_err(move |e| e.context(format!("delete delivery {:?}.", payload)).into())
+            .and_then(DeliveryTo::from_raw)
     }
 }
 
