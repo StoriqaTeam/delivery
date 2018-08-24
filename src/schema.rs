@@ -17,6 +17,24 @@ table! {
 }
 
 table! {
+    international_shipping (id) {
+        id -> Int4,
+        base_product_id -> Int4,
+        companies -> Jsonb,
+    }
+}
+
+table! {
+    local_shipping (id) {
+        id -> Int4,
+        base_product_id -> Int4,
+        pickup -> Bool,
+        country -> Varchar,
+        companies -> Jsonb,
+    }
+}
+
+table! {
     restrictions (id) {
         id -> Int4,
         name -> Varchar,
@@ -34,4 +52,11 @@ table! {
     }
 }
 
-allow_tables_to_appear_in_same_query!(delivery_from, delivery_to, restrictions, roles,);
+allow_tables_to_appear_in_same_query!(
+    delivery_from,
+    delivery_to,
+    international_shipping,
+    local_shipping,
+    restrictions,
+    roles,
+);
