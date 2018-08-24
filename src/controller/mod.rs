@@ -205,10 +205,8 @@ impl<
                     "User with id = '{:?}' is requesting  // GET /delivery_to/search/filters/company",
                     user_id
                 );
-                if let (Some(company_id), Some(count)) =
-                    parse_query!(req.query().unwrap_or_default(), "company_id" => DeliveryCompany, "count" => i32)
-                {
-                    serialize_future(delivery_to_service.list_by_company(company_id, count))
+                if let Some(company_id) = parse_query!(req.query().unwrap_or_default(), "company_id" => DeliveryCompany) {
+                    serialize_future(delivery_to_service.list_by_company(company_id))
                 } else {
                     Box::new(future::err(
                         format_err!("Parsing query parameters // GET /delivery_to/search/filters/company failed!")
@@ -224,8 +222,8 @@ impl<
                     "User with id = '{:?}' is requesting  // GET /delivery_to/search/filters/country",
                     user_id
                 );
-                if let (Some(country), Some(count)) = parse_query!(req.query().unwrap_or_default(), "country" => String, "count" => i32) {
-                    serialize_future(delivery_to_service.list_by_country(country, count))
+                if let Some(country) = parse_query!(req.query().unwrap_or_default(), "country" => String) {
+                    serialize_future(delivery_to_service.list_by_country(country))
                 } else {
                     Box::new(future::err(
                         format_err!("Parsing query parameters // GET /delivery_to/search/filters/country failed!")

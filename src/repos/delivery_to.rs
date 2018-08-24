@@ -31,11 +31,11 @@ pub trait DeliveryToRepo {
     /// Create a new delivery
     fn create(&self, payload: NewDeliveryTo) -> RepoResult<DeliveryTo>;
 
-    /// Returns list of deliveries supported by the company, limited by `from` and `count` parameters
-    fn list_by_company(&self, from: DeliveryCompany, count: i32) -> RepoResult<Vec<DeliveryTo>>;
+    /// Returns list of deliveries supported by the company, limited by `from` parameters
+    fn list_by_company(&self, from: DeliveryCompany) -> RepoResult<Vec<DeliveryTo>>;
 
-    /// Returns list of deliveries supported by the country, limited by `from` and `count` parameters
-    fn list_by_country(&self, from: String, count: i32) -> RepoResult<Vec<DeliveryTo>>;
+    /// Returns list of deliveries supported by the country, limited by `from` parameters
+    fn list_by_country(&self, from: String) -> RepoResult<Vec<DeliveryTo>>;
 
     /// Update a delivery
     fn update(&self, payload: UpdateDeliveryTo) -> RepoResult<DeliveryTo>;
@@ -75,9 +75,9 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             .map_err(|e: FailureError| e.context(format!("create new delivery {:?}.", payload)).into())
     }
 
-    fn list_by_company(&self, from: DeliveryCompany, count: i32) -> RepoResult<Vec<DeliveryTo>> {
-        debug!("Find in delivery_to with ids from {:?} count {}.", from, count);
-        let query = delivery_to.filter(company_id.eq(from.clone())).limit(count.into());
+    fn list_by_company(&self, from: DeliveryCompany) -> RepoResult<Vec<DeliveryTo>> {
+        debug!("Find in delivery_to with ids from {:?}.", from);
+        let query = delivery_to.filter(company_id.eq(from.clone()));
 
         query
             .get_results(self.db_conn)
@@ -95,16 +95,14 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 Ok(deliveries_res)
             })
             .map_err(|e: FailureError| {
-                e.context(format!(
-                    "Find in delivery_to with ids from {:?} count {} error occured",
-                    from, count
-                )).into()
+                e.context(format!("Find in delivery_to with ids from {:?} error occured", from))
+                    .into()
             })
     }
 
-    fn list_by_country(&self, from: String, count: i32) -> RepoResult<Vec<DeliveryTo>> {
-        debug!("Find in delivery_to with ids from {} count {}.", from, count);
-        let query = delivery_to.filter(country.eq(from.clone())).order(country).limit(count.into());
+    fn list_by_country(&self, from: String) -> RepoResult<Vec<DeliveryTo>> {
+        debug!("Find in delivery_to with ids from {}.", from);
+        let query = delivery_to.filter(country.eq(from.clone())).order(country);
 
         query
             .get_results(self.db_conn)
@@ -122,7 +120,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 Ok(deliveries_res)
             })
             .map_err(|e: FailureError| {
-                e.context(format!("Find in delivery_to with ids from {} count {} error occured", from, count))
+                e.context(format!("Find in delivery_to with ids from {} error occured", from))
                     .into()
             })
     }

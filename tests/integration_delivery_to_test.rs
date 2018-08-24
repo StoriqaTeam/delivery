@@ -110,17 +110,17 @@ fn delete_delivery_to(
     core.run(http_client.request_with_auth_header::<DeliveryTo>(Method::Delete, url, Some(body), Some(user_id.to_string())))
 }
 
-fn get_url_request_by_filter_company(base_url: String, company_id: DeliveryCompany, count: i32) -> String {
+fn get_url_request_by_filter_company(base_url: String, company_id: DeliveryCompany) -> String {
     format!(
-        "{}/{}/search/filters/company?company_id={}&count={}",
-        base_url, MOCK_DELIVERY_TO_ENDPOINT, company_id, count
+        "{}/{}/search/filters/company?company_id={}",
+        base_url, MOCK_DELIVERY_TO_ENDPOINT, company_id
     )
 }
 
-fn get_url_request_by_filter_country(base_url: String, country: String, count: i32) -> String {
+fn get_url_request_by_filter_country(base_url: String, country: String) -> String {
     format!(
-        "{}/{}/search/filters/country?country={}&count={}",
-        base_url, MOCK_DELIVERY_TO_ENDPOINT, country, count
+        "{}/{}/search/filters/country?country={}",
+        base_url, MOCK_DELIVERY_TO_ENDPOINT, country
     )
 }
 
@@ -145,7 +145,7 @@ fn test_delivery_to_superuser_crud() {
     println!("run search delivery_to by company");
     let read_result1 = core.run(http_client.request_with_auth_header::<Vec<DeliveryTo>>(
         Method::Get,
-        get_url_request_by_filter_company(base_url.clone(), DeliveryCompany::DHL, 1),
+        get_url_request_by_filter_company(base_url.clone(), DeliveryCompany::DHL),
         None,
         Some(user_id.to_string()),
     ));
@@ -155,7 +155,7 @@ fn test_delivery_to_superuser_crud() {
     println!("run search delivery_to by country");
     let read_result2 = core.run(http_client.request_with_auth_header::<Vec<DeliveryTo>>(
         Method::Get,
-        get_url_request_by_filter_country(base_url.clone(), country.clone(), 1),
+        get_url_request_by_filter_country(base_url.clone(), country.clone()),
         None,
         Some(user_id.to_string()),
     ));
@@ -210,7 +210,7 @@ fn test_delivery_to_regular_user_crud() {
     println!("run search delivery_to by company");
     let read_result1 = core.run(http_client.request_with_auth_header::<Vec<DeliveryTo>>(
         Method::Get,
-        get_url_request_by_filter_company(base_url.clone(), DeliveryCompany::DHL, 1),
+        get_url_request_by_filter_company(base_url.clone(), DeliveryCompany::DHL),
         None,
         Some(user_id.to_string()),
     ));
@@ -220,7 +220,7 @@ fn test_delivery_to_regular_user_crud() {
     println!("run search delivery_to by country");
     let read_result2 = core.run(http_client.request_with_auth_header::<Vec<DeliveryTo>>(
         Method::Get,
-        get_url_request_by_filter_country(base_url.clone(), country.clone(), 1),
+        get_url_request_by_filter_country(base_url.clone(), country.clone()),
         None,
         Some(user_id.to_string()),
     ));
@@ -274,7 +274,7 @@ fn test_update_delivery_to_unauthorized() {
     println!("run search delivery_to by company");
     let read_result1 = core.run(http_client.request_with_auth_header::<Vec<DeliveryTo>>(
         Method::Get,
-        get_url_request_by_filter_company(base_url.clone(), DeliveryCompany::DHL, 1),
+        get_url_request_by_filter_company(base_url.clone(), DeliveryCompany::DHL),
         None,
         None,
     ));
@@ -284,7 +284,7 @@ fn test_update_delivery_to_unauthorized() {
     println!("run search delivery_to by country");
     let read_result2 = core.run(http_client.request_with_auth_header::<Vec<DeliveryTo>>(
         Method::Get,
-        get_url_request_by_filter_country(base_url.clone(), country.clone(), 1),
+        get_url_request_by_filter_country(base_url.clone(), country.clone()),
         None,
         None,
     ));

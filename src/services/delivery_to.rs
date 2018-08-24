@@ -19,11 +19,11 @@ pub trait DeliveryToService {
     /// Creates new delivery_to
     fn create(&self, payload: NewDeliveryTo) -> ServiceFuture<DeliveryTo>;
 
-    /// Returns list of deliveries supported by the company, limited by `from` and `count` parameters
-    fn list_by_company(&self, from: DeliveryCompany, count: i32) -> ServiceFuture<Vec<DeliveryTo>>;
+    /// Returns list of deliveries supported by the company, limited by `from` parameters
+    fn list_by_company(&self, from: DeliveryCompany) -> ServiceFuture<Vec<DeliveryTo>>;
 
-    /// Returns list of deliveries supported by the country, limited by `from` and `count` parameters
-    fn list_by_country(&self, from: String, count: i32) -> ServiceFuture<Vec<DeliveryTo>>;
+    /// Returns list of deliveries supported by the country, limited by `from` parameters
+    fn list_by_country(&self, from: String) -> ServiceFuture<Vec<DeliveryTo>>;
 
     /// Update a delivery_to
     fn update(&self, payload: UpdateDeliveryTo) -> ServiceFuture<DeliveryTo>;
@@ -86,7 +86,7 @@ impl<
         )
     }
 
-    fn list_by_company(&self, from: DeliveryCompany, count: i32) -> ServiceFuture<Vec<DeliveryTo>> {
+    fn list_by_company(&self, from: DeliveryCompany) -> ServiceFuture<Vec<DeliveryTo>> {
         let db_pool = self.db_pool.clone();
         let user_id = self.user_id;
         let repo_factory = self.repo_factory.clone();
@@ -99,14 +99,14 @@ impl<
                         .map_err(|e| e.context(Error::Connection).into())
                         .and_then(move |conn| {
                             let delivery_to_repo = repo_factory.create_delivery_to_repo(&*conn, user_id);
-                            delivery_to_repo.list_by_company(from, count)
+                            delivery_to_repo.list_by_company(from)
                         })
                 })
                 .map_err(|e| e.context("Service DeliveryTo, list_by_company endpoint error occured.").into()),
         )
     }
 
-    fn list_by_country(&self, from: String, count: i32) -> ServiceFuture<Vec<DeliveryTo>> {
+    fn list_by_country(&self, from: String) -> ServiceFuture<Vec<DeliveryTo>> {
         let db_pool = self.db_pool.clone();
         let user_id = self.user_id;
         let repo_factory = self.repo_factory.clone();
@@ -119,7 +119,7 @@ impl<
                         .map_err(|e| e.context(Error::Connection).into())
                         .and_then(move |conn| {
                             let delivery_to_repo = repo_factory.create_delivery_to_repo(&*conn, user_id);
-                            delivery_to_repo.list_by_country(from, count)
+                            delivery_to_repo.list_by_country(from)
                         })
                 })
                 .map_err(|e| e.context("Service DeliveryTo, list_by_country endpoint error occured.").into()),

@@ -207,24 +207,24 @@ pub mod tests {
             })
         }
 
-        fn list_by_company(&self, from: DeliveryCompany, _count: i32) -> RepoResult<Vec<DeliveryTo>> {
+        fn list_by_company(&self, from: DeliveryCompany) -> RepoResult<Vec<DeliveryTo>> {
             Ok(vec![
                 DeliveryTo {
                     id: 1,
-                    company_id: DeliveryCompany::DHL,
+                    company_id: from.clone(),
                     country: "US".to_string(),
                     additional_info: None,
                 },
                 DeliveryTo {
                     id: 2,
-                    company_id: DeliveryCompany::DHL,
+                    company_id: from.clone(),
                     country: "UK".to_string(),
                     additional_info: None,
                 },
             ])
         }
 
-        fn list_by_country(&self, from: String, _count: i32) -> RepoResult<Vec<DeliveryTo>> {
+        fn list_by_country(&self, from: String) -> RepoResult<Vec<DeliveryTo>> {
             Ok(vec![
                 DeliveryTo {
                     id: 1,
