@@ -98,7 +98,10 @@ impl<
                             local_shippings_repo.get_by_base_product_id(base_product_id)
                         })
                 })
-                .map_err(|e| e.context("Service LocalShippings, get_by_name endpoint error occured.").into()),
+                .map_err(|e| {
+                    e.context("Service LocalShippings, get_by_base_product_id endpoint error occured.")
+                        .into()
+                }),
         )
     }
 

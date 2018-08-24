@@ -99,7 +99,7 @@ impl<
                         })
                 })
                 .map_err(|e| {
-                    e.context("Service InternationalShippings, get_by_name endpoint error occured.")
+                    e.context("Service InternationalShippings, get_by_base_product_id endpoint error occured.")
                         .into()
                 }),
         )
