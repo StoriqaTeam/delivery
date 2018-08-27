@@ -15,6 +15,8 @@ pub enum Route {
     DeliveryTo,
     DeliveryToFiltersCompany,
     DeliveryToFiltersCountry,
+    DeliveryFrom,
+    DeliveryFromFiltersCompany,
 }
 
 pub fn create_route_parser() -> RouteParser<Route> {
@@ -39,6 +41,9 @@ pub fn create_route_parser() -> RouteParser<Route> {
     route_parser.add_route(r"^/delivery_to$", || Route::DeliveryTo);
     route_parser.add_route(r"^/delivery_to/search/filters/company$", || Route::DeliveryToFiltersCompany);
     route_parser.add_route(r"^/delivery_to/search/filters/country$", || Route::DeliveryToFiltersCountry);
+
+    route_parser.add_route(r"^/delivery_from$", || Route::DeliveryFrom);
+    route_parser.add_route(r"^/delivery_from/search/filters/company$", || Route::DeliveryFromFiltersCompany);
 
     route_parser.add_route(r"^/roles$", || Route::Roles);
     route_parser.add_route_with_params(r"^/roles/by-user-id/(\d+)$", |params| {

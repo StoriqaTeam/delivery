@@ -15,6 +15,7 @@ pub trait ReposFactory<C: Connection<Backend = Pg, TransactionManager = AnsiTran
     fn create_local_shippings_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<LocalShippingRepo + 'a>;
     fn create_international_shippings_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<InternationalShippingRepo + 'a>;
     fn create_delivery_to_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<DeliveryToRepo + 'a>;
+    fn create_delivery_from_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<DeliveryFromRepo + 'a>;
 }
 
 #[derive(Clone)]
@@ -78,6 +79,11 @@ impl<C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 
         let acl = self.get_acl(db_conn, user_id);
         Box::new(DeliveryToRepoImpl::new(db_conn, acl)) as Box<DeliveryToRepo>
     }
+
+    fn create_delivery_from_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<DeliveryFromRepo + 'a> {
+        let acl = self.get_acl(db_conn, user_id);
+        Box::new(DeliveryFromRepoImpl::new(db_conn, acl)) as Box<DeliveryFromRepo>
+    }
 }
 
 #[cfg(test)]
@@ -135,6 +141,10 @@ pub mod tests {
 
         fn create_delivery_to_repo<'a>(&self, _db_conn: &'a C, _user_id: Option<UserId>) -> Box<DeliveryToRepo + 'a> {
             Box::new(DeliveryToRepoMock::default()) as Box<DeliveryToRepo>
+        }
+
+        fn create_delivery_from_repo<'a>(&self, _db_conn: &'a C, _user_id: Option<UserId>) -> Box<DeliveryFromRepo + 'a> {
+            Box::new(DeliveryFromRepoMock::default()) as Box<DeliveryFromRepo>
         }
     }
 
@@ -378,6 +388,55 @@ pub mod tests {
                 company_id,
                 country,
                 additional_info: None,
+            })
+        }
+    }
+
+    #[derive(Clone, Default)]
+    pub struct DeliveryFromRepoMock;
+
+    impl DeliveryFromRepo for DeliveryFromRepoMock {
+        fn create(&self, payload: NewDeliveryFrom) -> RepoResult<DeliveryFrom> {
+            Ok(DeliveryFrom {
+                id: 1,
+                company_id: payload.company_id,
+                country: payload.country,
+                restriction_name: payload.restriction_name,
+            })
+        }
+
+        fn list_by_company(&self, from: DeliveryCompany) -> RepoResult<Vec<DeliveryFrom>> {
+            Ok(vec![
+                DeliveryFrom {
+                    id: 1,
+                    company_id: from.clone(),
+                    country: "US".to_string(),
+                    restriction_name: format!("{}_{}", from, "US".to_string()),
+                },
+                DeliveryFrom {
+                    id: 2,
+                    company_id: from.clone(),
+                    country: "UK".to_string(),
+                    restriction_name: format!("{}_{}", from, "US".to_string()),
+                },
+            ])
+        }
+
+        fn update(&self, payload: UpdateDeliveryFrom) -> RepoResult<DeliveryFrom> {
+            Ok(DeliveryFrom {
+                id: 1,
+                company_id: payload.company_id,
+                country: payload.country,
+                restriction_name: payload.restriction_name,
+            })
+        }
+
+        fn delete(&self, company_id: DeliveryCompany, country: String) -> RepoResult<DeliveryFrom> {
+            Ok(DeliveryFrom {
+                id: 1,
+                company_id,
+                country,
+                restriction_name: "".to_string(),
             })
         }
     }

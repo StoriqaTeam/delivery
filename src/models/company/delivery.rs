@@ -8,7 +8,7 @@ use failure::Error as FailureError;
 use failure::Fail;
 use serde_json;
 
-#[derive(Serialize, Queryable, Insertable, Debug)]
+#[derive(Serialize, Deserialize, Queryable, Insertable, Debug)]
 #[table_name = "delivery_from"]
 pub struct DeliveryFrom {
     pub id: i32,
