@@ -18,7 +18,7 @@ use std::result;
 use stq_http::client::{self, ClientHandle as HttpClientHandle};
 use stq_static_resources::DeliveryCompany;
 
-static MOCK_DELIVERY_TO_ENDPOINT: &'static str = "delivery_from";
+static MOCK_DELIVERY_FROM_ENDPOINT: &'static str = "delivery_from";
 
 fn create_update_delivery_from(company_id: DeliveryCompany, country: String) -> UpdateDeliveryFrom {
     let restriction_name = format!("{}_{}", company_id, country);
@@ -49,7 +49,7 @@ fn create_delivery_from(
     let body: String = serde_json::to_string(&new_delivery_from).unwrap().to_string();
     let create_result = core.run(http_client.request_with_auth_header::<DeliveryFrom>(
         Method::Post,
-        format!("{}/{}", base_url, MOCK_DELIVERY_TO_ENDPOINT.to_string()),
+        format!("{}/{}", base_url, MOCK_DELIVERY_FROM_ENDPOINT.to_string()),
         Some(body),
         Some(user_id.to_string()),
     ));
@@ -74,12 +74,12 @@ fn delete_delivery_from(
 fn get_url_request_by_filter_company(base_url: String, company_id: DeliveryCompany) -> String {
     format!(
         "{}/{}/search/filters/company?company_id={}",
-        base_url, MOCK_DELIVERY_TO_ENDPOINT, company_id
+        base_url, MOCK_DELIVERY_FROM_ENDPOINT, company_id
     )
 }
 
 fn get_url_request(base_url: String) -> String {
-    format!("{}/{}", base_url, MOCK_DELIVERY_TO_ENDPOINT)
+    format!("{}/{}", base_url, MOCK_DELIVERY_FROM_ENDPOINT)
 }
 
 // test delivery_from by superuser
