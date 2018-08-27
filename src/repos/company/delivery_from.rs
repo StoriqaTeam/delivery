@@ -14,11 +14,12 @@ use failure::Fail;
 use stq_static_resources::DeliveryCompany;
 use stq_types::UserId;
 
-use super::types::RepoResult;
 use models::authorization::*;
 use models::company::{DeliveryFrom, NewDeliveryFrom, UpdateDeliveryFrom};
 use repos::legacy_acl::*;
 use repos::*;
+use repos::types::RepoResult;
+
 use schema::delivery_from::dsl::*;
 
 /// DeliveryFrom repository for handling DeliveryFrom

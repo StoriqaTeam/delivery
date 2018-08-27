@@ -22,8 +22,8 @@ static MOCK_RESTRICTION_ENDPOINT: &'static str = "restrictions";
 fn create_update_restriction(rest: String) -> UpdateRestriction {
     UpdateRestriction {
         name: rest,
-        max_weight: 1f64,
-        max_size: 1f64,
+        max_weight: Some(1f64),
+        max_size: Some(1f64),
     }
 }
 

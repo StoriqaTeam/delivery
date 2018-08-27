@@ -311,8 +311,8 @@ pub mod tests {
             Ok(Restriction {
                 id: 1,
                 name: payload.name,
-                max_weight: payload.max_weight,
-                max_size: payload.max_size,
+                max_weight: payload.max_weight.unwrap_or_default(),
+                max_size: payload.max_size.unwrap_or_default(),
             })
         }
 
