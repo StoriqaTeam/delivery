@@ -10,9 +10,9 @@ use r2d2::{ManageConnection, Pool};
 use errors::Error;
 use stq_types::UserId;
 
-use super::types::ServiceFuture;
 use models::company::{NewRestriction, Restriction, UpdateRestriction};
 use repos::ReposFactory;
+use services::types::ServiceFuture;
 
 pub trait RestrictionService {
     /// Creates new restriction

@@ -2,9 +2,6 @@
 //! describes the limits of the delivery company on
 //! the dimensions of the goods.
 
-use super::types::RepoResult;
-use models::company::{NewRestriction, Restriction, UpdateRestriction};
-
 use diesel;
 use diesel::connection::AnsiTransactionManager;
 use diesel::pg::Pg;
@@ -13,15 +10,16 @@ use diesel::query_dsl::LoadQuery;
 use diesel::query_dsl::RunQueryDsl;
 use diesel::Connection;
 
-use models::authorization::*;
-
-use repos::legacy_acl::*;
-use repos::*;
-
 use failure::Error as FailureError;
 use failure::Fail;
 
 use stq_types::UserId;
+
+use models::authorization::*;
+use models::company::{NewRestriction, Restriction, UpdateRestriction};
+use repos::legacy_acl::*;
+use repos::types::RepoResult;
+use repos::*;
 
 use schema::restrictions::dsl::*;
 

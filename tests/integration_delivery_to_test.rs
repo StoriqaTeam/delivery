@@ -55,45 +55,6 @@ fn create_delivery_to(
     create_result
 }
 
-fn create_user_role(
-    user_id: UserId,
-    core: &mut tokio_core::reactor::Core,
-    http_client: &HttpClientHandle,
-    base_url: String,
-) -> result::Result<UserRole, client::Error> {
-    let new_role = NewUserRole {
-        user_id,
-        name: StoresRole::User,
-        id: RoleId::new(),
-        data: None,
-    };
-
-    let super_user_id = UserId(1);
-
-    let body: String = serde_json::to_string(&new_role).unwrap().to_string();
-    core.run(http_client.request_with_auth_header::<UserRole>(
-        Method::Post,
-        format!("{}/{}", base_url, "roles"),
-        Some(body),
-        Some(super_user_id.to_string()),
-    ))
-}
-
-fn delete_role(
-    user_id: UserId,
-    core: &mut tokio_core::reactor::Core,
-    http_client: &HttpClientHandle,
-    url: String,
-) -> result::Result<Vec<UserRole>, client::Error> {
-    let super_user_id = UserId(1);
-    core.run(http_client.request_with_auth_header::<Vec<UserRole>>(
-        Method::Delete,
-        format!("{}/roles/by-user-id/{}", url, user_id.to_string()),
-        None,
-        Some(super_user_id.to_string()),
-    ))
-}
-
 // super user
 fn delete_delivery_to(
     company_id: DeliveryCompany,
@@ -195,7 +156,7 @@ fn test_delivery_to_regular_user_crud() {
 
     // create user for test acl
     let user_id = UserId(1123);
-    let create_role_result = create_user_role(user_id.clone(), &mut core, &http_client, base_url.clone());
+    let create_role_result = common::create_user_role(user_id.clone(), &mut core, &http_client, base_url.clone());
     assert!(create_role_result.is_ok());
 
     // create by super for test
@@ -251,7 +212,7 @@ fn test_delivery_to_regular_user_crud() {
     assert!(delete_result.is_ok());
 
     // delete user role
-    let delete_result = delete_role(user_id.clone(), &mut core, &http_client, base_url.clone());
+    let delete_result = common::delete_role(user_id.clone(), &mut core, &http_client, base_url.clone());
     assert!(delete_result.is_ok());
 }
 

@@ -30,10 +30,10 @@ use errors::Error;
 use models::*;
 use repos::acl::RolesCacheImpl;
 use repos::repo_factory::*;
-use services::delivery_to::{DeliveryToService, DeliveryToServiceImpl};
-use services::international::{InternationalShippingService, InternationalShippingServiceImpl};
-use services::local::{LocalShippingService, LocalShippingServiceImpl};
-use services::restrictions::{RestrictionService, RestrictionServiceImpl};
+use services::company::{
+    DeliveryFromService, DeliveryFromServiceImpl, DeliveryToService, DeliveryToServiceImpl, RestrictionService, RestrictionServiceImpl,
+};
+use services::shippping::{InternationalShippingService, InternationalShippingServiceImpl, LocalShippingService, LocalShippingServiceImpl};
 use services::user_roles::{UserRolesService, UserRolesServiceImpl};
 
 /// Controller handles route parsing and calling `Service` layer
@@ -111,6 +111,9 @@ impl<
 
         let delivery_to_service =
             DeliveryToServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), user_id, self.repo_factory.clone());
+
+        let delivery_from_service =
+            DeliveryFromServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), user_id, self.repo_factory.clone());
 
         let path = req.path().to_string();
 
@@ -365,6 +368,67 @@ impl<
                 } else {
                     Box::new(future::err(
                         format_err!("Parsing query parameters // DELETE /delivery_to failed!")
+                            .context(Error::Parse)
+                            .into(),
+                    ))
+                }
+            }
+
+            // POST /delivery_from
+            (&Post, Some(Route::DeliveryFrom)) => {
+                debug!("User with id = '{:?}' is requesting  // POST /delivery_from", user_id);
+                serialize_future(
+                    parse_body::<NewDeliveryFrom>(req.body())
+                        .map_err(|e| {
+                            e.context("Parsing body // POST /delivery_from in NewDeliveryFrom failed!")
+                                .context(Error::Parse)
+                                .into()
+                        })
+                        .and_then(move |new_delivery| delivery_from_service.create(new_delivery)),
+                )
+            }
+
+            // GET /delivery_from/search/filters/company
+            (&Get, Some(Route::DeliveryFromFiltersCompany)) => {
+                debug!(
+                    "User with id = '{:?}' is requesting  // GET/delivery_from/search/filters/company",
+                    user_id
+                );
+                if let Some(company_id) = parse_query!(req.query().unwrap_or_default(), "company_id" => DeliveryCompany) {
+                    serialize_future(delivery_from_service.list_by_company(company_id))
+                } else {
+                    Box::new(future::err(
+                        format_err!("Parsing query parameters // GET /delivery_from/search/filters/company failed!")
+                            .context(Error::Parse)
+                            .into(),
+                    ))
+                }
+            }
+
+            // PUT /delivery_from
+            (&Put, Some(Route::DeliveryFrom)) => {
+                debug!("User with id = '{:?}' is requesting  // PUT /delivery_from", user_id);
+                serialize_future(
+                    parse_body::<UpdateDeliveryFrom>(req.body())
+                        .map_err(|e| {
+                            e.context("Parsing body // PUT /delivery_from in UpdateDeliveryFrom failed!")
+                                .context(Error::Parse)
+                                .into()
+                        })
+                        .and_then(move |update_delivery| delivery_from_service.update(update_delivery)),
+                )
+            }
+
+            // DELETE /delivery_from
+            (&Delete, Some(Route::DeliveryFrom)) => {
+                debug!("User with id = '{:?}' is requesting  // DELETE /delivery_from", user_id);
+                if let (Some(company_id), Some(country)) =
+                    parse_query!(req.query().unwrap_or_default(), "company_id" => DeliveryCompany, "country" => String)
+                {
+                    serialize_future(delivery_from_service.delete(company_id, country))
+                } else {
+                    Box::new(future::err(
+                        format_err!("Parsing query parameters // DELETE /delivery_from failed!")
                             .context(Error::Parse)
                             .into(),
                     ))

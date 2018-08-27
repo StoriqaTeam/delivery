@@ -21,6 +21,6 @@ pub struct NewRestriction {
 #[table_name = "restrictions"]
 pub struct UpdateRestriction {
     pub name: String,
-    pub max_weight: f64,
-    pub max_size: f64,
+    pub max_weight: Option<f64>,
+    pub max_size: Option<f64>,
 }

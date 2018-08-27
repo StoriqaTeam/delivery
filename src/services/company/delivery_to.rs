@@ -10,9 +10,9 @@ use r2d2::{ManageConnection, Pool};
 use errors::Error;
 use stq_types::UserId;
 
-use super::types::ServiceFuture;
 use models::company::{DeliveryTo, NewDeliveryTo, UpdateDeliveryTo};
 use repos::ReposFactory;
+use services::types::ServiceFuture;
 use stq_static_resources::DeliveryCompany;
 
 pub trait DeliveryToService {

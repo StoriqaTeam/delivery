@@ -1,9 +1,4 @@
-//! Repo DeliveryTo table. DeliveryTo is an entity that
-//! describes the limits of the delivery company on
-//! the dimensions of the goods.
-
-use super::types::RepoResult;
-use models::company::{DeliveryTo, DeliveryToRaw, NewDeliveryTo, UpdateDeliveryTo};
+//! Repo DeliveryTo table.
 
 use diesel;
 use diesel::connection::AnsiTransactionManager;
@@ -13,16 +8,17 @@ use diesel::query_dsl::LoadQuery;
 use diesel::query_dsl::RunQueryDsl;
 use diesel::Connection;
 
-use models::authorization::*;
-use stq_static_resources::DeliveryCompany;
-
-use repos::legacy_acl::*;
-use repos::*;
-
 use failure::Error as FailureError;
 use failure::Fail;
 
+use stq_static_resources::DeliveryCompany;
 use stq_types::UserId;
+
+use models::authorization::*;
+use models::company::{DeliveryTo, DeliveryToRaw, NewDeliveryTo, UpdateDeliveryTo};
+use repos::legacy_acl::*;
+use repos::types::RepoResult;
+use repos::*;
 
 use schema::delivery_to::dsl::*;
 

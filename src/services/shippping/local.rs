@@ -1,4 +1,4 @@
-//! InternationalShipping Service, presents CRUD operations
+//! LocalShipping Service, presents CRUD operations
 use diesel::connection::AnsiTransactionManager;
 use diesel::pg::Pg;
 use diesel::Connection;
@@ -9,27 +9,27 @@ use r2d2::{ManageConnection, Pool};
 
 use stq_types::{BaseProductId, UserId};
 
-use super::types::ServiceFuture;
 use errors::Error;
-use models::{InternationalShipping, NewInternationalShipping, UpdateInternationalShipping};
+use models::{LocalShipping, NewLocalShipping, UpdateLocalShipping};
 use repos::ReposFactory;
+use services::types::ServiceFuture;
 
-pub trait InternationalShippingService {
-    /// Creates new international_shipping
-    fn create(&self, payload: NewInternationalShipping) -> ServiceFuture<InternationalShipping>;
+pub trait LocalShippingService {
+    /// Creates new local_shipping
+    fn create(&self, payload: NewLocalShipping) -> ServiceFuture<LocalShipping>;
 
-    /// Get a international_shipping
-    fn get_by_base_product_id(&self, base_product_id: BaseProductId) -> ServiceFuture<InternationalShipping>;
+    /// Get a local_shipping
+    fn get_by_base_product_id(&self, base_product_id: BaseProductId) -> ServiceFuture<LocalShipping>;
 
-    /// Update a international_shipping
-    fn update(&self, base_product_id_arg: BaseProductId, payload: UpdateInternationalShipping) -> ServiceFuture<InternationalShipping>;
+    /// Update a local_shipping
+    fn update(&self, base_product_id_arg: BaseProductId, payload: UpdateLocalShipping) -> ServiceFuture<LocalShipping>;
 
-    /// Delete a international_shipping
-    fn delete(&self, base_product_id_arg: BaseProductId) -> ServiceFuture<InternationalShipping>;
+    /// Delete a local_shipping
+    fn delete(&self, base_product_id_arg: BaseProductId) -> ServiceFuture<LocalShipping>;
 }
 
-/// InternationalShipping services, responsible for CRUD operations
-pub struct InternationalShippingServiceImpl<
+/// LocalShipping services, responsible for CRUD operations
+pub struct LocalShippingServiceImpl<
     T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static,
     M: ManageConnection<Connection = T>,
     F: ReposFactory<T>,
@@ -44,7 +44,7 @@ impl<
         T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static,
         M: ManageConnection<Connection = T>,
         F: ReposFactory<T>,
-    > InternationalShippingServiceImpl<T, M, F>
+    > LocalShippingServiceImpl<T, M, F>
 {
     pub fn new(db_pool: Pool<M>, cpu_pool: CpuPool, user_id: Option<UserId>, repo_factory: F) -> Self {
         Self {
@@ -60,9 +60,9 @@ impl<
         T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static,
         M: ManageConnection<Connection = T>,
         F: ReposFactory<T>,
-    > InternationalShippingService for InternationalShippingServiceImpl<T, M, F>
+    > LocalShippingService for LocalShippingServiceImpl<T, M, F>
 {
-    fn create(&self, payload: NewInternationalShipping) -> ServiceFuture<InternationalShipping> {
+    fn create(&self, payload: NewLocalShipping) -> ServiceFuture<LocalShipping> {
         let db_pool = self.db_pool.clone();
         let repo_factory = self.repo_factory.clone();
         let user_id = self.user_id;
@@ -74,15 +74,15 @@ impl<
                         .get()
                         .map_err(|e| e.context(Error::Connection).into())
                         .and_then(move |conn| {
-                            let international_shippings_repo = repo_factory.create_international_shippings_repo(&*conn, user_id);
-                            international_shippings_repo.create(payload)
+                            let local_shippings_repo = repo_factory.create_local_shippings_repo(&*conn, user_id);
+                            local_shippings_repo.create(payload)
                         })
                 })
-                .map_err(|e| e.context("Service InternationalShippings, create endpoint error occured.").into()),
+                .map_err(|e| e.context("Service LocalShippings, create endpoint error occured.").into()),
         )
     }
 
-    fn get_by_base_product_id(&self, base_product_id: BaseProductId) -> ServiceFuture<InternationalShipping> {
+    fn get_by_base_product_id(&self, base_product_id: BaseProductId) -> ServiceFuture<LocalShipping> {
         let db_pool = self.db_pool.clone();
         let repo_factory = self.repo_factory.clone();
         let user_id = self.user_id;
@@ -94,18 +94,18 @@ impl<
                         .get()
                         .map_err(|e| e.context(Error::Connection).into())
                         .and_then(move |conn| {
-                            let international_shippings_repo = repo_factory.create_international_shippings_repo(&*conn, user_id);
-                            international_shippings_repo.get_by_base_product_id(base_product_id)
+                            let local_shippings_repo = repo_factory.create_local_shippings_repo(&*conn, user_id);
+                            local_shippings_repo.get_by_base_product_id(base_product_id)
                         })
                 })
                 .map_err(|e| {
-                    e.context("Service InternationalShippings, get_by_base_product_id endpoint error occured.")
+                    e.context("Service LocalShippings, get_by_base_product_id endpoint error occured.")
                         .into()
                 }),
         )
     }
 
-    fn update(&self, base_product_id_arg: BaseProductId, payload: UpdateInternationalShipping) -> ServiceFuture<InternationalShipping> {
+    fn update(&self, base_product_id_arg: BaseProductId, payload: UpdateLocalShipping) -> ServiceFuture<LocalShipping> {
         let db_pool = self.db_pool.clone();
         let repo_factory = self.repo_factory.clone();
         let user_id = self.user_id;
@@ -117,15 +117,15 @@ impl<
                         .get()
                         .map_err(|e| e.context(Error::Connection).into())
                         .and_then(move |conn| {
-                            let international_shippings_repo = repo_factory.create_international_shippings_repo(&*conn, user_id);
-                            international_shippings_repo.update(base_product_id_arg, payload)
+                            let local_shippings_repo = repo_factory.create_local_shippings_repo(&*conn, user_id);
+                            local_shippings_repo.update(base_product_id_arg, payload)
                         })
                 })
-                .map_err(|e| e.context("Service InternationalShippings, update endpoint error occured.").into()),
+                .map_err(|e| e.context("Service LocalShippings, update endpoint error occured.").into()),
         )
     }
 
-    fn delete(&self, base_product_id_arg: BaseProductId) -> ServiceFuture<InternationalShipping> {
+    fn delete(&self, base_product_id_arg: BaseProductId) -> ServiceFuture<LocalShipping> {
         let db_pool = self.db_pool.clone();
         let repo_factory = self.repo_factory.clone();
         let user_id = self.user_id;
@@ -137,11 +137,11 @@ impl<
                         .get()
                         .map_err(|e| e.context(Error::Connection).into())
                         .and_then(move |conn| {
-                            let international_shippings_repo = repo_factory.create_international_shippings_repo(&*conn, user_id);
-                            international_shippings_repo.delete(base_product_id_arg)
+                            let local_shippings_repo = repo_factory.create_local_shippings_repo(&*conn, user_id);
+                            local_shippings_repo.delete(base_product_id_arg)
                         })
                 })
-                .map_err(|e| e.context("Service InternationalShippings, delete endpoint error occured.").into()),
+                .map_err(|e| e.context("Service LocalShippings, delete endpoint error occured.").into()),
         )
     }
 }
