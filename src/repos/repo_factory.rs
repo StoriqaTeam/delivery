@@ -14,6 +14,7 @@ pub trait ReposFactory<C: Connection<Backend = Pg, TransactionManager = AnsiTran
     fn create_restrictions_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<RestrictionsRepo + 'a>;
     fn create_local_shippings_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<LocalShippingRepo + 'a>;
     fn create_international_shippings_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<InternationalShippingRepo + 'a>;
+    fn create_delivery_to_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<DeliveryToRepo + 'a>;
 }
 
 #[derive(Clone)]
@@ -72,6 +73,11 @@ impl<C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 
         let acl = self.get_acl(db_conn, user_id);
         Box::new(InternationalShippingRepoImpl::new(db_conn, acl)) as Box<InternationalShippingRepo>
     }
+
+    fn create_delivery_to_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<DeliveryToRepo + 'a> {
+        let acl = self.get_acl(db_conn, user_id);
+        Box::new(DeliveryToRepoImpl::new(db_conn, acl)) as Box<DeliveryToRepo>
+    }
 }
 
 #[cfg(test)]
@@ -98,6 +104,7 @@ pub mod tests {
 
     use models::*;
     use repos::*;
+    use stq_static_resources::DeliveryCompany;
 
     pub const MOCK_REPO_FACTORY: ReposFactoryMock = ReposFactoryMock {};
     pub static MOCK_USER_ID: UserId = UserId(1);
@@ -124,6 +131,10 @@ pub mod tests {
             _user_id: Option<UserId>,
         ) -> Box<InternationalShippingRepo + 'a> {
             Box::new(InternationalShippingRepoMock::default()) as Box<InternationalShippingRepo>
+        }
+
+        fn create_delivery_to_repo<'a>(&self, _db_conn: &'a C, _user_id: Option<UserId>) -> Box<DeliveryToRepo + 'a> {
+            Box::new(DeliveryToRepoMock::default()) as Box<DeliveryToRepo>
         }
     }
 
@@ -301,6 +312,72 @@ pub mod tests {
                 name: name,
                 max_weight: 0f64,
                 max_size: 0f64,
+            })
+        }
+    }
+
+    #[derive(Clone, Default)]
+    pub struct DeliveryToRepoMock;
+
+    impl DeliveryToRepo for DeliveryToRepoMock {
+        fn create(&self, payload: NewDeliveryTo) -> RepoResult<DeliveryTo> {
+            Ok(DeliveryTo {
+                id: 1,
+                company_id: payload.company_id,
+                country: payload.country,
+                additional_info: payload.additional_info,
+            })
+        }
+
+        fn list_by_company(&self, from: DeliveryCompany) -> RepoResult<Vec<DeliveryTo>> {
+            Ok(vec![
+                DeliveryTo {
+                    id: 1,
+                    company_id: from.clone(),
+                    country: "US".to_string(),
+                    additional_info: None,
+                },
+                DeliveryTo {
+                    id: 2,
+                    company_id: from.clone(),
+                    country: "UK".to_string(),
+                    additional_info: None,
+                },
+            ])
+        }
+
+        fn list_by_country(&self, from: String) -> RepoResult<Vec<DeliveryTo>> {
+            Ok(vec![
+                DeliveryTo {
+                    id: 1,
+                    company_id: DeliveryCompany::DHL,
+                    country: from.clone(),
+                    additional_info: None,
+                },
+                DeliveryTo {
+                    id: 2,
+                    company_id: DeliveryCompany::UPS,
+                    country: from.clone(),
+                    additional_info: None,
+                },
+            ])
+        }
+
+        fn update(&self, payload: UpdateDeliveryTo) -> RepoResult<DeliveryTo> {
+            Ok(DeliveryTo {
+                id: 1,
+                company_id: payload.company_id,
+                country: payload.country,
+                additional_info: payload.additional_info,
+            })
+        }
+
+        fn delete(&self, company_id: DeliveryCompany, country: String) -> RepoResult<DeliveryTo> {
+            Ok(DeliveryTo {
+                id: 1,
+                company_id,
+                country,
+                additional_info: None,
             })
         }
     }

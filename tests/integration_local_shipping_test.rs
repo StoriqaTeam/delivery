@@ -12,6 +12,7 @@ pub mod common;
 use hyper::Method;
 
 use stq_http::client::{self, ClientHandle as HttpClientHandle};
+use stq_static_resources::DeliveryCompany;
 use stq_types::*;
 
 use lib::models::*;

@@ -1,6 +1,5 @@
 //! REPO InternationalShipping table. InternationalShipping is an entity that
-//! describes the limits of the delivery company on
-//! the dimensions of the goods.
+//! contains info about international shipping of base_product.
 
 use diesel;
 use diesel::connection::AnsiTransactionManager;
