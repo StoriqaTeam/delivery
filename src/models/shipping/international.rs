@@ -2,7 +2,7 @@ use failure::Error as FailureError;
 use failure::Fail;
 use serde_json;
 
-use stq_types::{BaseProductId, ProductPrice};
+use stq_types::{BaseProductId, ProductPrice, StoreId};
 
 use errors::Error;
 use schema::international_shipping;
@@ -14,12 +14,14 @@ pub struct InternationalShippingRaw {
     pub id: i32,
     pub base_product_id: BaseProductId,
     pub companies: serde_json::Value,
+    pub store_id: StoreId,
 }
 
 #[derive(Serialize, Deserialize, Insertable, Clone, Debug)]
 #[table_name = "international_shipping"]
 pub struct NewInternationalShippingRaw {
     pub base_product_id: BaseProductId,
+    pub store_id: StoreId,
     pub companies: serde_json::Value,
 }
 
@@ -41,6 +43,7 @@ pub struct InternationalShippingCompany {
 pub struct InternationalShipping {
     pub id: i32,
     pub base_product_id: BaseProductId,
+    pub store_id: StoreId,
     pub companies: Vec<InternationalShippingCompany>,
 }
 
@@ -51,6 +54,7 @@ impl InternationalShipping {
         Ok(Self {
             id: shipping.id,
             base_product_id: shipping.base_product_id,
+            store_id: shipping.store_id,
             companies,
         })
     }
@@ -59,6 +63,7 @@ impl InternationalShipping {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct NewInternationalShipping {
     pub base_product_id: BaseProductId,
+    pub store_id: StoreId,
     pub companies: Vec<InternationalShippingCompany>,
 }
 
@@ -68,6 +73,7 @@ impl NewInternationalShipping {
             serde_json::to_value(self.companies).map_err(|e| e.context("Can not parse companies from value").context(Error::Parse))?;
         Ok(NewInternationalShippingRaw {
             base_product_id: self.base_product_id,
+            store_id: self.store_id,
             companies,
         })
     }

@@ -31,6 +31,8 @@ use models::*;
 use repos::acl::RolesCacheImpl;
 use repos::repo_factory::*;
 use services::delivery_to::{DeliveryToService, DeliveryToServiceImpl};
+use services::international::{InternationalShippingService, InternationalShippingServiceImpl};
+use services::local::{LocalShippingService, LocalShippingServiceImpl};
 use services::restrictions::{RestrictionService, RestrictionServiceImpl};
 use services::user_roles::{UserRolesService, UserRolesServiceImpl};
 
@@ -48,7 +50,6 @@ where
     pub route_parser: Arc<RouteParser<Route>>,
     pub repo_factory: F,
     pub roles_cache: RolesCacheImpl,
-
     pub http_client: ClientHandle,
 }
 
@@ -103,6 +104,10 @@ impl<
             UserRolesServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), cached_roles, self.repo_factory.clone());
         let restrictions_service =
             RestrictionServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), user_id, self.repo_factory.clone());
+        let local_shipping_service =
+            LocalShippingServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), user_id, self.repo_factory.clone());
+        let international_shipping_service =
+            InternationalShippingServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), user_id, self.repo_factory.clone());
 
         let delivery_to_service =
             DeliveryToServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), user_id, self.repo_factory.clone());
@@ -185,6 +190,109 @@ impl<
                 )
             }
 
+            // POST /shipping/local
+            (&Post, Some(Route::ShippingLocal)) => {
+                debug!("User with id = '{:?}' is requesting  // POST /shipping/local", user_id);
+                serialize_future(
+                    parse_body::<NewLocalShipping>(req.body())
+                        .map_err(|e| {
+                            e.context("Parsing body // POST /shipping/local in NewLocalShipping failed!")
+                                .context(Error::Parse)
+                                .into()
+                        })
+                        .and_then(move |new_local_shipping| local_shipping_service.create(new_local_shipping)),
+                )
+            }
+
+            // GET /shipping/local/<base_product_id>
+            (&Get, Some(Route::ShippingLocalById { base_product_id })) => {
+                debug!(
+                    "User with id = '{:?}' is requesting  // GET /shipping/local/{}",
+                    user_id, base_product_id
+                );
+                serialize_future(local_shipping_service.get_by_base_product_id(base_product_id))
+            }
+
+            // DELETE /shipping/local/<base_product_id>
+            (&Delete, Some(Route::ShippingLocalById { base_product_id })) => {
+                debug!(
+                    "User with id = '{:?}' is requesting  // DELETE /shipping/local/{}",
+                    user_id, base_product_id
+                );
+                serialize_future(local_shipping_service.delete(base_product_id))
+            }
+
+            // PUT /shipping/local/<base_product_id>
+            (&Put, Some(Route::ShippingLocalById { base_product_id })) => {
+                debug!(
+                    "User with id = '{:?}' is requesting  // PUT /shipping/local/{}",
+                    user_id, base_product_id
+                );
+                serialize_future(
+                    parse_body::<UpdateLocalShipping>(req.body())
+                        .map_err(move |e| {
+                            e.context(format!(
+                                "Parsing body // PUT /shipping/local/{} in UpdateLocalShipping failed!",
+                                base_product_id
+                            )).context(Error::Parse)
+                                .into()
+                        })
+                        .and_then(move |update_local_shipping| local_shipping_service.update(base_product_id, update_local_shipping)),
+                )
+            }
+
+            // POST /shipping/international
+            (&Post, Some(Route::ShippingInternational)) => {
+                debug!("User with id = '{:?}' is requesting  // POST /shipping/international", user_id);
+                serialize_future(
+                    parse_body::<NewInternationalShipping>(req.body())
+                        .map_err(|e| {
+                            e.context("Parsing body // POST /shipping/international in NewInternationalShipping failed!")
+                                .context(Error::Parse)
+                                .into()
+                        })
+                        .and_then(move |new_international_shipping| international_shipping_service.create(new_international_shipping)),
+                )
+            }
+
+            // GET /shipping/international/<base_product_id>
+            (&Get, Some(Route::ShippingInternationalById { base_product_id })) => {
+                debug!(
+                    "User with id = '{:?}' is requesting  // GET /shipping/international/{}",
+                    user_id, base_product_id
+                );
+                serialize_future(international_shipping_service.get_by_base_product_id(base_product_id))
+            }
+
+            // DELETE /shipping/international/<base_product_id>
+            (&Delete, Some(Route::ShippingInternationalById { base_product_id })) => {
+                debug!(
+                    "User with id = '{:?}' is requesting  // DELETE /shipping/international/{}",
+                    user_id, base_product_id
+                );
+                serialize_future(international_shipping_service.delete(base_product_id))
+            }
+
+            // PUT /shipping/international/<base_product_id>
+            (&Put, Some(Route::ShippingInternationalById { base_product_id })) => {
+                debug!(
+                    "User with id = '{:?}' is requesting  // PUT /shipping/international/{}",
+                    user_id, base_product_id
+                );
+                serialize_future(
+                    parse_body::<UpdateInternationalShipping>(req.body())
+                        .map_err(move |e| {
+                            e.context(format!(
+                                "Parsing body // PUT /shipping/international/{} in UpdateInternationalShipping failed!",
+                                base_product_id
+                            )).context(Error::Parse)
+                                .into()
+                        })
+                        .and_then(move |update_international_shipping| {
+                            international_shipping_service.update(base_product_id, update_international_shipping)
+                        }),
+                )
+            }
             // POST /delivery_to
             (&Post, Some(Route::DeliveryTo)) => {
                 debug!("User with id = '{:?}' is requesting  // POST /delivery_to", user_id);

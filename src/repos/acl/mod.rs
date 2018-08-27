@@ -57,6 +57,8 @@ impl ApplicationAcl {
                 permission!(Resource::Restrictions),
                 permission!(Resource::DeliveryFrom),
                 permission!(Resource::DeliveryTo),
+                permission!(Resource::LocalShipping),
+                permission!(Resource::InternationalShipping),
             ],
         );
 
@@ -66,6 +68,16 @@ impl ApplicationAcl {
                 permission!(Resource::Restrictions, Action::Read),
                 permission!(Resource::DeliveryFrom, Action::Read),
                 permission!(Resource::DeliveryTo, Action::Read),
+                permission!(Resource::LocalShipping, Action::Read),
+                permission!(Resource::InternationalShipping, Action::Read),
+            ],
+        );
+
+        hash.insert(
+            StoresRole::StoreManager,
+            vec![
+                permission!(Resource::LocalShipping, Action::All, Scope::Owned),
+                permission!(Resource::InternationalShipping, Action::All, Scope::Owned),
             ],
         );
 
