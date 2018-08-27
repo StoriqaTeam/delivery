@@ -1,7 +1,4 @@
-pub mod delivery_from;
-pub mod delivery_to;
-pub mod international;
-pub mod local;
-pub mod restrictions;
+pub mod company;
+pub mod shippping;
 pub mod types;
 pub mod user_roles;

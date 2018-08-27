@@ -11,14 +11,14 @@ use diesel::Connection;
 use failure::Error as FailureError;
 use failure::Fail;
 
-use stq_types::UserId;
 use stq_static_resources::DeliveryCompany;
+use stq_types::UserId;
 
-use repos::*;
+use models::authorization::*;
+use models::company::{DeliveryTo, DeliveryToRaw, NewDeliveryTo, UpdateDeliveryTo};
 use repos::legacy_acl::*;
 use repos::types::RepoResult;
-use models::company::{DeliveryTo, DeliveryToRaw, NewDeliveryTo, UpdateDeliveryTo};
-use models::authorization::*;
+use repos::*;
 
 use schema::delivery_to::dsl::*;
 

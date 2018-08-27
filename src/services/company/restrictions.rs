@@ -1,4 +1,4 @@
-//! LocalShipping Service, presents CRUD operations
+//! Restriction Service, presents CRUD operations
 use diesel::connection::AnsiTransactionManager;
 use diesel::pg::Pg;
 use diesel::Connection;
@@ -7,29 +7,29 @@ use futures::future::*;
 use futures_cpupool::CpuPool;
 use r2d2::{ManageConnection, Pool};
 
-use stq_types::{BaseProductId, UserId};
-
-use super::types::ServiceFuture;
 use errors::Error;
-use models::{LocalShipping, NewLocalShipping, UpdateLocalShipping};
+use stq_types::UserId;
+
+use models::company::{NewRestriction, Restriction, UpdateRestriction};
 use repos::ReposFactory;
+use services::types::ServiceFuture;
 
-pub trait LocalShippingService {
-    /// Creates new local_shipping
-    fn create(&self, payload: NewLocalShipping) -> ServiceFuture<LocalShipping>;
+pub trait RestrictionService {
+    /// Creates new restriction
+    fn create(&self, payload: NewRestriction) -> ServiceFuture<Restriction>;
 
-    /// Get a local_shipping
-    fn get_by_base_product_id(&self, base_product_id: BaseProductId) -> ServiceFuture<LocalShipping>;
+    /// Get a restriction
+    fn get_by_name(&self, name: String) -> ServiceFuture<Restriction>;
 
-    /// Update a local_shipping
-    fn update(&self, base_product_id_arg: BaseProductId, payload: UpdateLocalShipping) -> ServiceFuture<LocalShipping>;
+    /// Update a restriction
+    fn update(&self, payload: UpdateRestriction) -> ServiceFuture<Restriction>;
 
-    /// Delete a local_shipping
-    fn delete(&self, base_product_id_arg: BaseProductId) -> ServiceFuture<LocalShipping>;
+    /// Delete a restriction
+    fn delete(&self, name: String) -> ServiceFuture<Restriction>;
 }
 
-/// LocalShipping services, responsible for CRUD operations
-pub struct LocalShippingServiceImpl<
+/// Restriction services, responsible for CRUD operations
+pub struct RestrictionServiceImpl<
     T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static,
     M: ManageConnection<Connection = T>,
     F: ReposFactory<T>,
@@ -44,7 +44,7 @@ impl<
         T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static,
         M: ManageConnection<Connection = T>,
         F: ReposFactory<T>,
-    > LocalShippingServiceImpl<T, M, F>
+    > RestrictionServiceImpl<T, M, F>
 {
     pub fn new(db_pool: Pool<M>, cpu_pool: CpuPool, user_id: Option<UserId>, repo_factory: F) -> Self {
         Self {
@@ -60,9 +60,9 @@ impl<
         T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static,
         M: ManageConnection<Connection = T>,
         F: ReposFactory<T>,
-    > LocalShippingService for LocalShippingServiceImpl<T, M, F>
+    > RestrictionService for RestrictionServiceImpl<T, M, F>
 {
-    fn create(&self, payload: NewLocalShipping) -> ServiceFuture<LocalShipping> {
+    fn create(&self, payload: NewRestriction) -> ServiceFuture<Restriction> {
         let db_pool = self.db_pool.clone();
         let repo_factory = self.repo_factory.clone();
         let user_id = self.user_id;
@@ -74,15 +74,15 @@ impl<
                         .get()
                         .map_err(|e| e.context(Error::Connection).into())
                         .and_then(move |conn| {
-                            let local_shippings_repo = repo_factory.create_local_shippings_repo(&*conn, user_id);
-                            local_shippings_repo.create(payload)
+                            let restrictions_repo = repo_factory.create_restrictions_repo(&*conn, user_id);
+                            restrictions_repo.create(payload)
                         })
                 })
-                .map_err(|e| e.context("Service LocalShippings, create endpoint error occured.").into()),
+                .map_err(|e| e.context("Service Restrictions, create endpoint error occured.").into()),
         )
     }
 
-    fn get_by_base_product_id(&self, base_product_id: BaseProductId) -> ServiceFuture<LocalShipping> {
+    fn get_by_name(&self, name: String) -> ServiceFuture<Restriction> {
         let db_pool = self.db_pool.clone();
         let repo_factory = self.repo_factory.clone();
         let user_id = self.user_id;
@@ -94,18 +94,15 @@ impl<
                         .get()
                         .map_err(|e| e.context(Error::Connection).into())
                         .and_then(move |conn| {
-                            let local_shippings_repo = repo_factory.create_local_shippings_repo(&*conn, user_id);
-                            local_shippings_repo.get_by_base_product_id(base_product_id)
+                            let restrictions_repo = repo_factory.create_restrictions_repo(&*conn, user_id);
+                            restrictions_repo.get_by_name(name)
                         })
                 })
-                .map_err(|e| {
-                    e.context("Service LocalShippings, get_by_base_product_id endpoint error occured.")
-                        .into()
-                }),
+                .map_err(|e| e.context("Service Restrictions, get_by_name endpoint error occured.").into()),
         )
     }
 
-    fn update(&self, base_product_id_arg: BaseProductId, payload: UpdateLocalShipping) -> ServiceFuture<LocalShipping> {
+    fn update(&self, payload: UpdateRestriction) -> ServiceFuture<Restriction> {
         let db_pool = self.db_pool.clone();
         let repo_factory = self.repo_factory.clone();
         let user_id = self.user_id;
@@ -117,15 +114,15 @@ impl<
                         .get()
                         .map_err(|e| e.context(Error::Connection).into())
                         .and_then(move |conn| {
-                            let local_shippings_repo = repo_factory.create_local_shippings_repo(&*conn, user_id);
-                            local_shippings_repo.update(base_product_id_arg, payload)
+                            let restrictions_repo = repo_factory.create_restrictions_repo(&*conn, user_id);
+                            restrictions_repo.update(payload)
                         })
                 })
-                .map_err(|e| e.context("Service LocalShippings, update endpoint error occured.").into()),
+                .map_err(|e| e.context("Service Restrictions, update endpoint error occured.").into()),
         )
     }
 
-    fn delete(&self, base_product_id_arg: BaseProductId) -> ServiceFuture<LocalShipping> {
+    fn delete(&self, name: String) -> ServiceFuture<Restriction> {
         let db_pool = self.db_pool.clone();
         let repo_factory = self.repo_factory.clone();
         let user_id = self.user_id;
@@ -137,11 +134,11 @@ impl<
                         .get()
                         .map_err(|e| e.context(Error::Connection).into())
                         .and_then(move |conn| {
-                            let local_shippings_repo = repo_factory.create_local_shippings_repo(&*conn, user_id);
-                            local_shippings_repo.delete(base_product_id_arg)
+                            let restrictions_repo = repo_factory.create_restrictions_repo(&*conn, user_id);
+                            restrictions_repo.delete(name)
                         })
                 })
-                .map_err(|e| e.context("Service LocalShippings, delete endpoint error occured.").into()),
+                .map_err(|e| e.context("Service Restrictions, delete endpoint error occured.").into()),
         )
     }
 }

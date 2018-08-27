@@ -17,8 +17,8 @@ use stq_types::UserId;
 use models::authorization::*;
 use models::company::{DeliveryFrom, NewDeliveryFrom, UpdateDeliveryFrom};
 use repos::legacy_acl::*;
-use repos::*;
 use repos::types::RepoResult;
+use repos::*;
 
 use schema::delivery_from::dsl::*;
 

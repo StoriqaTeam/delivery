@@ -15,10 +15,10 @@ use failure::Fail;
 
 use stq_types::UserId;
 
-use repos::types::RepoResult;
-use models::company::{NewRestriction, Restriction, UpdateRestriction};
 use models::authorization::*;
+use models::company::{NewRestriction, Restriction, UpdateRestriction};
 use repos::legacy_acl::*;
+use repos::types::RepoResult;
 use repos::*;
 
 use schema::restrictions::dsl::*;

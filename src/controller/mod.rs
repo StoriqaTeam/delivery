@@ -30,11 +30,10 @@ use errors::Error;
 use models::*;
 use repos::acl::RolesCacheImpl;
 use repos::repo_factory::*;
-use services::delivery_from::{DeliveryFromService, DeliveryFromServiceImpl};
-use services::delivery_to::{DeliveryToService, DeliveryToServiceImpl};
-use services::international::{InternationalShippingService, InternationalShippingServiceImpl};
-use services::local::{LocalShippingService, LocalShippingServiceImpl};
-use services::restrictions::{RestrictionService, RestrictionServiceImpl};
+use services::company::{
+    DeliveryFromService, DeliveryFromServiceImpl, DeliveryToService, DeliveryToServiceImpl, RestrictionService, RestrictionServiceImpl,
+};
+use services::shippping::{InternationalShippingService, InternationalShippingServiceImpl, LocalShippingService, LocalShippingServiceImpl};
 use services::user_roles::{UserRolesService, UserRolesServiceImpl};
 
 /// Controller handles route parsing and calling `Service` layer

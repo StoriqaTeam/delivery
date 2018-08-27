@@ -1,5 +1,5 @@
-use stq_static_resources::DeliveryCompany;
 use schema::delivery_from;
+use stq_static_resources::DeliveryCompany;
 
 #[derive(Serialize, Deserialize, Queryable, Insertable, Debug)]
 #[table_name = "delivery_from"]

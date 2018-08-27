@@ -10,10 +10,10 @@ use r2d2::{ManageConnection, Pool};
 use stq_static_resources::DeliveryCompany;
 use stq_types::UserId;
 
-use super::types::ServiceFuture;
 use errors::Error;
 use models::company::{DeliveryFrom, NewDeliveryFrom, UpdateDeliveryFrom};
 use repos::ReposFactory;
+use services::types::ServiceFuture;
 
 pub trait DeliveryFromService {
     /// Creates new delivery_from
