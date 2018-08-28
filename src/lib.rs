@@ -26,6 +26,10 @@ extern crate serde_json;
 extern crate sha3;
 extern crate tokio_core;
 extern crate uuid;
+extern crate validator;
+#[macro_use]
+extern crate validator_derive;
+
 #[macro_use]
 extern crate stq_http;
 extern crate stq_logging;
@@ -55,6 +59,7 @@ use tokio_core::reactor::Core;
 use stq_http::controller::Application;
 
 use repos::acl::RolesCacheImpl;
+use repos::countries::CountryCacheImpl;
 use repos::repo_factory::ReposFactoryImpl;
 
 /// Starts new web service from provided `Config`
@@ -78,9 +83,11 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: &Option
 
     // Roles cache
     let roles_cache = RolesCacheImpl::default();
+    // Countries cache
+    let countries_cache = CountryCacheImpl::default();
 
     // Repo factory
-    let repo_factory = ReposFactoryImpl::new(roles_cache.clone());
+    let repo_factory = ReposFactoryImpl::new(roles_cache.clone(), countries_cache.clone());
 
     let http_config = stq_http::client::Config {
         http_client_retries: config.client.http_client_retries,

@@ -14,6 +14,7 @@ use hyper::header::Authorization;
 use hyper::server::Request;
 use hyper::{Delete, Get, Post, Put};
 use r2d2::{ManageConnection, Pool};
+use validator::Validate;
 
 use stq_http::client::ClientHandle;
 use stq_http::controller::Controller;
@@ -33,6 +34,7 @@ use repos::repo_factory::*;
 use services::company::{
     DeliveryFromService, DeliveryFromServiceImpl, DeliveryToService, DeliveryToServiceImpl, RestrictionService, RestrictionServiceImpl,
 };
+use services::countries::{CountriesService, CountriesServiceImpl};
 use services::shippping::{InternationalShippingService, InternationalShippingServiceImpl, LocalShippingService, LocalShippingServiceImpl};
 use services::user_roles::{UserRolesService, UserRolesServiceImpl};
 
@@ -114,6 +116,8 @@ impl<
 
         let delivery_from_service =
             DeliveryFromServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), user_id, self.repo_factory.clone());
+
+        let countries_service = CountriesServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), user_id, self.repo_factory.clone());
 
         let path = req.path().to_string();
 
@@ -433,6 +437,32 @@ impl<
                             .into(),
                     ))
                 }
+            }
+
+            // GET /countries
+            (&Get, Some(Route::Countries)) => {
+                debug!("User with id = '{:?}' is requesting  // GET /countries", user_id);
+                serialize_future(countries_service.get_all())
+            }
+
+            // POST /countries
+            (&Post, Some(Route::Countries)) => {
+                debug!("User with id = '{:?}' is requesting  // POST /countries", user_id);
+                serialize_future(
+                    parse_body::<NewCountry>(req.body())
+                        .map_err(|e| {
+                            e.context("Parsing body // POST /countries in NewCountry failed!")
+                                .context(Error::Parse)
+                                .into()
+                        })
+                        .and_then(move |new_country| {
+                            new_country
+                                .validate()
+                                .map_err(|e| e.context("Validation of NewCountry failed!").context(Error::Parse).into())
+                                .into_future()
+                                .and_then(move |_| countries_service.create(new_country))
+                        }),
+                )
             }
 
             // Fallback

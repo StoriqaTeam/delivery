@@ -17,16 +17,21 @@ pub trait ReposFactory<C: Connection<Backend = Pg, TransactionManager = AnsiTran
     fn create_delivery_to_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<DeliveryToRepo + 'a>;
     fn create_delivery_from_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<DeliveryFromRepo + 'a>;
     fn create_companies_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<CompaniesRepo + 'a>;
+    fn create_countries_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<CountriesRepo + 'a>;
 }
 
 #[derive(Clone)]
 pub struct ReposFactoryImpl {
     roles_cache: RolesCacheImpl,
+    country_cache: CountryCacheImpl,
 }
 
 impl ReposFactoryImpl {
-    pub fn new(roles_cache: RolesCacheImpl) -> Self {
-        Self { roles_cache }
+    pub fn new(roles_cache: RolesCacheImpl, country_cache: CountryCacheImpl) -> Self {
+        Self {
+            roles_cache,
+            country_cache,
+        }
     }
 
     pub fn get_roles<'a, C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static>(
@@ -89,6 +94,11 @@ impl<C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 
     fn create_companies_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<CompaniesRepo + 'a> {
         let acl = self.get_acl(db_conn, user_id);
         Box::new(CompaniesRepoImpl::new(db_conn, acl)) as Box<CompaniesRepo>
+    }
+
+    fn create_countries_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<CountriesRepo + 'a> {
+        let acl = self.get_acl(db_conn, user_id);
+        Box::new(CountriesRepoImpl::new(db_conn, acl, self.country_cache.clone())) as Box<CountriesRepo>
     }
 }
 
@@ -155,6 +165,10 @@ pub mod tests {
 
         fn create_companies_repo<'a>(&self, _db_conn: &'a C, _user_id: Option<UserId>) -> Box<CompaniesRepo + 'a> {
             Box::new(CompaniesRepoMock::default()) as Box<CompaniesRepo>
+        }
+
+        fn create_countries_repo<'a>(&self, _db_conn: &'a C, _user_id: Option<UserId>) -> Box<CountriesRepo + 'a> {
+            Box::new(CountriesRepoMock::default()) as Box<CountriesRepo>
         }
     }
 
@@ -292,6 +306,66 @@ pub mod tests {
                 pickup_price: None,
                 companies: vec![],
             })
+        }
+    }
+
+    #[derive(Clone, Default)]
+    pub struct CountriesRepoMock;
+
+    impl CountriesRepo for CountriesRepoMock {
+        /// Find specific country by label
+        fn find(&self, label_arg: String) -> RepoResult<Option<Country>> {
+            Ok(Some(Country {
+                label: label_arg,
+                name: vec![],
+                children: vec![],
+                level: 3,
+                parent_label: Some("EEE".to_string()),
+            }))
+        }
+
+        /// Creates new country
+        fn create(&self, payload: NewCountry) -> RepoResult<Country> {
+            Ok(Country {
+                label: payload.label,
+                name: vec![],
+                children: vec![],
+                level: payload.level,
+                parent_label: None,
+            })
+        }
+
+        /// Returns all countries as a tree
+        fn get_all(&self) -> RepoResult<Country> {
+            Ok(create_mock_countries())
+        }
+    }
+
+    fn create_mock_countries() -> Country {
+        let country_3 = Country {
+            label: "rus".to_string(),
+            name: vec![],
+            children: vec![],
+            level: 3,
+            parent_label: Some("EEE".to_string()),
+        };
+        let country_2 = Country {
+            label: "EEE".to_string(),
+            name: vec![],
+            children: vec![country_3],
+            level: 2,
+            parent_label: Some("ALL".to_string()),
+        };
+        let country_1 = Country {
+            label: "ALL".to_string(),
+            name: vec![],
+            children: vec![country_2],
+            level: 1,
+            parent_label: Some("root".to_string()),
+        };
+        Country {
+            children: vec![country_1],
+            ..Default::default()
         }
     }
 
