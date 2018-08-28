@@ -1,0 +1,9 @@
+CREATE TABLE packages (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR NOT NULL,
+    max_size DOUBLE PRECISION NOT NULL,
+    min_size DOUBLE PRECISION NOT NULL,
+    max_weight DOUBLE PRECISION NOT NULL,
+    min_weight DOUBLE PRECISION NOT NULL,
+    deliveries_to JSONB NOT NULL
+);
