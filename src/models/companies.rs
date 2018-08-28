@@ -7,7 +7,7 @@ use schema::companies;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct DeliveriesFrom {
-    country_labels: Vec<String>,
+    pub country_labels: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Associations, Queryable, Debug)]
