@@ -175,7 +175,7 @@ pub mod tests {
         let new_countries = create_new_countries("rus");
         let work = service.create(new_countries);
         let result = core.run(work).unwrap();
-        assert_eq!(result.label, "root".to_string());
+        assert_eq!(result.label, "rus".to_string());
     }
 
 }

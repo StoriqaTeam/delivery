@@ -183,8 +183,6 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 mod tests {
     use super::*;
     use models::*;
-    use serde_json;
-    use stq_static_resources::{Language, Translation};
 
     fn create_mock_countries() -> Country {
         let country_3 = Country {

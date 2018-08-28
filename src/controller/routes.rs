@@ -60,7 +60,7 @@ pub fn create_route_parser() -> RouteParser<Route> {
             .map(|id| Route::RoleById { id })
     });
 
-    route_parser.add_route(r"^/countries", || Route::Countries);
+    route_parser.add_route(r"^/countries$", || Route::Countries);
 
     route_parser
 }
