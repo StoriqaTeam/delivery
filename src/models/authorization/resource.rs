@@ -9,6 +9,7 @@ pub enum Resource {
     DeliveryTo,
     LocalShipping,
     InternationalShipping,
+    Countries,
 }
 
 impl fmt::Display for Resource {
@@ -20,6 +21,7 @@ impl fmt::Display for Resource {
             Resource::DeliveryTo => write!(f, "delivery_to"),
             Resource::LocalShipping => write!(f, "local_shipping"),
             Resource::InternationalShipping => write!(f, "international_shipping"),
+            Resource::Countries => write!(f, "countries"),
         }
     }
 }

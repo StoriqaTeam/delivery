@@ -1,4 +1,13 @@
 table! {
+    countries (label) {
+        label -> Varchar,
+        name -> Jsonb,
+        parent_label -> Nullable<Varchar>,
+        level -> Int4,
+    }
+}
+
+table! {
     delivery_from (id) {
         id -> Int4,
         company_id -> Varchar,
@@ -56,6 +65,7 @@ table! {
 }
 
 allow_tables_to_appear_in_same_query!(
+    countries,
     delivery_from,
     delivery_to,
     international_shipping,

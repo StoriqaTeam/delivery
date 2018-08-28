@@ -17,6 +17,7 @@ pub enum Route {
     DeliveryToFiltersCountry,
     DeliveryFrom,
     DeliveryFromFiltersCompany,
+    Countries,
 }
 
 pub fn create_route_parser() -> RouteParser<Route> {
@@ -58,6 +59,8 @@ pub fn create_route_parser() -> RouteParser<Route> {
             .and_then(|string_id| string_id.parse().ok())
             .map(|id| Route::RoleById { id })
     });
+
+    route_parser.add_route(r"^/countries", || Route::Countries);
 
     route_parser
 }
