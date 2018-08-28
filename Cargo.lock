@@ -72,17 +72,17 @@ dependencies = [
 [[package]]
 name = "bb8"
 version = "0.1.0"
-source = "git+https://github.com/StoriqaTeam/bb8#706974109cde1f6a651e38ca4d30dd820598b839"
+source = "git+https://github.com/StoriqaTeam/bb8#2521a9c3d08a741f64a728f990e5cc332c5b3428"
 dependencies = [
  "futures 0.1.23 (registry+https://github.com/rust-lang/crates.io-index)",
- "owning_ref 0.3.3 (git+https://github.com/khuey/owning-ref-rs?branch=owning_handle_owner)",
+ "owning_ref 0.4.0 (git+https://github.com/khuey/owning-ref-rs?branch=owning_handle_owner)",
  "tokio-core 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "bb8-postgres"
 version = "0.1.0"
-source = "git+https://github.com/StoriqaTeam/bb8#706974109cde1f6a651e38ca4d30dd820598b839"
+source = "git+https://github.com/StoriqaTeam/bb8#2521a9c3d08a741f64a728f990e5cc332c5b3428"
 dependencies = [
  "bb8 0.1.0 (git+https://github.com/StoriqaTeam/bb8)",
  "futures 0.1.23 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1012,8 +1012,8 @@ dependencies = [
 
 [[package]]
 name = "owning_ref"
-version = "0.3.3"
-source = "git+https://github.com/khuey/owning-ref-rs?branch=owning_handle_owner#7b182f83cfb130765ac4093a9320095b2f6e1db0"
+version = "0.4.0"
+source = "git+https://github.com/khuey/owning-ref-rs?branch=owning_handle_owner#d9ae958d1cd689a148ec14c9cf7367c54f6ddd57"
 dependencies = [
  "stable_deref_trait 1.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -2224,7 +2224,7 @@ dependencies = [
 "checksum openssl 0.9.24 (registry+https://github.com/rust-lang/crates.io-index)" = "a3605c298474a3aa69de92d21139fb5e2a81688d308262359d85cdd0d12a7985"
 "checksum openssl-sys 0.9.35 (registry+https://github.com/rust-lang/crates.io-index)" = "912f301a749394e1025d9dcddef6106ddee9252620e6d0a0e5f8d0681de9b129"
 "checksum ordermap 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)" = "b81cf3b8cb96aa0e73bbedfcdc9708d09fec2854ba8d474be4e6f666d7379e8b"
-"checksum owning_ref 0.3.3 (git+https://github.com/khuey/owning-ref-rs?branch=owning_handle_owner)" = "<none>"
+"checksum owning_ref 0.4.0 (git+https://github.com/khuey/owning-ref-rs?branch=owning_handle_owner)" = "<none>"
 "checksum percent-encoding 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "31010dd2e1ac33d5b46a5b413495239882813e0369f8ed8a5e266f173602f831"
 "checksum phf 0.7.22 (registry+https://github.com/rust-lang/crates.io-index)" = "7d37a244c75a9748e049225155f56dbcb98fe71b192fd25fd23cb914b5ad62f2"
 "checksum phf_codegen 0.7.22 (registry+https://github.com/rust-lang/crates.io-index)" = "4e4048fe7dd7a06b8127ecd6d3803149126e9b33c7558879846da3a63f734f2b"

@@ -7,7 +7,7 @@ use schema::packages;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct DeliveriesTo {
-    country_labels: String,
+    pub country_labels: String,
 }
 
 #[derive(Serialize, Deserialize, Associations, Queryable, Debug, QueryableByName)]

@@ -78,6 +78,17 @@ table! {
 }
 
 table! {
+    products (id) {
+        id -> Int4,
+        base_product_id -> Int4,
+        store_id -> Int4,
+        company_package_id -> Int4,
+        price -> Nullable<Float8>,
+        deliveries_to -> Jsonb,
+    }
+}
+
+table! {
     restrictions (id) {
         id -> Int4,
         name -> Varchar,
@@ -97,6 +108,7 @@ table! {
 
 joinable!(companies_packages -> companies (company_id));
 joinable!(companies_packages -> packages (package_id));
+joinable!(products -> companies_packages (company_package_id));
 
 allow_tables_to_appear_in_same_query!(
     companies,
@@ -107,6 +119,7 @@ allow_tables_to_appear_in_same_query!(
     international_shipping,
     local_shipping,
     packages,
+    products,
     restrictions,
     roles,
 );

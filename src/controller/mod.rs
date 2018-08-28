@@ -35,6 +35,7 @@ use services::company::{
     DeliveryFromService, DeliveryFromServiceImpl, DeliveryToService, DeliveryToServiceImpl, RestrictionService, RestrictionServiceImpl,
 };
 use services::countries::{CountriesService, CountriesServiceImpl};
+use services::products::{ProductsService, ProductsServiceImpl};
 use services::shippping::{InternationalShippingService, InternationalShippingServiceImpl, LocalShippingService, LocalShippingServiceImpl};
 use services::user_roles::{UserRolesService, UserRolesServiceImpl};
 
@@ -118,6 +119,8 @@ impl<
             DeliveryFromServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), user_id, self.repo_factory.clone());
 
         let countries_service = CountriesServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), user_id, self.repo_factory.clone());
+
+        let products_service = ProductsServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), user_id, self.repo_factory.clone());
 
         let path = req.path().to_string();
 
@@ -245,6 +248,60 @@ impl<
                                 .into()
                         })
                         .and_then(move |update_local_shipping| local_shipping_service.update(base_product_id, update_local_shipping)),
+                )
+            }
+
+            // POST /products
+            (&Post, Some(Route::Products)) => {
+                debug!("User with id = '{:?}' is requesting  // POST /products", user_id);
+                serialize_future(
+                    parse_body::<NewProducts>(req.body())
+                        .map_err(|e| {
+                            e.context("Parsing body // POST /products in NewProducts failed!")
+                                .context(Error::Parse)
+                                .into()
+                        })
+                        .and_then(move |new_products| products_service.create(new_products)),
+                )
+            }
+
+            // GET /products/<base_product_id>
+            (&Get, Some(Route::ProductsById { base_product_id })) => {
+                debug!("User with id = '{:?}' is requesting  // GET /products/{}", user_id, base_product_id);
+                serialize_future(products_service.get_by_base_product_id(base_product_id))
+            }
+
+            // DELETE /products/<base_product_id>
+            (&Delete, Some(Route::ProductsById { base_product_id })) => {
+                debug!(
+                    "User with id = '{:?}' is requesting  // DELETE /products/{}",
+                    user_id, base_product_id
+                );
+                serialize_future(products_service.delete(base_product_id))
+            }
+
+            // PUT /products/<base_product_id>/company_package/<company_package_id>
+            (
+                &Put,
+                Some(Route::ProductsByIdAndCompanyPackageId {
+                    base_product_id,
+                    company_package_id,
+                }),
+            ) => {
+                debug!(
+                    "User with id = '{:?}' is requesting  // PUT /products/{}/company_package/{}",
+                    user_id, base_product_id, company_package_id
+                );
+                serialize_future(
+                    parse_body::<UpdateProducts>(req.body())
+                        .map_err(move |e| {
+                            e.context(format!(
+                                "Parsing body // PUT /products/{}/company_package/{} in UpdateProducts failed!",
+                                base_product_id, company_package_id
+                            )).context(Error::Parse)
+                                .into()
+                        })
+                        .and_then(move |update_products| products_service.update(base_product_id, company_package_id, update_products)),
                 )
             }
 
