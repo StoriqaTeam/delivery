@@ -8,6 +8,17 @@ table! {
 }
 
 table! {
+    companies (id) {
+        id -> Int4,
+        name -> Varchar,
+        label -> Varchar,
+        description -> Nullable<Varchar>,
+        deliveries_from -> Jsonb,
+        logo -> Varchar,
+    }
+}
+
+table! {
     delivery_from (id) {
         id -> Int4,
         company_id -> Varchar,
@@ -77,6 +88,7 @@ table! {
 }
 
 allow_tables_to_appear_in_same_query!(
+    companies,
     countries,
     delivery_from,
     delivery_to,

@@ -16,6 +16,7 @@ pub trait ReposFactory<C: Connection<Backend = Pg, TransactionManager = AnsiTran
     fn create_international_shippings_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<InternationalShippingRepo + 'a>;
     fn create_delivery_to_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<DeliveryToRepo + 'a>;
     fn create_delivery_from_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<DeliveryFromRepo + 'a>;
+    fn create_companies_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<CompaniesRepo + 'a>;
     fn create_countries_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<CountriesRepo + 'a>;
 }
 
@@ -90,6 +91,11 @@ impl<C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 
         Box::new(DeliveryFromRepoImpl::new(db_conn, acl)) as Box<DeliveryFromRepo>
     }
 
+    fn create_companies_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<CompaniesRepo + 'a> {
+        let acl = self.get_acl(db_conn, user_id);
+        Box::new(CompaniesRepoImpl::new(db_conn, acl)) as Box<CompaniesRepo>
+    }
+
     fn create_countries_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<CountriesRepo + 'a> {
         let acl = self.get_acl(db_conn, user_id);
         Box::new(CountriesRepoImpl::new(db_conn, acl, self.country_cache.clone())) as Box<CountriesRepo>
@@ -155,6 +161,10 @@ pub mod tests {
 
         fn create_delivery_from_repo<'a>(&self, _db_conn: &'a C, _user_id: Option<UserId>) -> Box<DeliveryFromRepo + 'a> {
             Box::new(DeliveryFromRepoMock::default()) as Box<DeliveryFromRepo>
+        }
+
+        fn create_companies_repo<'a>(&self, _db_conn: &'a C, _user_id: Option<UserId>) -> Box<CompaniesRepo + 'a> {
+            Box::new(CompaniesRepoMock::default()) as Box<CompaniesRepo>
         }
 
         fn create_countries_repo<'a>(&self, _db_conn: &'a C, _user_id: Option<UserId>) -> Box<CountriesRepo + 'a> {
@@ -511,6 +521,69 @@ pub mod tests {
                 company_id,
                 country,
                 restriction_name: "".to_string(),
+            })
+        }
+    }
+
+    #[derive(Clone, Default)]
+    pub struct CompaniesRepoMock;
+
+    impl CompaniesRepo for CompaniesRepoMock {
+        fn create(&self, payload: NewCompany) -> RepoResult<Company> {
+            Ok(Company {
+                id: 1,
+                name: "UPS Russia".to_string(),
+                label: "UPS".to_string(),
+                description: None,
+                deliveries_from: DeliveriesFrom { country_labels: vec![] },
+                logo: "".to_string(),
+            })
+        }
+
+        fn list(&self) -> RepoResult<Vec<Company>> {
+            Ok(vec![
+                Company {
+                    id: 1,
+                    name: "UPS Russia".to_string(),
+                    label: "UPS".to_string(),
+                    description: None,
+                    deliveries_from: DeliveriesFrom { country_labels: vec![] },
+                    logo: "".to_string(),
+                },
+                Company {
+                    id: 2,
+                    name: "UPS USA".to_string(),
+                    label: "UPS".to_string(),
+                    description: None,
+                    deliveries_from: DeliveriesFrom { country_labels: vec![] },
+                    logo: "".to_string(),
+                },
+            ])
+        }
+
+        fn find(&self, company_id: i32) -> RepoResult<Option<Company>> {
+            Ok(None)
+        }
+
+        fn update(&self, id_arg: i32, payload: UpdateCompany) -> RepoResult<Company> {
+            Ok(Company {
+                id: id_arg,
+                name: payload.name.unwrap(),
+                label: payload.label.unwrap(),
+                description: payload.description,
+                deliveries_from: payload.deliveries_from.unwrap(),
+                logo: payload.logo.unwrap(),
+            })
+        }
+
+        fn delete(&self, id_arg: i32) -> RepoResult<Company> {
+            Ok(Company {
+                id: id_arg,
+                name: "UPS USA".to_string(),
+                label: "UPS".to_string(),
+                description: None,
+                deliveries_from: DeliveriesFrom { country_labels: vec![] },
+                logo: "".to_string(),
             })
         }
     }
