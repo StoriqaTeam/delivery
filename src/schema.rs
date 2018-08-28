@@ -47,6 +47,18 @@ table! {
 }
 
 table! {
+    packages (id) {
+        id -> Int4,
+        name -> Varchar,
+        max_size -> Float8,
+        min_size -> Float8,
+        max_weight -> Float8,
+        min_weight -> Float8,
+        deliveries_to -> Jsonb,
+    }
+}
+
+table! {
     restrictions (id) {
         id -> Int4,
         name -> Varchar,
@@ -70,6 +82,7 @@ allow_tables_to_appear_in_same_query!(
     delivery_to,
     international_shipping,
     local_shipping,
+    packages,
     restrictions,
     roles,
 );
