@@ -4,6 +4,7 @@ use std::fmt;
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Resource {
     UserRoles,
+    Companies,
     Restrictions,
     DeliveryFrom,
     DeliveryTo,
@@ -15,6 +16,7 @@ impl fmt::Display for Resource {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Resource::UserRoles => write!(f, "user roles"),
+            Resource::Companies => write!(f, "companies"),
             Resource::Restrictions => write!(f, "restrictions"),
             Resource::DeliveryFrom => write!(f, "delivery_from"),
             Resource::DeliveryTo => write!(f, "delivery_to"),
