@@ -5,19 +5,35 @@ use stq_types::*;
 #[derive(Clone, Debug, PartialEq)]
 pub enum Route {
     Roles,
-    RoleById { id: RoleId },
-    RolesByUserId { user_id: UserId },
+    RoleById {
+        id: RoleId,
+    },
+    RolesByUserId {
+        user_id: UserId,
+    },
     Restrictions,
     ShippingLocal,
-    ShippingLocalById { base_product_id: BaseProductId },
+    ShippingLocalById {
+        base_product_id: BaseProductId,
+    },
     ShippingInternational,
-    ShippingInternationalById { base_product_id: BaseProductId },
+    ShippingInternationalById {
+        base_product_id: BaseProductId,
+    },
     DeliveryTo,
     DeliveryToFiltersCompany,
     DeliveryToFiltersCountry,
     DeliveryFrom,
     DeliveryFromFiltersCompany,
     Countries,
+    Products,
+    ProductsById {
+        base_product_id: BaseProductId,
+    },
+    ProductsByIdAndCompanyPackageId {
+        base_product_id: BaseProductId,
+        company_package_id: i32,
+    },
 }
 
 pub fn create_route_parser() -> RouteParser<Route> {
@@ -61,6 +77,29 @@ pub fn create_route_parser() -> RouteParser<Route> {
     });
 
     route_parser.add_route(r"^/countries$", || Route::Countries);
+
+    route_parser.add_route(r"^/products$", || Route::Products);
+    route_parser.add_route_with_params(r"^/products/(\d+)$", |params| {
+        params
+            .get(0)
+            .and_then(|string_id| string_id.parse().ok())
+            .map(|base_product_id| Route::ProductsById { base_product_id })
+    });
+    route_parser.add_route_with_params(r"^/products/(\d+)/company_package/(\d+)$", |params| {
+        if let Some(base_product_id_s) = params.get(0) {
+            if let Some(company_package_id_s) = params.get(1) {
+                if let Ok(base_product_id) = base_product_id_s.parse().map(BaseProductId) {
+                    if let Ok(company_package_id) = company_package_id_s.parse() {
+                        return Some(Route::ProductsByIdAndCompanyPackageId {
+                            base_product_id,
+                            company_package_id,
+                        });
+                    }
+                }
+            }
+        }
+        None
+    });
 
     route_parser
 }

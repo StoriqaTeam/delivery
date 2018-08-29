@@ -62,6 +62,7 @@ impl ApplicationAcl {
                 permission!(Resource::Countries),
                 permission!(Resource::Packages),
                 permission!(Resource::CompaniesPackages),
+                permission!(Resource::Products),
             ],
         );
 
@@ -76,6 +77,7 @@ impl ApplicationAcl {
                 permission!(Resource::Countries, Action::Read),
                 permission!(Resource::Packages, Action::Read),
                 permission!(Resource::CompaniesPackages, Action::Read),
+                permission!(Resource::Products, Action::Read),
             ],
         );
 
@@ -84,6 +86,7 @@ impl ApplicationAcl {
             vec![
                 permission!(Resource::LocalShipping, Action::All, Scope::Owned),
                 permission!(Resource::InternationalShipping, Action::All, Scope::Owned),
+                permission!(Resource::Products, Action::All, Scope::Owned),
             ],
         );
 

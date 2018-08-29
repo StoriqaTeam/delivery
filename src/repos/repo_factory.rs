@@ -18,6 +18,7 @@ pub trait ReposFactory<C: Connection<Backend = Pg, TransactionManager = AnsiTran
     fn create_delivery_from_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<DeliveryFromRepo + 'a>;
     fn create_companies_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<CompaniesRepo + 'a>;
     fn create_countries_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<CountriesRepo + 'a>;
+    fn create_products_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<ProductsRepo + 'a>;
 }
 
 #[derive(Clone)]
@@ -100,6 +101,11 @@ impl<C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 
         let acl = self.get_acl(db_conn, user_id);
         Box::new(CountriesRepoImpl::new(db_conn, acl, self.country_cache.clone())) as Box<CountriesRepo>
     }
+
+    fn create_products_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<ProductsRepo + 'a> {
+        let acl = self.get_acl(db_conn, user_id);
+        Box::new(ProductsRepoImpl::new(db_conn, acl)) as Box<ProductsRepo>
+    }
 }
 
 #[cfg(test)]
@@ -169,6 +175,10 @@ pub mod tests {
 
         fn create_countries_repo<'a>(&self, _db_conn: &'a C, _user_id: Option<UserId>) -> Box<CountriesRepo + 'a> {
             Box::new(CountriesRepoMock::default()) as Box<CountriesRepo>
+        }
+
+        fn create_products_repo<'a>(&self, _db_conn: &'a C, _user_id: Option<UserId>) -> Box<ProductsRepo + 'a> {
+            Box::new(ProductsRepoMock::default()) as Box<ProductsRepo>
         }
     }
 
@@ -305,6 +315,59 @@ pub mod tests {
                 pickup: false,
                 pickup_price: None,
                 companies: vec![],
+            })
+        }
+    }
+
+    #[derive(Clone, Default)]
+    pub struct ProductsRepoMock;
+
+    impl ProductsRepo for ProductsRepoMock {
+        /// Create a new products
+        fn create(&self, payload: NewProducts) -> RepoResult<Products> {
+            Ok(Products {
+                id: 1,
+                base_product_id: payload.base_product_id,
+                store_id: payload.store_id,
+                company_package_id: payload.company_package_id,
+                price: payload.price,
+                deliveries_to: payload.deliveries_to,
+            })
+        }
+
+        /// Get a products
+        fn get_by_base_product_id(&self, base_product_id: BaseProductId) -> RepoResult<Vec<Products>> {
+            Ok(vec![Products {
+                id: 1,
+                base_product_id: base_product_id,
+                store_id: StoreId(1),
+                company_package_id: 1,
+                price: None,
+                deliveries_to: vec![],
+            }])
+        }
+
+        /// Update a products
+        fn update(&self, base_product_id_arg: BaseProductId, company_package_id: i32, payload: UpdateProducts) -> RepoResult<Products> {
+            Ok(Products {
+                id: 1,
+                base_product_id: base_product_id_arg,
+                store_id: StoreId(1),
+                company_package_id: company_package_id,
+                price: payload.price,
+                deliveries_to: payload.deliveries_to.unwrap_or_default(),
+            })
+        }
+
+        /// Delete a products
+        fn delete(&self, base_product_id_arg: BaseProductId) -> RepoResult<Products> {
+            Ok(Products {
+                id: 1,
+                base_product_id: base_product_id_arg,
+                store_id: StoreId(1),
+                company_package_id: 1,
+                price: None,
+                deliveries_to: vec![],
             })
         }
     }
@@ -561,8 +624,33 @@ pub mod tests {
             ])
         }
 
-        fn find(&self, company_id: i32) -> RepoResult<Option<Company>> {
+        fn find(&self, _company_id: i32) -> RepoResult<Option<Company>> {
             Ok(None)
+        }
+
+        fn find_deliveries_from(&self, country: String) -> RepoResult<Vec<Company>> {
+            Ok(vec![
+                Company {
+                    id: 1,
+                    name: "UPS Russia".to_string(),
+                    label: "UPS".to_string(),
+                    description: None,
+                    deliveries_from: DeliveriesFrom {
+                        country_labels: vec![country.clone()],
+                    },
+                    logo: "".to_string(),
+                },
+                Company {
+                    id: 2,
+                    name: "UPS USA".to_string(),
+                    label: "UPS".to_string(),
+                    description: None,
+                    deliveries_from: DeliveriesFrom {
+                        country_labels: vec![country.clone()],
+                    },
+                    logo: "".to_string(),
+                },
+            ])
         }
 
         fn update(&self, id_arg: i32, payload: UpdateCompany) -> RepoResult<Company> {

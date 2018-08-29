@@ -13,6 +13,7 @@ pub enum Resource {
     Countries,
     Packages,
     CompaniesPackages,
+    Products,
 }
 
 impl fmt::Display for Resource {
@@ -28,6 +29,7 @@ impl fmt::Display for Resource {
             Resource::Countries => write!(f, "countries"),
             Resource::Packages => write!(f, "packages"),
             Resource::CompaniesPackages => write!(f, "companies_packages"),
+            Resource::Products => write!(f, "products"),
         }
     }
 }
