@@ -4,7 +4,6 @@ use diesel;
 use diesel::connection::AnsiTransactionManager;
 use diesel::pg::Pg;
 use diesel::prelude::*;
-use diesel::query_dsl::LoadQuery;
 use diesel::query_dsl::RunQueryDsl;
 use diesel::Connection;
 
@@ -32,6 +31,9 @@ pub trait CompaniesRepo {
     /// Find specific company by ID
     fn find(&self, company_id: i32) -> RepoResult<Option<Company>>;
 
+    /// Returns list of companies supported by the country
+    fn find_deliveries_from(&self, country: String) -> RepoResult<Vec<Company>>;
+
     /// Update a company
     fn update(&self, id_arg: i32, payload: UpdateCompany) -> RepoResult<Company>;
 
@@ -48,10 +50,6 @@ pub struct CompaniesRepoImpl<'a, T: Connection<Backend = Pg, TransactionManager 
 impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> CompaniesRepoImpl<'a, T> {
     pub fn new(db_conn: &'a T, acl: Box<Acl<Resource, Action, Scope, FailureError, Company>>) -> Self {
         Self { db_conn, acl }
-    }
-
-    fn execute_query<Ty: Send + 'static, U: LoadQuery<T, Ty> + Send + 'static>(&self, query: U) -> RepoResult<Ty> {
-        query.get_result::<Ty>(self.db_conn).map_err(From::from)
     }
 }
 
@@ -102,6 +100,27 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 None => Ok(None),
             })
             .map_err(|e: FailureError| e.context(format!("Find company with id: {} error occured", id_arg)).into())
+    }
+
+    /// Returns list of companies supported by the country
+    fn find_deliveries_from(&self, country: String) -> RepoResult<Vec<Company>> {
+        debug!("Find in companies with country {:?}.", country);
+
+        let query_str = format!("SELECT * FROM companies WHERE deliveries_from @> {};", country);
+        diesel::sql_query(query_str)
+            .get_results(self.db_conn)
+            .map_err(From::from)
+            .and_then(|raw: Vec<CompanyRaw>| raw.into_iter().map(Company::from_raw).collect())
+            .and_then(|results: Vec<Company>| {
+                for result in &results {
+                    acl::check(&*self.acl, Resource::Companies, Action::Read, self, Some(&result))?;
+                }
+                Ok(results)
+            })
+            .map_err(|e: FailureError| {
+                e.context(format!("Find in companies with country {:?} error occured", country))
+                    .into()
+            })
     }
 
     fn update(&self, id_arg: i32, payload: UpdateCompany) -> RepoResult<Company> {

@@ -1,5 +1,6 @@
 pub mod acl;
 pub mod companies;
+pub mod companies_packages;
 pub mod company;
 pub mod countries;
 pub mod packages;
@@ -10,6 +11,7 @@ pub mod user_roles;
 
 pub use self::acl::*;
 pub use self::companies::*;
+pub use self::companies_packages::*;
 pub use self::company::*;
 pub use self::countries::*;
 pub use self::packages::*;

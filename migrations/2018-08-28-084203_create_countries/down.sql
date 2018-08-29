@@ -1,1 +1,1 @@
-DROP TABLE countries;
+DROP TABLE IF EXISTS countries;
