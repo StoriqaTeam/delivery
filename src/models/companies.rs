@@ -10,7 +10,7 @@ pub struct DeliveriesFrom {
     pub country_labels: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, Associations, Queryable, Debug)]
+#[derive(Serialize, Deserialize, Associations, Queryable, Debug, QueryableByName)]
 #[table_name = "companies"]
 pub struct CompanyRaw {
     pub id: i32,

@@ -1,1 +1,1 @@
-DROP TABLE packages;
+DROP TABLE IF EXISTS packages;

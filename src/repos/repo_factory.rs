@@ -532,11 +532,11 @@ pub mod tests {
         fn create(&self, payload: NewCompany) -> RepoResult<Company> {
             Ok(Company {
                 id: 1,
-                name: "UPS Russia".to_string(),
-                label: "UPS".to_string(),
-                description: None,
-                deliveries_from: DeliveriesFrom { country_labels: vec![] },
-                logo: "".to_string(),
+                name: payload.name,
+                label: payload.label,
+                description: payload.description,
+                deliveries_from: payload.deliveries_from,
+                logo: payload.logo,
             })
         }
 

@@ -61,6 +61,7 @@ impl ApplicationAcl {
                 permission!(Resource::InternationalShipping),
                 permission!(Resource::Countries),
                 permission!(Resource::Packages),
+                permission!(Resource::CompaniesPackages),
             ],
         );
 
@@ -74,6 +75,7 @@ impl ApplicationAcl {
                 permission!(Resource::InternationalShipping, Action::Read),
                 permission!(Resource::Countries, Action::Read),
                 permission!(Resource::Packages, Action::Read),
+                permission!(Resource::CompaniesPackages, Action::Read),
             ],
         );
 

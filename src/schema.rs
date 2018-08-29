@@ -1,13 +1,4 @@
 table! {
-    countries (label) {
-        label -> Varchar,
-        name -> Jsonb,
-        parent_label -> Nullable<Varchar>,
-        level -> Int4,
-    }
-}
-
-table! {
     companies (id) {
         id -> Int4,
         name -> Varchar,
@@ -15,6 +6,23 @@ table! {
         description -> Nullable<Varchar>,
         deliveries_from -> Jsonb,
         logo -> Varchar,
+    }
+}
+
+table! {
+    companies_packages (id) {
+        id -> Int4,
+        company_id -> Int4,
+        package_id -> Int4,
+    }
+}
+
+table! {
+    countries (label) {
+        label -> Varchar,
+        name -> Jsonb,
+        parent_label -> Nullable<Varchar>,
+        level -> Int4,
     }
 }
 
@@ -87,8 +95,12 @@ table! {
     }
 }
 
+joinable!(companies_packages -> companies (company_id));
+joinable!(companies_packages -> packages (package_id));
+
 allow_tables_to_appear_in_same_query!(
     companies,
+    companies_packages,
     countries,
     delivery_from,
     delivery_to,
