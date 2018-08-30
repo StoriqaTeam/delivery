@@ -24,6 +24,10 @@ pub enum Route {
     CompanyById {
         company_id: CompanyId,
     },
+    Packages,
+    PackagesById {
+        package_id: PackageId,
+    },
 }
 
 pub fn create_route_parser() -> RouteParser<Route> {
@@ -74,6 +78,14 @@ pub fn create_route_parser() -> RouteParser<Route> {
             .get(0)
             .and_then(|string_id| string_id.parse().ok())
             .map(|company_id| Route::CompanyById { company_id })
+    });
+
+    route_parser.add_route(r"^/packages$", || Route::Packages);
+    route_parser.add_route_with_params(r"^/packages/(\d+)$", |params| {
+        params
+            .get(0)
+            .and_then(|string_id| string_id.parse().ok())
+            .map(|package_id| Route::PackagesById { package_id })
     });
 
     route_parser
