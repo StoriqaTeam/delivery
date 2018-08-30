@@ -63,6 +63,7 @@ impl ApplicationAcl {
                 permission!(Resource::Packages),
                 permission!(Resource::CompaniesPackages),
                 permission!(Resource::Products),
+                permission!(Resource::Pickups),
             ],
         );
 
@@ -78,6 +79,7 @@ impl ApplicationAcl {
                 permission!(Resource::Packages, Action::Read),
                 permission!(Resource::CompaniesPackages, Action::Read),
                 permission!(Resource::Products, Action::Read),
+                permission!(Resource::Pickups, Action::Read),
             ],
         );
 
@@ -87,6 +89,7 @@ impl ApplicationAcl {
                 permission!(Resource::LocalShipping, Action::All, Scope::Owned),
                 permission!(Resource::InternationalShipping, Action::All, Scope::Owned),
                 permission!(Resource::Products, Action::All, Scope::Owned),
+                permission!(Resource::Pickups, Action::All, Scope::Owned),
             ],
         );
 

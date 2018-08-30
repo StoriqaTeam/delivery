@@ -1,5 +1,5 @@
 //! REPO Products table. Products is an entity that
-//! contains info about local shipping of base_product.
+//! contains info about international shipping of base_product.
 
 use diesel;
 use diesel::connection::AnsiTransactionManager;

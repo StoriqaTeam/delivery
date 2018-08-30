@@ -27,7 +27,7 @@ use schema::packages::dsl as DslPackages;
 
 /// Companies packages repository for handling companies_packages model
 pub trait CompaniesPackagesRepo {
-    /// Create a new company
+    /// Create a new companies_packages
     fn create(&self, payload: NewCompaniesPackages) -> RepoResult<CompaniesPackages>;
 
     /// Getting available packages satisfying the constraints
@@ -77,6 +77,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             .filter(DslPackages::min_size.ge(size))
             .filter(DslPackages::max_weight.le(size))
             .filter(DslPackages::min_weight.ge(size))
+            .order(DslCompanies::label)
             .select((id, DslCompanies::label, DslPackages::name, DslPackages::deliveries_to));
 
         query
@@ -112,7 +113,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         let query = diesel::delete(filtered);
         query
             .get_result(self.db_conn)
-            .map_err(move |e| e.context(format!("delete company id: {}.", id_arg)).into())
+            .map_err(move |e| e.context(format!("delete companies_packages id: {}.", id_arg)).into())
     }
 }
 
