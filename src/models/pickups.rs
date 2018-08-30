@@ -1,11 +1,12 @@
 use schema::pickups;
-use stq_types::{BaseProductId, ProductPrice};
+use stq_types::{BaseProductId, ProductPrice, StoreId};
 
 #[derive(Serialize, Deserialize, Associations, Queryable, Debug)]
 #[table_name = "pickups"]
 pub struct Pickups {
     pub id: i32,
     pub base_product_id: BaseProductId,
+    pub store_id: StoreId,
     pub pickup: bool,
     pub price: Option<ProductPrice>,
 }
@@ -14,6 +15,7 @@ pub struct Pickups {
 #[table_name = "pickups"]
 pub struct NewPickups {
     pub base_product_id: BaseProductId,
+    pub store_id: StoreId,
     pub pickup: bool,
     pub price: Option<ProductPrice>,
 }

@@ -81,6 +81,7 @@ table! {
     pickups (id) {
         id -> Int4,
         base_product_id -> Int4,
+        store_id -> Int4,
         pickup -> Bool,
         price -> Nullable<Float8>,
     }

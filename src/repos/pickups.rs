@@ -1,4 +1,5 @@
-//! Repo Pickups table.
+//! Repo Pickups table. Pickups is an entity that
+//! contains info about local shipping of base_product.
 
 use diesel;
 use diesel::connection::AnsiTransactionManager;
@@ -18,8 +19,10 @@ use repos::legacy_acl::*;
 use repos::types::RepoResult;
 
 use models::pickups::{NewPickups, Pickups, UpdatePickups};
+use models::roles::UserRole;
 use repos::acl;
 use schema::pickups::dsl::*;
+use schema::roles::dsl as Roles;
 
 /// pickups repository for handling pickups model
 pub trait PickupsRepo {
@@ -88,10 +91,25 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> CheckScope<Scope, Pickups>
     for PickupsRepoImpl<'a, T>
 {
-    fn is_in_scope(&self, _user_id: UserId, scope: &Scope, _obj: Option<&Pickups>) -> bool {
+    fn is_in_scope(&self, user_id_arg: UserId, scope: &Scope, obj: Option<&Pickups>) -> bool {
         match *scope {
             Scope::All => true,
-            Scope::Owned => false,
+            Scope::Owned => {
+                if let Some(obj) = obj {
+                    Roles::roles
+                        .filter(Roles::user_id.eq(user_id_arg))
+                        .get_results::<UserRole>(self.db_conn)
+                        .map_err(From::from)
+                        .map(|user_roles_arg| {
+                            user_roles_arg
+                                .iter()
+                                .any(|user_role_arg| user_role_arg.data.clone().map(|data| data == obj.store_id.0).unwrap_or_default())
+                        })
+                        .unwrap_or_else(|_: FailureError| false)
+                } else {
+                    false
+                }
+            }
         }
     }
 }
