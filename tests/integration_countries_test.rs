@@ -23,7 +23,7 @@ static MOCK_COUNTRY_ENDPOINT: &'static str = "countries";
 
 // super user
 fn create_country(
-    label: String,
+    label: CountryLabel,
     core: &mut tokio_core::reactor::Core,
     http_client: &HttpClientHandle,
     base_url: String,
@@ -33,7 +33,7 @@ fn create_country(
         label,
         name: serde_json::from_str("[{\"lang\" : \"en\", \"text\" : \"root\"}]").unwrap(),
         level: 3,
-        parent_label: Some("EEE".to_string()),
+        parent_label: Some("EEE".to_string().into()),
     };
 
     let body: String = serde_json::to_string(&new_country).unwrap().to_string();
@@ -54,7 +54,7 @@ fn test_country_superuser_crud() {
     let base_url = common::setup();
     let user_id = UserId(1);
     let mut rng = thread_rng();
-    let label: String = rng.sample_iter(&Alphanumeric).take(7).collect();
+    let label = CountryLabel(rng.sample_iter(&Alphanumeric).take(7).collect::<String>());
     let url_crud = format!("{}/{}", base_url, MOCK_COUNTRY_ENDPOINT.to_string());
 
     // create
@@ -77,7 +77,7 @@ fn test_country_regular_user_crud() {
     let (mut core, http_client) = common::make_utils();
     let base_url = common::setup();
     let mut rng = thread_rng();
-    let label: String = rng.sample_iter(&Alphanumeric).take(7).collect();
+    let label = CountryLabel(rng.sample_iter(&Alphanumeric).take(7).collect::<String>());
     let url_crud = format!("{}/{}", base_url, MOCK_COUNTRY_ENDPOINT.to_string());
 
     // create user for test acl
@@ -121,7 +121,7 @@ fn test_country_unauthorized() {
     let (mut core, http_client) = common::make_utils();
     let base_url = common::setup();
     let mut rng = thread_rng();
-    let label: String = rng.sample_iter(&Alphanumeric).take(7).collect();
+    let label = CountryLabel(rng.sample_iter(&Alphanumeric).take(7).collect::<String>());
     let url_crud = format!("{}/{}", base_url, MOCK_COUNTRY_ENDPOINT.to_string());
 
     // create

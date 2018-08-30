@@ -7,7 +7,7 @@ use futures::future::*;
 use futures_cpupool::CpuPool;
 use r2d2::{ManageConnection, Pool};
 
-use stq_types::{BaseProductId, UserId};
+use stq_types::{BaseProductId, CompanyPackageId, UserId};
 
 use errors::Error;
 use models::{NewProducts, Products, UpdateProducts};
@@ -22,7 +22,12 @@ pub trait ProductsService {
     fn get_by_base_product_id(&self, base_product_id: BaseProductId) -> ServiceFuture<Vec<Products>>;
 
     /// Update a product
-    fn update(&self, base_product_id_arg: BaseProductId, company_package_id: i32, payload: UpdateProducts) -> ServiceFuture<Products>;
+    fn update(
+        &self,
+        base_product_id_arg: BaseProductId,
+        company_package_id: CompanyPackageId,
+        payload: UpdateProducts,
+    ) -> ServiceFuture<Products>;
 
     /// Delete a products
     fn delete(&self, base_product_id_arg: BaseProductId) -> ServiceFuture<Products>;
@@ -102,7 +107,12 @@ impl<
         )
     }
 
-    fn update(&self, base_product_id_arg: BaseProductId, company_package_id: i32, payload: UpdateProducts) -> ServiceFuture<Products> {
+    fn update(
+        &self,
+        base_product_id_arg: BaseProductId,
+        company_package_id: CompanyPackageId,
+        payload: UpdateProducts,
+    ) -> ServiceFuture<Products> {
         let db_pool = self.db_pool.clone();
         let repo_factory = self.repo_factory.clone();
         let user_id = self.user_id;

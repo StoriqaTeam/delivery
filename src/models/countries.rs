@@ -7,6 +7,7 @@ use serde_json;
 use validator::Validate;
 
 use stq_static_resources::{Language, Translation};
+use stq_types::CountryLabel;
 
 use errors::Error;
 use models::validation_rules::*;
@@ -16,9 +17,9 @@ use schema::countries;
 #[derive(Debug, Serialize, Deserialize, Associations, Queryable, Clone)]
 #[table_name = "countries"]
 pub struct RawCountry {
-    pub label: String,
+    pub label: CountryLabel,
     pub name: serde_json::Value,
-    pub parent_label: Option<String>,
+    pub parent_label: Option<CountryLabel>,
     pub level: i32,
 }
 
@@ -26,27 +27,27 @@ pub struct RawCountry {
 #[derive(Serialize, Deserialize, Insertable, Clone, Validate, Debug)]
 #[table_name = "countries"]
 pub struct NewCountry {
-    pub label: String,
+    pub label: CountryLabel,
     #[validate(custom = "validate_translation")]
     pub name: serde_json::Value,
-    pub parent_label: Option<String>,
+    pub parent_label: Option<CountryLabel>,
     #[validate(range(min = "1", max = "3"))]
     pub level: i32,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Country {
-    pub label: String,
+    pub label: CountryLabel,
     pub name: Vec<Translation>,
     pub level: i32,
-    pub parent_label: Option<String>,
+    pub parent_label: Option<CountryLabel>,
     pub children: Vec<Country>,
 }
 
 impl Default for Country {
     fn default() -> Self {
         Self {
-            label: "root".to_string(),
+            label: "root".to_string().into(),
             name: vec![Translation::new(Language::En, "root".to_string())],
             children: vec![],
             level: 0,

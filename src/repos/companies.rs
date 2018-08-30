@@ -10,7 +10,7 @@ use diesel::Connection;
 use failure::Error as FailureError;
 use failure::Fail;
 
-use stq_types::UserId;
+use stq_types::{CompanyId, CountryLabel, UserId};
 
 use models::authorization::*;
 use repos::legacy_acl::*;
@@ -29,16 +29,16 @@ pub trait CompaniesRepo {
     fn list(&self) -> RepoResult<Vec<Company>>;
 
     /// Find specific company by ID
-    fn find(&self, company_id: i32) -> RepoResult<Option<Company>>;
+    fn find(&self, id_arg: CompanyId) -> RepoResult<Option<Company>>;
 
     /// Returns list of companies supported by the country
-    fn find_deliveries_from(&self, country: String) -> RepoResult<Vec<Company>>;
+    fn find_deliveries_from(&self, country: CountryLabel) -> RepoResult<Vec<Company>>;
 
     /// Update a company
-    fn update(&self, id_arg: i32, payload: UpdateCompany) -> RepoResult<Company>;
+    fn update(&self, id_arg: CompanyId, payload: UpdateCompany) -> RepoResult<Company>;
 
     /// Delete a company
-    fn delete(&self, company_id: i32) -> RepoResult<Company>;
+    fn delete(&self, id_arg: CompanyId) -> RepoResult<Company>;
 }
 
 /// Implementation of CompaniesRepo trait
@@ -84,7 +84,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     }
 
     /// Find specific company by ID
-    fn find(&self, id_arg: i32) -> RepoResult<Option<Company>> {
+    fn find(&self, id_arg: CompanyId) -> RepoResult<Option<Company>> {
         debug!("Find in company with id {}.", id_arg);
         let query = companies.find(id_arg);
         query
@@ -103,7 +103,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     }
 
     /// Returns list of companies supported by the country
-    fn find_deliveries_from(&self, country: String) -> RepoResult<Vec<Company>> {
+    fn find_deliveries_from(&self, country: CountryLabel) -> RepoResult<Vec<Company>> {
         debug!("Find in companies with country {:?}.", country);
 
         let query_str = format!("SELECT * FROM companies WHERE deliveries_from @> {};", country);
@@ -123,8 +123,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             })
     }
 
-    fn update(&self, id_arg: i32, payload: UpdateCompany) -> RepoResult<Company> {
-        debug!("Updating company payload {:?}.", payload);
+    fn update(&self, id_arg: CompanyId, payload: UpdateCompany) -> RepoResult<Company> {
+        debug!("Updating company {} with payload {:?}.", id_arg, payload);
         let payload = payload.to_raw()?;
         let query = companies.filter(id.eq(id_arg.clone()));
 
@@ -145,8 +145,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             .map_err(|e: FailureError| e.context(format!("Updating company payload {:?} failed.", payload)).into())
     }
 
-    fn delete(&self, id_arg: i32) -> RepoResult<Company> {
-        debug!("delete company by company_id: {}.", id_arg,);
+    fn delete(&self, id_arg: CompanyId) -> RepoResult<Company> {
+        debug!("delete company by company_id: {}.", id_arg);
 
         acl::check(&*self.acl, Resource::Companies, Action::Delete, self, None)?;
         let filtered = companies.filter(id.eq(id_arg.clone()));

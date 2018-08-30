@@ -6,7 +6,7 @@ use diesel::query_dsl::RunQueryDsl;
 use diesel::Connection;
 use failure::Error as FailureError;
 
-use stq_types::UserId;
+use stq_types::{CountryLabel, UserId};
 
 use models::authorization::*;
 use models::{Country, NewCountry, RawCountry};
@@ -28,7 +28,7 @@ pub struct CountriesRepoImpl<'a, T: Connection<Backend = Pg, TransactionManager 
 
 pub trait CountriesRepo {
     /// Find specific country by label
-    fn find(&self, label_arg: String) -> RepoResult<Option<Country>>;
+    fn find(&self, label_arg: CountryLabel) -> RepoResult<Option<Country>>;
 
     /// Creates new country
     fn create(&self, payload: NewCountry) -> RepoResult<Country>;
@@ -45,7 +45,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 
 impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> CountriesRepo for CountriesRepoImpl<'a, T> {
     /// Find specific country by label
-    fn find(&self, label_arg: String) -> RepoResult<Option<Country>> {
+    fn find(&self, label_arg: CountryLabel) -> RepoResult<Option<Country>> {
         debug!("Find in countries with label {}.", label_arg);
         acl::check(&*self.acl, Resource::Countries, Action::Read, self, None)?;
         self.get_all().map(|root| get_country(&root, label_arg))
@@ -84,7 +84,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     }
 }
 
-fn create_tree(countries_: &[RawCountry], parent_label_arg: Option<String>) -> RepoResult<Vec<Country>> {
+fn create_tree(countries_: &[RawCountry], parent_label_arg: Option<CountryLabel>) -> RepoResult<Vec<Country>> {
     let mut branch = vec![];
     for country in countries_ {
         if country.parent_label == parent_label_arg {
@@ -97,7 +97,7 @@ fn create_tree(countries_: &[RawCountry], parent_label_arg: Option<String>) -> R
     Ok(branch)
 }
 
-pub fn remove_unused_countries(mut country: Country, used_countries_labels: &[String], stack_level: i32) -> Country {
+pub fn remove_unused_countries(mut country: Country, used_countries_labels: &[CountryLabel], stack_level: i32) -> Country {
     let mut children = vec![];
     for country_child in country.children {
         if stack_level == 0 {
@@ -129,7 +129,7 @@ pub fn clear_child_countries(mut country: Country, stack_level: i32) -> Country 
     country
 }
 
-pub fn get_parent_country(country: &Country, child_label: String, stack_level: i32) -> Option<Country> {
+pub fn get_parent_country(country: &Country, child_label: CountryLabel, stack_level: i32) -> Option<Country> {
     if stack_level != 0 {
         country
             .children
@@ -143,7 +143,7 @@ pub fn get_parent_country(country: &Country, child_label: String, stack_level: i
     }
 }
 
-pub fn get_country(country: &Country, country_label: String) -> Option<Country> {
+pub fn get_country(country: &Country, country_label: CountryLabel) -> Option<Country> {
     if country.label == country_label {
         Some(country.clone())
     } else {
@@ -183,28 +183,29 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 mod tests {
     use super::*;
     use models::*;
+    use stq_types::CountryLabel;
 
     fn create_mock_countries() -> Country {
         let country_3 = Country {
-            label: "rus".to_string(),
+            label: "rus".to_string().into(),
             name: vec![],
             children: vec![],
             level: 3,
-            parent_label: Some("EEE".to_string()),
+            parent_label: Some("EEE".to_string().into()),
         };
         let country_2 = Country {
-            label: "EEE".to_string(),
+            label: "EEE".to_string().into(),
             name: vec![],
             children: vec![country_3],
             level: 2,
-            parent_label: Some("ALL".to_string()),
+            parent_label: Some("ALL".to_string().into()),
         };
         let country_1 = Country {
-            label: "ALL".to_string(),
+            label: "ALL".to_string().into(),
             name: vec![],
             children: vec![country_2],
             level: 1,
-            parent_label: Some("root".to_string()),
+            parent_label: Some("root".to_string().into()),
         };
         Country {
             children: vec![country_1],
@@ -215,20 +216,20 @@ mod tests {
     #[test]
     fn test_parent_countries() {
         let country = create_mock_countries();
-        let child_label = "rus".to_string();
+        let child_label = CountryLabel("rus".to_string());
         let new_country = country
             .children
             .into_iter()
             .find(|country_child| get_parent_country(&country_child, child_label.clone(), 2).is_some())
             .unwrap();
-        assert_eq!(new_country.label, "ALL".to_string());
+        assert_eq!(new_country.label, "ALL".to_string().into());
     }
 
     #[test]
     fn test_get_country() {
         let country = create_mock_countries();
-        let child_label = "rus".to_string();
+        let child_label = CountryLabel("rus".to_string());
         let new_country = get_country(&country, child_label.clone()).unwrap();
-        assert_eq!(new_country.label, child_label.clone());
+        assert_eq!(new_country.label, child_label.clone().into());
     }
 }

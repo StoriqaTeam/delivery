@@ -36,10 +36,10 @@ fn create_products(
     let new_products = NewProducts {
         base_product_id,
         store_id: StoreId(1),
-        company_package_id: 1,
+        company_package_id: CompanyPackageId(1),
         price: None,
         deliveries_to: vec![DeliveriesTo {
-            country_labels: "rus".to_string(),
+            country_labels: "rus".to_string().into(),
         }],
     };
 

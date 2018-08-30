@@ -11,7 +11,7 @@ use diesel::Connection;
 use failure::Error as FailureError;
 use failure::Fail;
 
-use stq_types::UserId;
+use stq_types::{CountryLabel, PackageId, UserId};
 
 use models::authorization::*;
 use models::packages::{NewPackages, Packages, PackagesRaw, UpdatePackages};
@@ -27,13 +27,13 @@ pub trait PackagesRepo {
     fn create(&self, payload: NewPackages) -> RepoResult<Packages>;
 
     /// Returns list of packages supported by the country
-    fn find_deliveries_to(&self, country: String) -> RepoResult<Vec<Packages>>;
+    fn find_deliveries_to(&self, country: CountryLabel) -> RepoResult<Vec<Packages>>;
 
     /// Update a packages
-    fn update(&self, id: i32, payload: UpdatePackages) -> RepoResult<Packages>;
+    fn update(&self, id: PackageId, payload: UpdatePackages) -> RepoResult<Packages>;
 
     /// Delete a packages
-    fn delete(&self, id: i32) -> RepoResult<Packages>;
+    fn delete(&self, id: PackageId) -> RepoResult<Packages>;
 }
 
 /// Implementation of UserRoles trait
@@ -68,7 +68,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     }
 
     /// Returns list of packages supported by the country
-    fn find_deliveries_to(&self, country: String) -> RepoResult<Vec<Packages>> {
+    fn find_deliveries_to(&self, country: CountryLabel) -> RepoResult<Vec<Packages>> {
         debug!("Find in packages with country {:?}.", country);
 
         let query_str = format!("SELECT * FROM packages WHERE deliveries_to @> {};", country);
@@ -88,7 +88,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             })
     }
 
-    fn update(&self, id_arg: i32, payload: UpdatePackages) -> RepoResult<Packages> {
+    fn update(&self, id_arg: PackageId, payload: UpdatePackages) -> RepoResult<Packages> {
         debug!("Updating packages_ payload {:?}.", payload);
         let payload = payload.to_raw()?;
         self.execute_query(packages.filter(id.eq(id_arg)))
@@ -106,7 +106,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             .map_err(|e: FailureError| e.context(format!("Updating packages payload {:?} failed.", payload)).into())
     }
 
-    fn delete(&self, id_arg: i32) -> RepoResult<Packages> {
+    fn delete(&self, id_arg: PackageId) -> RepoResult<Packages> {
         debug!("delete packages_ id: {}.", id_arg);
 
         acl::check(&*self.acl, Resource::Packages, Action::Delete, self, None)?;

@@ -32,7 +32,11 @@ pub enum Route {
     },
     ProductsByIdAndCompanyPackageId {
         base_product_id: BaseProductId,
-        company_package_id: i32,
+        company_package_id: CompanyPackageId,
+    },
+    Companies,
+    CompanyById {
+        company_id: CompanyId,
     },
 }
 
@@ -89,7 +93,7 @@ pub fn create_route_parser() -> RouteParser<Route> {
         if let Some(base_product_id_s) = params.get(0) {
             if let Some(company_package_id_s) = params.get(1) {
                 if let Ok(base_product_id) = base_product_id_s.parse().map(BaseProductId) {
-                    if let Ok(company_package_id) = company_package_id_s.parse() {
+                    if let Ok(company_package_id) = company_package_id_s.parse().map(CompanyPackageId) {
                         return Some(Route::ProductsByIdAndCompanyPackageId {
                             base_product_id,
                             company_package_id,
@@ -99,6 +103,14 @@ pub fn create_route_parser() -> RouteParser<Route> {
             }
         }
         None
+    });
+
+    route_parser.add_route(r"^/companies$", || Route::Companies);
+    route_parser.add_route_with_params(r"^/companies/(\d+)$", |params| {
+        params
+            .get(0)
+            .and_then(|string_id| string_id.parse().ok())
+            .map(|company_id| Route::CompanyById { company_id })
     });
 
     route_parser
