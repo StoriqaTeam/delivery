@@ -341,14 +341,19 @@ pub mod tests {
                 id: 1,
                 base_product_id: base_product_id,
                 store_id: StoreId(1),
-                company_package_id: 1,
+                company_package_id: CompanyPackageId(1),
                 price: None,
                 deliveries_to: vec![],
             }])
         }
 
         /// Update a products
-        fn update(&self, base_product_id_arg: BaseProductId, company_package_id: i32, payload: UpdateProducts) -> RepoResult<Products> {
+        fn update(
+            &self,
+            base_product_id_arg: BaseProductId,
+            company_package_id: CompanyPackageId,
+            payload: UpdateProducts,
+        ) -> RepoResult<Products> {
             Ok(Products {
                 id: 1,
                 base_product_id: base_product_id_arg,
@@ -365,7 +370,7 @@ pub mod tests {
                 id: 1,
                 base_product_id: base_product_id_arg,
                 store_id: StoreId(1),
-                company_package_id: 1,
+                company_package_id: CompanyPackageId(1),
                 price: None,
                 deliveries_to: vec![],
             })
@@ -377,13 +382,13 @@ pub mod tests {
 
     impl CountriesRepo for CountriesRepoMock {
         /// Find specific country by label
-        fn find(&self, label_arg: String) -> RepoResult<Option<Country>> {
+        fn find(&self, label_arg: CountryLabel) -> RepoResult<Option<Country>> {
             Ok(Some(Country {
                 label: label_arg,
                 name: vec![],
                 children: vec![],
                 level: 3,
-                parent_label: Some("EEE".to_string()),
+                parent_label: Some("EEE".to_string().into()),
             }))
         }
 
@@ -406,25 +411,25 @@ pub mod tests {
 
     fn create_mock_countries() -> Country {
         let country_3 = Country {
-            label: "rus".to_string(),
+            label: "rus".to_string().into(),
             name: vec![],
             children: vec![],
             level: 3,
-            parent_label: Some("EEE".to_string()),
+            parent_label: Some("EEE".to_string().into()),
         };
         let country_2 = Country {
-            label: "EEE".to_string(),
+            label: "EEE".to_string().into(),
             name: vec![],
             children: vec![country_3],
             level: 2,
-            parent_label: Some("ALL".to_string()),
+            parent_label: Some("ALL".to_string().into()),
         };
         let country_1 = Country {
-            label: "ALL".to_string(),
+            label: "ALL".to_string().into(),
             name: vec![],
             children: vec![country_2],
             level: 1,
-            parent_label: Some("root".to_string()),
+            parent_label: Some("root".to_string().into()),
         };
         Country {
             children: vec![country_1],
@@ -594,7 +599,7 @@ pub mod tests {
     impl CompaniesRepo for CompaniesRepoMock {
         fn create(&self, payload: NewCompany) -> RepoResult<Company> {
             Ok(Company {
-                id: 1,
+                id: CompanyId(1),
                 name: payload.name,
                 label: payload.label,
                 description: payload.description,
@@ -606,7 +611,7 @@ pub mod tests {
         fn list(&self) -> RepoResult<Vec<Company>> {
             Ok(vec![
                 Company {
-                    id: 1,
+                    id: CompanyId(1),
                     name: "UPS Russia".to_string(),
                     label: "UPS".to_string(),
                     description: None,
@@ -614,7 +619,7 @@ pub mod tests {
                     logo: "".to_string(),
                 },
                 Company {
-                    id: 2,
+                    id: CompanyId(2),
                     name: "UPS USA".to_string(),
                     label: "UPS".to_string(),
                     description: None,
@@ -624,14 +629,14 @@ pub mod tests {
             ])
         }
 
-        fn find(&self, _company_id: i32) -> RepoResult<Option<Company>> {
+        fn find(&self, _company_id: CompanyId) -> RepoResult<Option<Company>> {
             Ok(None)
         }
 
-        fn find_deliveries_from(&self, country: String) -> RepoResult<Vec<Company>> {
+        fn find_deliveries_from(&self, country: CountryLabel) -> RepoResult<Vec<Company>> {
             Ok(vec![
                 Company {
-                    id: 1,
+                    id: CompanyId(1),
                     name: "UPS Russia".to_string(),
                     label: "UPS".to_string(),
                     description: None,
@@ -641,7 +646,7 @@ pub mod tests {
                     logo: "".to_string(),
                 },
                 Company {
-                    id: 2,
+                    id: CompanyId(2),
                     name: "UPS USA".to_string(),
                     label: "UPS".to_string(),
                     description: None,
@@ -653,7 +658,7 @@ pub mod tests {
             ])
         }
 
-        fn update(&self, id_arg: i32, payload: UpdateCompany) -> RepoResult<Company> {
+        fn update(&self, id_arg: CompanyId, payload: UpdateCompany) -> RepoResult<Company> {
             Ok(Company {
                 id: id_arg,
                 name: payload.name.unwrap(),
@@ -664,7 +669,7 @@ pub mod tests {
             })
         }
 
-        fn delete(&self, id_arg: i32) -> RepoResult<Company> {
+        fn delete(&self, id_arg: CompanyId) -> RepoResult<Company> {
             Ok(Company {
                 id: id_arg,
                 name: "UPS USA".to_string(),

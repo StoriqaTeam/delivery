@@ -1,3 +1,4 @@
+pub mod companies;
 pub mod company;
 pub mod countries;
 pub mod products;

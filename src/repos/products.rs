@@ -10,7 +10,7 @@ use diesel::query_dsl::RunQueryDsl;
 use diesel::Connection;
 use failure::Error as FailureError;
 
-use stq_types::{BaseProductId, UserId};
+use stq_types::{BaseProductId, CompanyPackageId, UserId};
 
 use models::authorization::*;
 use models::products::{NewProducts, Products, ProductsRaw, UpdateProducts};
@@ -30,7 +30,12 @@ pub trait ProductsRepo {
     fn get_by_base_product_id(&self, base_product_id: BaseProductId) -> RepoResult<Vec<Products>>;
 
     /// Update a products
-    fn update(&self, base_product_id_arg: BaseProductId, company_package_id: i32, payload: UpdateProducts) -> RepoResult<Products>;
+    fn update(
+        &self,
+        base_product_id_arg: BaseProductId,
+        company_package_id: CompanyPackageId,
+        payload: UpdateProducts,
+    ) -> RepoResult<Products>;
 
     /// Delete a products
     fn delete(&self, base_product_id_arg: BaseProductId) -> RepoResult<Products>;
@@ -89,7 +94,12 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             })
     }
 
-    fn update(&self, base_product_id_arg: BaseProductId, company_package_id_arg: i32, payload: UpdateProducts) -> RepoResult<Products> {
+    fn update(
+        &self,
+        base_product_id_arg: BaseProductId,
+        company_package_id_arg: CompanyPackageId,
+        payload: UpdateProducts,
+    ) -> RepoResult<Products> {
         debug!("Updating products payload {:?}.", payload);
         let payload = payload.to_raw()?;
         self.execute_query(

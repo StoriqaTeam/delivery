@@ -1,24 +1,26 @@
+use stq_types::{CompanyId, CompanyPackageId, PackageId};
+
 use models::packages::DeliveriesTo;
 use schema::companies_packages;
 
 #[derive(Serialize, Deserialize, Associations, Queryable, Debug)]
 #[table_name = "companies_packages"]
 pub struct CompaniesPackages {
-    pub id: i32,
-    pub company_id: i32,
-    pub package_id: i32,
+    pub id: CompanyPackageId,
+    pub company_id: CompanyId,
+    pub package_id: PackageId,
 }
 
 #[derive(Serialize, Deserialize, Insertable, Clone, Debug)]
 #[table_name = "companies_packages"]
 pub struct NewCompaniesPackages {
-    pub company_id: i32,
-    pub package_id: i32,
+    pub company_id: CompanyId,
+    pub package_id: PackageId,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AvailablePackages {
-    pub id: i32,
+    pub id: CompanyPackageId,
     pub name: String,
     pub deliveries_to: Vec<DeliveriesTo>,
 }

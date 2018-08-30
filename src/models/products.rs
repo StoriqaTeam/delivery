@@ -2,7 +2,7 @@ use failure::Error as FailureError;
 use failure::Fail;
 use serde_json;
 
-use stq_types::{BaseProductId, ProductPrice, StoreId};
+use stq_types::{BaseProductId, CompanyPackageId, ProductPrice, StoreId};
 
 use errors::Error;
 use models::packages::DeliveriesTo;
@@ -14,7 +14,7 @@ pub struct ProductsRaw {
     pub id: i32,
     pub base_product_id: BaseProductId,
     pub store_id: StoreId,
-    pub company_package_id: i32,
+    pub company_package_id: CompanyPackageId,
     pub price: Option<ProductPrice>,
     pub deliveries_to: serde_json::Value,
 }
@@ -24,7 +24,7 @@ pub struct ProductsRaw {
 pub struct NewProductsRaw {
     pub base_product_id: BaseProductId,
     pub store_id: StoreId,
-    pub company_package_id: i32,
+    pub company_package_id: CompanyPackageId,
     pub price: Option<ProductPrice>,
     pub deliveries_to: serde_json::Value,
 }
@@ -41,7 +41,7 @@ pub struct Products {
     pub id: i32,
     pub base_product_id: BaseProductId,
     pub store_id: StoreId,
-    pub company_package_id: i32,
+    pub company_package_id: CompanyPackageId,
     pub price: Option<ProductPrice>,
     pub deliveries_to: Vec<DeliveriesTo>,
 }
@@ -65,7 +65,7 @@ impl ProductsRaw {
 pub struct NewProducts {
     pub base_product_id: BaseProductId,
     pub store_id: StoreId,
-    pub company_package_id: i32,
+    pub company_package_id: CompanyPackageId,
     pub price: Option<ProductPrice>,
     pub deliveries_to: Vec<DeliveriesTo>,
 }

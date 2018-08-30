@@ -36,10 +36,10 @@ fn create_products(
     let new_products = NewProducts {
         base_product_id,
         store_id: StoreId(1),
-        company_package_id: 1,
+        company_package_id: CompanyPackageId(1),
         price: None,
         deliveries_to: vec![DeliveriesTo {
-            country_labels: "rus".to_string(),
+            country_labels: "rus".to_string().into(),
         }],
     };
 
@@ -72,6 +72,7 @@ fn get_url_request_by_base_product_id_company_id(base_url: String, base_product_
 }
 
 // test products by superuser
+#[ignore]
 #[test]
 fn test_products_superuser_crud() {
     let (mut core, http_client) = common::make_utils();
@@ -122,6 +123,7 @@ fn test_products_superuser_crud() {
 }
 
 // test products by regular user
+#[ignore]
 #[test]
 fn test_products_regular_user_crud() {
     let (mut core, http_client) = common::make_utils();
@@ -192,6 +194,7 @@ fn test_products_regular_user_crud() {
 }
 
 // test update products without authorization data
+#[ignore]
 #[test]
 fn test_products_unauthorized() {
     let (mut core, http_client) = common::make_utils();
@@ -241,6 +244,7 @@ fn test_products_unauthorized() {
 }
 
 // test products by store manager
+#[ignore]
 #[test]
 fn test_products_store_manager() {
     let (mut core, http_client) = common::make_utils();

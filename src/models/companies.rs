@@ -2,18 +2,20 @@ use failure::Error as FailureError;
 use failure::Fail;
 use serde_json;
 
+use stq_types::{CompanyId, CountryLabel};
+
 use errors::Error;
 use schema::companies;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct DeliveriesFrom {
-    pub country_labels: Vec<String>,
+    pub country_labels: Vec<CountryLabel>,
 }
 
 #[derive(Serialize, Deserialize, Associations, Queryable, Debug, QueryableByName)]
 #[table_name = "companies"]
 pub struct CompanyRaw {
-    pub id: i32,
+    pub id: CompanyId,
     pub name: String,
     pub label: String,
     pub description: Option<String>,
@@ -23,7 +25,7 @@ pub struct CompanyRaw {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Company {
-    pub id: i32,
+    pub id: CompanyId,
     pub name: String,
     pub label: String,
     pub description: Option<String>,

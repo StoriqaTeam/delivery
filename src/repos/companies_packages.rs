@@ -12,7 +12,7 @@ use serde_json;
 use failure::Error as FailureError;
 use failure::Fail;
 
-use stq_types::UserId;
+use stq_types::{CompanyId, CompanyPackageId, UserId};
 
 use models::authorization::*;
 use repos::legacy_acl::*;
@@ -31,10 +31,10 @@ pub trait CompaniesPackagesRepo {
     fn create(&self, payload: NewCompaniesPackages) -> RepoResult<CompaniesPackages>;
 
     /// Getting available packages satisfying the constraints
-    fn get_available_packages(&self, company_id_args: Vec<i32>, size: f64, weight: f64) -> RepoResult<Vec<AvailablePackages>>;
+    fn get_available_packages(&self, company_id_args: Vec<CompanyId>, size: f64, weight: f64) -> RepoResult<Vec<AvailablePackages>>;
 
     /// Delete a companies_packages
-    fn delete(&self, id_arg: i32) -> RepoResult<CompaniesPackages>;
+    fn delete(&self, id_arg: CompanyPackageId) -> RepoResult<CompaniesPackages>;
 }
 
 /// Implementation of CompaniesPackagesRepo trait
@@ -63,7 +63,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     }
 
     /// Getting available packages satisfying the constraints
-    fn get_available_packages(&self, company_id_args: Vec<i32>, size: f64, weight: f64) -> RepoResult<Vec<AvailablePackages>> {
+    fn get_available_packages(&self, company_id_args: Vec<CompanyId>, size: f64, weight: f64) -> RepoResult<Vec<AvailablePackages>> {
         debug!(
             "Find in packages with companies: {:?}, size: {}, weight: {}.",
             company_id_args, size, weight
@@ -83,7 +83,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         query
             .get_results(self.db_conn)
             .map_err(From::from)
-            .and_then(|results: Vec<(i32, String, String, serde_json::Value)>| {
+            .and_then(|results: Vec<(CompanyPackageId, String, String, serde_json::Value)>| {
                 let mut data = vec![];
                 for result in results {
                     let deliveries_to = serde_json::from_value(result.3)
@@ -105,7 +105,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             })
     }
 
-    fn delete(&self, id_arg: i32) -> RepoResult<CompaniesPackages> {
+    fn delete(&self, id_arg: CompanyPackageId) -> RepoResult<CompaniesPackages> {
         debug!("delete companies_packages by id: {}.", id_arg);
 
         acl::check(&*self.acl, Resource::CompaniesPackages, Action::Delete, self, None)?;

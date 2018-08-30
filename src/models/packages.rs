@@ -2,18 +2,20 @@ use failure::Error as FailureError;
 use failure::Fail;
 use serde_json;
 
+use stq_types::{CountryLabel, PackageId};
+
 use errors::Error;
 use schema::packages;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct DeliveriesTo {
-    pub country_labels: String,
+    pub country_labels: CountryLabel,
 }
 
 #[derive(Serialize, Deserialize, Associations, Queryable, Debug, QueryableByName)]
 #[table_name = "packages"]
 pub struct PackagesRaw {
-    pub id: i32,
+    pub id: PackageId,
     pub name: String,
     pub max_size: f64,
     pub min_size: f64,
@@ -24,7 +26,7 @@ pub struct PackagesRaw {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Packages {
-    pub id: i32,
+    pub id: PackageId,
     pub name: String,
     pub max_size: f64,
     pub min_size: f64,

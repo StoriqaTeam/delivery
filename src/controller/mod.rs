@@ -31,6 +31,7 @@ use errors::Error;
 use models::*;
 use repos::acl::RolesCacheImpl;
 use repos::repo_factory::*;
+use services::companies::{CompaniesService, CompaniesServiceImpl};
 use services::company::{
     DeliveryFromService, DeliveryFromServiceImpl, DeliveryToService, DeliveryToServiceImpl, RestrictionService, RestrictionServiceImpl,
 };
@@ -121,6 +122,8 @@ impl<
         let countries_service = CountriesServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), user_id, self.repo_factory.clone());
 
         let products_service = ProductsServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), user_id, self.repo_factory.clone());
+
+        let companies_service = CompaniesServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), user_id, self.repo_factory.clone());
 
         let path = req.path().to_string();
 
@@ -494,6 +497,46 @@ impl<
                             .into(),
                     ))
                 }
+            }
+
+            // POST /companies
+            (&Post, Some(Route::Companies)) => {
+                debug!("User with id = '{:?}' is requesting  // POST /companies", user_id);
+                serialize_future(
+                    parse_body::<NewCompany>(req.body())
+                        .map_err(|e| {
+                            e.context("Parsing body // POST /companies in NewCompanies failed!")
+                                .context(Error::Parse)
+                                .into()
+                        })
+                        .and_then(move |new_delivery| companies_service.create(new_delivery)),
+                )
+            }
+
+            // GET /companies/<company_id>
+            (&Get, Some(Route::CompanyById { company_id })) => {
+                debug!("User with id = '{:?}' is requesting  // GET /companies/{}", user_id, company_id);
+                serialize_future(companies_service.find(company_id))
+            }
+
+            // PUT /companies/<company_id>
+            (&Put, Some(Route::CompanyById { company_id })) => {
+                debug!("User with id = '{:?}' is requesting  // PUT /companies/{}", user_id, company_id);
+                serialize_future(
+                    parse_body::<UpdateCompany>(req.body())
+                        .map_err(move |e| {
+                            e.context(format!("Parsing body // PUT /companies/{} in UpdateCompany failed!", company_id))
+                                .context(Error::Parse)
+                                .into()
+                        })
+                        .and_then(move |update_company| companies_service.update(company_id, update_company)),
+                )
+            }
+
+            // DELETE /companies/<company_id>
+            (&Delete, Some(Route::CompanyById { company_id })) => {
+                debug!("User with id = '{:?}' is requesting  // DELETE /companies/{}", user_id, company_id);
+                serialize_future(companies_service.delete(company_id))
             }
 
             // GET /countries

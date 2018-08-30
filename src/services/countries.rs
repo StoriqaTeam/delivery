@@ -9,7 +9,7 @@ use futures::future::*;
 use futures_cpupool::CpuPool;
 use r2d2::{ManageConnection, Pool};
 
-use stq_types::UserId;
+use stq_types::{CountryLabel, UserId};
 
 use errors::Error;
 
@@ -19,7 +19,7 @@ use repos::ReposFactory;
 
 pub trait CountriesService {
     /// Returns country by label
-    fn get(&self, label: String) -> ServiceFuture<Option<Country>>;
+    fn get(&self, label: CountryLabel) -> ServiceFuture<Option<Country>>;
     /// Creates new country
     fn create(&self, payload: NewCountry) -> ServiceFuture<Country>;
     /// Returns all countries as a tree
@@ -61,7 +61,7 @@ impl<
     > CountriesService for CountriesServiceImpl<T, M, F>
 {
     /// Returns country by label
-    fn get(&self, label: String) -> ServiceFuture<Option<Country>> {
+    fn get(&self, label: CountryLabel) -> ServiceFuture<Option<Country>> {
         let db_pool = self.db_pool.clone();
         let user_id = self.user_id;
         let repo_factory = self.repo_factory.clone();
@@ -150,12 +150,12 @@ pub mod tests {
         }
     }
 
-    pub fn create_new_countries(label: &str) -> NewCountry {
+    pub fn create_new_countries(label: CountryLabel) -> NewCountry {
         NewCountry {
-            label: label.to_string(),
+            label: label,
             name: serde_json::from_str("[{\"lang\" : \"en\", \"text\" : \"root\"}]").unwrap(),
             level: 3,
-            parent_label: Some("EEE".to_string()),
+            parent_label: Some("EEE".to_string().into()),
         }
     }
 
@@ -163,19 +163,19 @@ pub mod tests {
     fn test_get_countries() {
         let mut core = Core::new().unwrap();
         let service = create_countries_service(Some(MOCK_USER_ID));
-        let work = service.get("root".to_string());
+        let work = service.get(CountryLabel("root".to_string()));
         let result = core.run(work).unwrap();
-        assert_eq!(result.unwrap().label, "root".to_string());
+        assert_eq!(result.unwrap().label.0, "root".to_string());
     }
 
     #[test]
     fn test_create_countries() {
         let mut core = Core::new().unwrap();
         let service = create_countries_service(Some(MOCK_USER_ID));
-        let new_countries = create_new_countries("rus");
+        let new_countries = create_new_countries(CountryLabel("rus".to_string()));
         let work = service.create(new_countries);
         let result = core.run(work).unwrap();
-        assert_eq!(result.label, "rus".to_string());
+        assert_eq!(result.label.0, "rus".to_string());
     }
 
 }
