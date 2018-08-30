@@ -12,6 +12,7 @@ use repos::*;
 pub trait ReposFactory<C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static>: Clone + Send + 'static {
     fn create_user_roles_repo<'a>(&self, db_conn: &'a C) -> Box<UserRolesRepo + 'a>;
     fn create_companies_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<CompaniesRepo + 'a>;
+    fn create_companies_packages_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<CompaniesPackagesRepo + 'a>;
     fn create_countries_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<CountriesRepo + 'a>;
     fn create_products_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<ProductsRepo + 'a>;
     fn create_packages_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<PackagesRepo + 'a>;
@@ -68,6 +69,11 @@ impl<C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 
         Box::new(CompaniesRepoImpl::new(db_conn, acl)) as Box<CompaniesRepo>
     }
 
+    fn create_companies_packages_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<CompaniesPackagesRepo + 'a> {
+        let acl = self.get_acl(db_conn, user_id);
+        Box::new(CompaniesPackagesRepoImpl::new(db_conn, acl)) as Box<CompaniesPackagesRepo>
+    }
+
     fn create_countries_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<CountriesRepo + 'a> {
         let acl = self.get_acl(db_conn, user_id);
         Box::new(CountriesRepoImpl::new(db_conn, acl, self.country_cache.clone())) as Box<CountriesRepo>
@@ -122,6 +128,10 @@ pub mod tests {
 
         fn create_companies_repo<'a>(&self, _db_conn: &'a C, _user_id: Option<UserId>) -> Box<CompaniesRepo + 'a> {
             Box::new(CompaniesRepoMock::default()) as Box<CompaniesRepo>
+        }
+
+        fn create_companies_packages_repo<'a>(&self, _db_conn: &'a C, _user_id: Option<UserId>) -> Box<CompaniesPackagesRepo + 'a> {
+            Box::new(CompaniesPackagesRepoMock::default()) as Box<CompaniesPackagesRepo>
         }
 
         fn create_countries_repo<'a>(&self, _db_conn: &'a C, _user_id: Option<UserId>) -> Box<CountriesRepo + 'a> {
@@ -457,6 +467,49 @@ pub mod tests {
                 deliveries_to: vec![DeliveriesTo {
                     country_labels: CountryLabel("rus".to_string()),
                 }],
+            })
+        }
+    }
+
+    #[derive(Clone, Default)]
+    pub struct CompaniesPackagesRepoMock;
+
+    impl CompaniesPackagesRepo for CompaniesPackagesRepoMock {
+        /// Create a new companies_packages
+        fn create(&self, payload: NewCompaniesPackages) -> RepoResult<CompaniesPackages> {
+            Ok(CompaniesPackages {
+                id: CompanyPackageId(1),
+                company_id: payload.company_id,
+                package_id: payload.package_id,
+            })
+        }
+
+        /// Getting available packages satisfying the constraints
+        fn get_available_packages(&self, company_id_args: Vec<CompanyId>, _size: f64, _weight: f64) -> RepoResult<Vec<AvailablePackages>> {
+            Ok(company_id_args
+                .into_iter()
+                .map(|id| AvailablePackages {
+                    id: CompanyPackageId(id.0),
+                    name: "name".to_string(),
+                    deliveries_to: vec![],
+                })
+                .collect())
+        }
+
+        fn get(&self, id_arg: CompanyPackageId) -> RepoResult<CompaniesPackages> {
+            Ok(CompaniesPackages {
+                id: id_arg,
+                company_id: CompanyId(1),
+                package_id: PackageId(1),
+            })
+        }
+
+        /// Delete a companies_packages
+        fn delete(&self, id_arg: CompanyPackageId) -> RepoResult<CompaniesPackages> {
+            Ok(CompaniesPackages {
+                id: id_arg,
+                company_id: CompanyId(1),
+                package_id: PackageId(1),
             })
         }
     }
