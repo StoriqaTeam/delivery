@@ -53,45 +53,34 @@ impl ApplicationAcl {
         hash.insert(
             StoresRole::Superuser,
             vec![
-                permission!(Resource::UserRoles),
-                permission!(Resource::Restrictions),
-                permission!(Resource::DeliveryFrom),
-                permission!(Resource::DeliveryTo),
-                permission!(Resource::LocalShipping),
-                permission!(Resource::InternationalShipping),
+                permission!(Resource::Companies),
+                permission!(Resource::CompaniesPackages),
                 permission!(Resource::Countries),
                 permission!(Resource::Packages),
-                permission!(Resource::CompaniesPackages),
-                permission!(Resource::Products),
                 permission!(Resource::Pickups),
-                permission!(Resource::Companies),
+                permission!(Resource::Products),
+                permission!(Resource::UserRoles),
             ],
         );
 
         hash.insert(
             StoresRole::User,
             vec![
-                permission!(Resource::Restrictions, Action::Read),
-                permission!(Resource::DeliveryFrom, Action::Read),
-                permission!(Resource::DeliveryTo, Action::Read),
-                permission!(Resource::LocalShipping, Action::Read),
-                permission!(Resource::InternationalShipping, Action::Read),
+                permission!(Resource::Companies, Action::Read),
+                permission!(Resource::CompaniesPackages, Action::Read),
                 permission!(Resource::Countries, Action::Read),
                 permission!(Resource::Packages, Action::Read),
-                permission!(Resource::CompaniesPackages, Action::Read),
-                permission!(Resource::Products, Action::Read),
                 permission!(Resource::Pickups, Action::Read),
-                permission!(Resource::Companies, Action::Read),
+                permission!(Resource::Products, Action::Read),
+                permission!(Resource::UserRoles, Action::Read, Scope::Owned),
             ],
         );
 
         hash.insert(
             StoresRole::StoreManager,
             vec![
-                permission!(Resource::LocalShipping, Action::All, Scope::Owned),
-                permission!(Resource::InternationalShipping, Action::All, Scope::Owned),
-                permission!(Resource::Products, Action::All, Scope::Owned),
                 permission!(Resource::Pickups, Action::All, Scope::Owned),
+                permission!(Resource::Products, Action::All, Scope::Owned),
             ],
         );
 
@@ -142,7 +131,6 @@ impl<T> Acl<Resource, Action, Scope, FailureError, T> for UnauthorizedAcl {
     ) -> Result<bool, FailureError> {
         if action == Action::Read {
             match resource {
-                Resource::Restrictions | Resource::DeliveryFrom | Resource::DeliveryTo => Ok(true),
                 _ => Ok(false),
             }
         } else {

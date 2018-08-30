@@ -27,45 +27,6 @@ table! {
 }
 
 table! {
-    delivery_from (id) {
-        id -> Int4,
-        company_id -> Varchar,
-        country -> Varchar,
-        restriction_name -> Varchar,
-    }
-}
-
-table! {
-    delivery_to (id) {
-        id -> Int4,
-        company_id -> Varchar,
-        country -> Varchar,
-        additional_info -> Nullable<Jsonb>,
-    }
-}
-
-table! {
-    international_shipping (id) {
-        id -> Int4,
-        base_product_id -> Int4,
-        companies -> Jsonb,
-        store_id -> Int4,
-    }
-}
-
-table! {
-    local_shipping (id) {
-        id -> Int4,
-        base_product_id -> Int4,
-        pickup -> Bool,
-        country -> Varchar,
-        companies -> Jsonb,
-        store_id -> Int4,
-        pickup_price -> Nullable<Float8>,
-    }
-}
-
-table! {
     packages (id) {
         id -> Int4,
         name -> Varchar,
@@ -99,15 +60,6 @@ table! {
 }
 
 table! {
-    restrictions (id) {
-        id -> Int4,
-        name -> Varchar,
-        max_weight -> Float8,
-        max_size -> Float8,
-    }
-}
-
-table! {
     roles (id) {
         id -> Uuid,
         user_id -> Int4,
@@ -120,17 +72,4 @@ joinable!(companies_packages -> companies (company_id));
 joinable!(companies_packages -> packages (package_id));
 joinable!(products -> companies_packages (company_package_id));
 
-allow_tables_to_appear_in_same_query!(
-    companies,
-    companies_packages,
-    countries,
-    delivery_from,
-    delivery_to,
-    international_shipping,
-    local_shipping,
-    packages,
-    pickups,
-    products,
-    restrictions,
-    roles,
-);
+allow_tables_to_appear_in_same_query!(companies, companies_packages, countries, packages, pickups, products, roles,);
