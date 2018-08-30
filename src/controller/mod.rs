@@ -22,7 +22,6 @@ use stq_http::controller::ControllerFuture;
 use stq_http::request_util::parse_body;
 use stq_http::request_util::serialize_future;
 use stq_router::RouteParser;
-use stq_static_resources::DeliveryCompany;
 use stq_types::*;
 
 use self::routes::Route;
@@ -32,12 +31,8 @@ use models::*;
 use repos::acl::RolesCacheImpl;
 use repos::repo_factory::*;
 use services::companies::{CompaniesService, CompaniesServiceImpl};
-use services::company::{
-    DeliveryFromService, DeliveryFromServiceImpl, DeliveryToService, DeliveryToServiceImpl, RestrictionService, RestrictionServiceImpl,
-};
 use services::countries::{CountriesService, CountriesServiceImpl};
 use services::products::{ProductsService, ProductsServiceImpl};
-use services::shippping::{InternationalShippingService, InternationalShippingServiceImpl, LocalShippingService, LocalShippingServiceImpl};
 use services::user_roles::{UserRolesService, UserRolesServiceImpl};
 
 /// Controller handles route parsing and calling `Service` layer
@@ -106,18 +101,6 @@ impl<
 
         let user_roles_service =
             UserRolesServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), cached_roles, self.repo_factory.clone());
-        let restrictions_service =
-            RestrictionServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), user_id, self.repo_factory.clone());
-        let local_shipping_service =
-            LocalShippingServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), user_id, self.repo_factory.clone());
-        let international_shipping_service =
-            InternationalShippingServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), user_id, self.repo_factory.clone());
-
-        let delivery_to_service =
-            DeliveryToServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), user_id, self.repo_factory.clone());
-
-        let delivery_from_service =
-            DeliveryFromServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), user_id, self.repo_factory.clone());
 
         let countries_service = CountriesServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), user_id, self.repo_factory.clone());
 
@@ -145,113 +128,6 @@ impl<
             (Delete, Some(Route::RoleById { id })) => {
                 debug!("Received request to delete role by id {}", id);
                 serialize_future({ user_roles_service.delete_by_id(id) })
-            }
-
-            // POST /restrictions
-            (&Post, Some(Route::Restrictions)) => {
-                debug!("User with id = '{:?}' is requesting  // POST /restrictions", user_id);
-                serialize_future(
-                    parse_body::<NewRestriction>(req.body())
-                        .map_err(|e| {
-                            e.context("Parsing body // POST /restrictions in NewRestriction failed!")
-                                .context(Error::Parse)
-                                .into()
-                        })
-                        .and_then(move |new_restriction| restrictions_service.create(new_restriction)),
-                )
-            }
-
-            // GET /restrictions/<name>
-            (&Get, Some(Route::Restrictions)) => {
-                debug!("User with id = '{:?}' is requesting  // GET /restrictions", user_id);
-                if let Some(name) = parse_query!(req.query().unwrap_or_default(), "name" => String) {
-                    serialize_future(restrictions_service.get_by_name(name))
-                } else {
-                    Box::new(future::err(
-                        format_err!("Parsing query parameters // GET /restrictions failed!")
-                            .context(Error::Parse)
-                            .into(),
-                    ))
-                }
-            }
-
-            // DELETE /restrictions/<name>
-            (&Delete, Some(Route::Restrictions)) => {
-                debug!("User with id = '{:?}' is requesting  // DELETE /restrictions", user_id);
-                if let Some(name) = parse_query!(req.query().unwrap_or_default(), "name" => String) {
-                    serialize_future(restrictions_service.delete(name))
-                } else {
-                    Box::new(future::err(
-                        format_err!("Parsing query parameters // DELETE /restrictions failed!")
-                            .context(Error::Parse)
-                            .into(),
-                    ))
-                }
-            }
-
-            // PUT /restrictions
-            (&Put, Some(Route::Restrictions)) => {
-                debug!("User with id = '{:?}' is requesting  // PUT /restrictions", user_id);
-                serialize_future(
-                    parse_body::<UpdateRestriction>(req.body())
-                        .map_err(|e| {
-                            e.context("Parsing body // PUT /restrictions in UpdateRestriction failed!")
-                                .context(Error::Parse)
-                                .into()
-                        })
-                        .and_then(move |update_restriction| restrictions_service.update(update_restriction)),
-                )
-            }
-
-            // POST /shipping/local
-            (&Post, Some(Route::ShippingLocal)) => {
-                debug!("User with id = '{:?}' is requesting  // POST /shipping/local", user_id);
-                serialize_future(
-                    parse_body::<NewLocalShipping>(req.body())
-                        .map_err(|e| {
-                            e.context("Parsing body // POST /shipping/local in NewLocalShipping failed!")
-                                .context(Error::Parse)
-                                .into()
-                        })
-                        .and_then(move |new_local_shipping| local_shipping_service.create(new_local_shipping)),
-                )
-            }
-
-            // GET /shipping/local/<base_product_id>
-            (&Get, Some(Route::ShippingLocalById { base_product_id })) => {
-                debug!(
-                    "User with id = '{:?}' is requesting  // GET /shipping/local/{}",
-                    user_id, base_product_id
-                );
-                serialize_future(local_shipping_service.get_by_base_product_id(base_product_id))
-            }
-
-            // DELETE /shipping/local/<base_product_id>
-            (&Delete, Some(Route::ShippingLocalById { base_product_id })) => {
-                debug!(
-                    "User with id = '{:?}' is requesting  // DELETE /shipping/local/{}",
-                    user_id, base_product_id
-                );
-                serialize_future(local_shipping_service.delete(base_product_id))
-            }
-
-            // PUT /shipping/local/<base_product_id>
-            (&Put, Some(Route::ShippingLocalById { base_product_id })) => {
-                debug!(
-                    "User with id = '{:?}' is requesting  // PUT /shipping/local/{}",
-                    user_id, base_product_id
-                );
-                serialize_future(
-                    parse_body::<UpdateLocalShipping>(req.body())
-                        .map_err(move |e| {
-                            e.context(format!(
-                                "Parsing body // PUT /shipping/local/{} in UpdateLocalShipping failed!",
-                                base_product_id
-                            )).context(Error::Parse)
-                                .into()
-                        })
-                        .and_then(move |update_local_shipping| local_shipping_service.update(base_product_id, update_local_shipping)),
-                )
             }
 
             // POST /products
@@ -306,197 +182,6 @@ impl<
                         })
                         .and_then(move |update_products| products_service.update(base_product_id, company_package_id, update_products)),
                 )
-            }
-
-            // POST /shipping/international
-            (&Post, Some(Route::ShippingInternational)) => {
-                debug!("User with id = '{:?}' is requesting  // POST /shipping/international", user_id);
-                serialize_future(
-                    parse_body::<NewInternationalShipping>(req.body())
-                        .map_err(|e| {
-                            e.context("Parsing body // POST /shipping/international in NewInternationalShipping failed!")
-                                .context(Error::Parse)
-                                .into()
-                        })
-                        .and_then(move |new_international_shipping| international_shipping_service.create(new_international_shipping)),
-                )
-            }
-
-            // GET /shipping/international/<base_product_id>
-            (&Get, Some(Route::ShippingInternationalById { base_product_id })) => {
-                debug!(
-                    "User with id = '{:?}' is requesting  // GET /shipping/international/{}",
-                    user_id, base_product_id
-                );
-                serialize_future(international_shipping_service.get_by_base_product_id(base_product_id))
-            }
-
-            // DELETE /shipping/international/<base_product_id>
-            (&Delete, Some(Route::ShippingInternationalById { base_product_id })) => {
-                debug!(
-                    "User with id = '{:?}' is requesting  // DELETE /shipping/international/{}",
-                    user_id, base_product_id
-                );
-                serialize_future(international_shipping_service.delete(base_product_id))
-            }
-
-            // PUT /shipping/international/<base_product_id>
-            (&Put, Some(Route::ShippingInternationalById { base_product_id })) => {
-                debug!(
-                    "User with id = '{:?}' is requesting  // PUT /shipping/international/{}",
-                    user_id, base_product_id
-                );
-                serialize_future(
-                    parse_body::<UpdateInternationalShipping>(req.body())
-                        .map_err(move |e| {
-                            e.context(format!(
-                                "Parsing body // PUT /shipping/international/{} in UpdateInternationalShipping failed!",
-                                base_product_id
-                            )).context(Error::Parse)
-                                .into()
-                        })
-                        .and_then(move |update_international_shipping| {
-                            international_shipping_service.update(base_product_id, update_international_shipping)
-                        }),
-                )
-            }
-            // POST /delivery_to
-            (&Post, Some(Route::DeliveryTo)) => {
-                debug!("User with id = '{:?}' is requesting  // POST /delivery_to", user_id);
-                serialize_future(
-                    parse_body::<NewDeliveryTo>(req.body())
-                        .map_err(|e| {
-                            e.context("Parsing body // POST /delivery_to in NewDeliveryTo failed!")
-                                .context(Error::Parse)
-                                .into()
-                        })
-                        .and_then(move |new_delivery| delivery_to_service.create(new_delivery)),
-                )
-            }
-
-            // GET /delivery_to/search/filters/company
-            (&Get, Some(Route::DeliveryToFiltersCompany)) => {
-                debug!(
-                    "User with id = '{:?}' is requesting  // GET /delivery_to/search/filters/company",
-                    user_id
-                );
-                if let Some(company_id) = parse_query!(req.query().unwrap_or_default(), "company_id" => DeliveryCompany) {
-                    serialize_future(delivery_to_service.list_by_company(company_id))
-                } else {
-                    Box::new(future::err(
-                        format_err!("Parsing query parameters // GET /delivery_to/search/filters/company failed!")
-                            .context(Error::Parse)
-                            .into(),
-                    ))
-                }
-            }
-
-            // GET /delivery_to/search/filters/country
-            (&Get, Some(Route::DeliveryToFiltersCountry)) => {
-                debug!(
-                    "User with id = '{:?}' is requesting  // GET /delivery_to/search/filters/country",
-                    user_id
-                );
-                if let Some(country) = parse_query!(req.query().unwrap_or_default(), "country" => String) {
-                    serialize_future(delivery_to_service.list_by_country(country))
-                } else {
-                    Box::new(future::err(
-                        format_err!("Parsing query parameters // GET /delivery_to/search/filters/country failed!")
-                            .context(Error::Parse)
-                            .into(),
-                    ))
-                }
-            }
-
-            // PUT /delivery_to
-            (&Put, Some(Route::DeliveryTo)) => {
-                debug!("User with id = '{:?}' is requesting  // PUT /delivery_to", user_id);
-                serialize_future(
-                    parse_body::<UpdateDeliveryTo>(req.body())
-                        .map_err(|e| {
-                            e.context("Parsing body // PUT /delivery_to in UpdateDeliveryTo failed!")
-                                .context(Error::Parse)
-                                .into()
-                        })
-                        .and_then(move |update_delivery| delivery_to_service.update(update_delivery)),
-                )
-            }
-
-            // DELETE /delivery_to
-            (&Delete, Some(Route::DeliveryTo)) => {
-                debug!("User with id = '{:?}' is requesting  // DELETE /delivery_to", user_id);
-                if let (Some(company_id), Some(country)) =
-                    parse_query!(req.query().unwrap_or_default(), "company_id" => DeliveryCompany, "country" => String)
-                {
-                    serialize_future(delivery_to_service.delete(company_id, country))
-                } else {
-                    Box::new(future::err(
-                        format_err!("Parsing query parameters // DELETE /delivery_to failed!")
-                            .context(Error::Parse)
-                            .into(),
-                    ))
-                }
-            }
-
-            // POST /delivery_from
-            (&Post, Some(Route::DeliveryFrom)) => {
-                debug!("User with id = '{:?}' is requesting  // POST /delivery_from", user_id);
-                serialize_future(
-                    parse_body::<NewDeliveryFrom>(req.body())
-                        .map_err(|e| {
-                            e.context("Parsing body // POST /delivery_from in NewDeliveryFrom failed!")
-                                .context(Error::Parse)
-                                .into()
-                        })
-                        .and_then(move |new_delivery| delivery_from_service.create(new_delivery)),
-                )
-            }
-
-            // GET /delivery_from/search/filters/company
-            (&Get, Some(Route::DeliveryFromFiltersCompany)) => {
-                debug!(
-                    "User with id = '{:?}' is requesting  // GET/delivery_from/search/filters/company",
-                    user_id
-                );
-                if let Some(company_id) = parse_query!(req.query().unwrap_or_default(), "company_id" => DeliveryCompany) {
-                    serialize_future(delivery_from_service.list_by_company(company_id))
-                } else {
-                    Box::new(future::err(
-                        format_err!("Parsing query parameters // GET /delivery_from/search/filters/company failed!")
-                            .context(Error::Parse)
-                            .into(),
-                    ))
-                }
-            }
-
-            // PUT /delivery_from
-            (&Put, Some(Route::DeliveryFrom)) => {
-                debug!("User with id = '{:?}' is requesting  // PUT /delivery_from", user_id);
-                serialize_future(
-                    parse_body::<UpdateDeliveryFrom>(req.body())
-                        .map_err(|e| {
-                            e.context("Parsing body // PUT /delivery_from in UpdateDeliveryFrom failed!")
-                                .context(Error::Parse)
-                                .into()
-                        })
-                        .and_then(move |update_delivery| delivery_from_service.update(update_delivery)),
-                )
-            }
-
-            // DELETE /delivery_from
-            (&Delete, Some(Route::DeliveryFrom)) => {
-                debug!("User with id = '{:?}' is requesting  // DELETE /delivery_from", user_id);
-                if let (Some(company_id), Some(country)) =
-                    parse_query!(req.query().unwrap_or_default(), "company_id" => DeliveryCompany, "country" => String)
-                {
-                    serialize_future(delivery_from_service.delete(company_id, country))
-                } else {
-                    Box::new(future::err(
-                        format_err!("Parsing query parameters // DELETE /delivery_from failed!")
-                            .context(Error::Parse)
-                            .into(),
-                    ))
-                }
             }
 
             // POST /companies
