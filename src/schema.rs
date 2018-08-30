@@ -78,6 +78,15 @@ table! {
 }
 
 table! {
+    pickups (id) {
+        id -> Int4,
+        base_product_id -> Int4,
+        pickup -> Bool,
+        price -> Nullable<Float8>,
+    }
+}
+
+table! {
     products (id) {
         id -> Int4,
         base_product_id -> Int4,
@@ -119,6 +128,7 @@ allow_tables_to_appear_in_same_query!(
     international_shipping,
     local_shipping,
     packages,
+    pickups,
     products,
     restrictions,
     roles,
