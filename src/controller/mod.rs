@@ -32,6 +32,7 @@ use repos::acl::RolesCacheImpl;
 use repos::repo_factory::*;
 use services::companies::{CompaniesService, CompaniesServiceImpl};
 use services::countries::{CountriesService, CountriesServiceImpl};
+use services::packages::{PackagesService, PackagesServiceImpl};
 use services::products::{ProductsService, ProductsServiceImpl};
 use services::user_roles::{UserRolesService, UserRolesServiceImpl};
 
@@ -107,6 +108,8 @@ impl<
         let products_service = ProductsServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), user_id, self.repo_factory.clone());
 
         let companies_service = CompaniesServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), user_id, self.repo_factory.clone());
+
+        let packages_service = PackagesServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), user_id, self.repo_factory.clone());
 
         let path = req.path().to_string();
 
@@ -248,6 +251,52 @@ impl<
                                 .and_then(move |_| countries_service.create(new_country))
                         }),
                 )
+            }
+
+            // POST /packages
+            (&Post, Some(Route::Packages)) => {
+                debug!("User with id = '{:?}' is requesting  // POST /packages", user_id);
+                serialize_future(
+                    parse_body::<NewPackages>(req.body())
+                        .map_err(|e| {
+                            e.context("Parsing body // POST /packages in NewPackages failed!")
+                                .context(Error::Parse)
+                                .into()
+                        })
+                        .and_then(move |new_package| packages_service.create(new_package)),
+                )
+            }
+
+            // GET /packages/<package_id>
+            (&Get, Some(Route::PackagesById { package_id })) => {
+                debug!("User with id = '{:?}' is requesting  // GET /packages/{}", user_id, package_id);
+                serialize_future(packages_service.find(package_id))
+            }
+
+            // GET /packages
+            (&Get, Some(Route::Packages)) => {
+                debug!("User with id = '{:?}' is requesting  // GET /packages", user_id);
+                serialize_future(packages_service.list())
+            }
+
+            // PUT /packages/<package_id>
+            (&Put, Some(Route::PackagesById { package_id })) => {
+                debug!("User with id = '{:?}' is requesting  // PUT /packages/{}", user_id, package_id);
+                serialize_future(
+                    parse_body::<UpdatePackages>(req.body())
+                        .map_err(move |e| {
+                            e.context(format!("Parsing body // PUT /packages/{} in UpdatePackages failed!", package_id))
+                                .context(Error::Parse)
+                                .into()
+                        })
+                        .and_then(move |update_package| packages_service.update(package_id, update_package)),
+                )
+            }
+
+            // DELETE /packages/<package_id>
+            (&Delete, Some(Route::PackagesById { package_id })) => {
+                debug!("User with id = '{:?}' is requesting  // DELETE /packages/{}", user_id, package_id);
+                serialize_future(packages_service.delete(package_id))
             }
 
             // Fallback

@@ -14,6 +14,7 @@ pub trait ReposFactory<C: Connection<Backend = Pg, TransactionManager = AnsiTran
     fn create_companies_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<CompaniesRepo + 'a>;
     fn create_countries_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<CountriesRepo + 'a>;
     fn create_products_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<ProductsRepo + 'a>;
+    fn create_packages_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<PackagesRepo + 'a>;
 }
 
 #[derive(Clone)]
@@ -76,6 +77,11 @@ impl<C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 
         let acl = self.get_acl(db_conn, user_id);
         Box::new(ProductsRepoImpl::new(db_conn, acl)) as Box<ProductsRepo>
     }
+
+    fn create_packages_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<PackagesRepo + 'a> {
+        let acl = self.get_acl(db_conn, user_id);
+        Box::new(PackagesRepoImpl::new(db_conn, acl)) as Box<PackagesRepo>
+    }
 }
 
 #[cfg(test)]
@@ -124,6 +130,10 @@ pub mod tests {
 
         fn create_products_repo<'a>(&self, _db_conn: &'a C, _user_id: Option<UserId>) -> Box<ProductsRepo + 'a> {
             Box::new(ProductsRepoMock::default()) as Box<ProductsRepo>
+        }
+
+        fn create_packages_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<PackagesRepo + 'a> {
+            Box::new(PackagesRepoMock::default()) as Box<PackagesRepo>
         }
     }
 
@@ -368,6 +378,85 @@ pub mod tests {
                 description: None,
                 deliveries_from: DeliveriesFrom { country_labels: vec![] },
                 logo: "".to_string(),
+            })
+        }
+    }
+
+    #[derive(Clone, Default)]
+    pub struct PackagesRepoMock;
+
+    impl PackagesRepo for PackagesRepoMock {
+        fn create(&self, payload: NewPackages) -> RepoResult<Packages> {
+            Ok(Packages {
+                id: PackageId(1),
+                name: payload.name,
+                max_size: payload.max_size,
+                min_size: payload.min_size,
+                max_weight: payload.max_weight,
+                min_weight: payload.min_weight,
+                deliveries_to: payload.deliveries_to,
+            })
+        }
+
+        fn find_deliveries_to(&self, country: CountryLabel) -> RepoResult<Vec<Packages>> {
+            Ok(vec![Packages {
+                id: PackageId(1),
+                name: "package1".to_string(),
+                max_size: 0f64,
+                min_size: 0f64,
+                max_weight: 0f64,
+                min_weight: 0f64,
+                deliveries_to: vec![DeliveriesTo { country_labels: country }],
+            }])
+        }
+
+        fn list(&self) -> RepoResult<Vec<Packages>> {
+            Ok(vec![Packages {
+                id: PackageId(1),
+                name: "package1".to_string(),
+                max_size: 0f64,
+                min_size: 0f64,
+                max_weight: 0f64,
+                min_weight: 0f64,
+                deliveries_to: vec![],
+            }])
+        }
+
+        fn find(&self, id_arg: PackageId) -> RepoResult<Option<Packages>> {
+            Ok(Some(Packages {
+                id: id_arg,
+                name: "package1".to_string(),
+                max_size: 0f64,
+                min_size: 0f64,
+                max_weight: 0f64,
+                min_weight: 0f64,
+                deliveries_to: vec![],
+            }))
+        }
+
+        fn update(&self, id_arg: PackageId, payload: UpdatePackages) -> RepoResult<Packages> {
+            Ok(Packages {
+                id: id_arg,
+                name: payload.name.unwrap(),
+                max_size: payload.max_size.unwrap(),
+                min_size: payload.min_size.unwrap(),
+                max_weight: payload.max_weight.unwrap(),
+                min_weight: payload.min_weight.unwrap(),
+                deliveries_to: payload.deliveries_to.unwrap(),
+            })
+        }
+
+        fn delete(&self, id_arg: PackageId) -> RepoResult<Packages> {
+            Ok(Packages {
+                id: id_arg,
+                name: "package1".to_string(),
+                max_size: 0f64,
+                min_size: 0f64,
+                max_weight: 0f64,
+                min_weight: 0f64,
+                deliveries_to: vec![DeliveriesTo {
+                    country_labels: CountryLabel("rus".to_string()),
+                }],
             })
         }
     }

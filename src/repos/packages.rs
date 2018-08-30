@@ -23,11 +23,17 @@ use schema::packages::dsl::*;
 
 /// Packages repository for handling Packages
 pub trait PackagesRepo {
-    /// Create a new packages_
+    /// Create a new packages
     fn create(&self, payload: NewPackages) -> RepoResult<Packages>;
 
     /// Returns list of packages supported by the country
     fn find_deliveries_to(&self, country: CountryLabel) -> RepoResult<Vec<Packages>>;
+
+    /// Returns list of packages
+    fn list(&self) -> RepoResult<Vec<Packages>>;
+
+    /// Find specific package by ID
+    fn find(&self, id_arg: PackageId) -> RepoResult<Option<Packages>>;
 
     /// Update a packages
     fn update(&self, id: PackageId, payload: UpdatePackages) -> RepoResult<Packages>;
@@ -86,6 +92,43 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 e.context(format!("Find in packages with country {:?} error occured", country))
                     .into()
             })
+    }
+
+    /// Returns list of packages
+    fn list(&self) -> RepoResult<Vec<Packages>> {
+        debug!("List packages");
+        let query = packages.order(id);
+
+        query
+            .get_results(self.db_conn)
+            .map_err(From::from)
+            .and_then(|raws: Vec<PackagesRaw>| raws.into_iter().map(|raw| raw.to_packages()).collect())
+            .and_then(|results: Vec<Packages>| {
+                for package in &results {
+                    acl::check(&*self.acl, Resource::Packages, Action::Read, self, Some(&package))?;
+                }
+                Ok(results)
+            })
+            .map_err(|e: FailureError| e.context(format!("Find in packages error occured")).into())
+    }
+
+    /// Find specific package by ID
+    fn find(&self, id_arg: PackageId) -> RepoResult<Option<Packages>> {
+        debug!("Find in package with id {}.", id_arg);
+        let query = packages.find(id_arg);
+        query
+            .get_result::<PackagesRaw>(self.db_conn)
+            .optional()
+            .map_err(From::from)
+            .and_then(|raw: Option<PackagesRaw>| match raw {
+                Some(value) => {
+                    let package = value.to_packages()?;
+                    acl::check(&*self.acl, Resource::Packages, Action::Read, self, Some(&package))?;
+                    Ok(Some(package))
+                }
+                None => Ok(None),
+            })
+            .map_err(|e: FailureError| e.context(format!("Find package with id: {} error occured", id_arg)).into())
     }
 
     fn update(&self, id_arg: PackageId, payload: UpdatePackages) -> RepoResult<Packages> {
