@@ -31,6 +31,7 @@ use models::*;
 use repos::acl::RolesCacheImpl;
 use repos::repo_factory::*;
 use services::companies::{CompaniesService, CompaniesServiceImpl};
+use services::companies_packages::{CompaniesPackagesService, CompaniesPackagesServiceImpl};
 use services::countries::{CountriesService, CountriesServiceImpl};
 use services::packages::{PackagesService, PackagesServiceImpl};
 use services::products::{ProductsService, ProductsServiceImpl};
@@ -110,6 +111,9 @@ impl<
         let companies_service = CompaniesServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), user_id, self.repo_factory.clone());
 
         let packages_service = PackagesServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), user_id, self.repo_factory.clone());
+
+        let companies_packages_service =
+            CompaniesPackagesServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), user_id, self.repo_factory.clone());
 
         let path = req.path().to_string();
 
@@ -197,7 +201,7 @@ impl<
                                 .context(Error::Parse)
                                 .into()
                         })
-                        .and_then(move |new_delivery| companies_service.create(new_delivery)),
+                        .and_then(move |new_company| companies_service.create(new_company)),
                 )
             }
 
@@ -225,6 +229,54 @@ impl<
             (&Delete, Some(Route::CompanyById { company_id })) => {
                 debug!("User with id = '{:?}' is requesting  // DELETE /companies/{}", user_id, company_id);
                 serialize_future(companies_service.delete(company_id))
+            }
+
+            // POST /companies_packages
+            (&Post, Some(Route::CompaniesPackages)) => {
+                debug!("User with id = '{:?}' is requesting  // POST /companies_packages", user_id);
+                serialize_future(
+                    parse_body::<NewCompaniesPackages>(req.body())
+                        .map_err(|e| {
+                            e.context("Parsing body // POST /companies in NewCompaniesPackages failed!")
+                                .context(Error::Parse)
+                                .into()
+                        })
+                        .and_then(move |new_companies_packages| companies_packages_service.create(new_companies_packages)),
+                )
+            }
+
+            // GET /available_packages
+            (&Get, Some(Route::AvailablePackages)) => {
+                debug!("User with id = '{:?}' is requesting  // GET /available_packages", user_id);
+                if let (Some(country), Some(size), Some(weight)) =
+                    parse_query!(req.query().unwrap_or_default(), "country" => CountryLabel, "size" => f64, "weight" => f64)
+                {
+                    serialize_future(companies_packages_service.find_available_from(country, size, weight))
+                } else {
+                    Box::new(future::err(
+                        format_err!("Parsing query parameters // GET /available_packages failed!")
+                            .context(Error::Parse)
+                            .into(),
+                    ))
+                }
+            }
+
+            // Get /companies_packages/<company_package_id>
+            (&Get, Some(Route::CompaniesPackagesById { company_package_id })) => {
+                debug!(
+                    "User with id = '{:?}' is requesting  // GET /companies_packages/{}",
+                    user_id, company_package_id
+                );
+                serialize_future(companies_packages_service.get(company_package_id))
+            }
+
+            // DELETE /companies_packages/<company_package_id>
+            (&Delete, Some(Route::CompaniesPackagesById { company_package_id })) => {
+                debug!(
+                    "User with id = '{:?}' is requesting  // DELETE /companies_packages/{}",
+                    user_id, company_package_id
+                );
+                serialize_future(companies_packages_service.delete(company_package_id))
             }
 
             // GET /countries

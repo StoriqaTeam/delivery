@@ -29,6 +29,7 @@ extern crate validator;
 #[macro_use]
 extern crate validator_derive;
 
+#[macro_use]
 extern crate stq_http;
 extern crate stq_logging;
 extern crate stq_router;

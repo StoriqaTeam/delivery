@@ -33,6 +33,9 @@ pub trait CompaniesPackagesRepo {
     /// Getting available packages satisfying the constraints
     fn get_available_packages(&self, company_id_args: Vec<CompanyId>, size: f64, weight: f64) -> RepoResult<Vec<AvailablePackages>>;
 
+    /// Returns company package by id
+    fn get(&self, id: CompanyPackageId) -> RepoResult<CompaniesPackages>;
+
     /// Delete a companies_packages
     fn delete(&self, id_arg: CompanyPackageId) -> RepoResult<CompaniesPackages>;
 }
@@ -60,6 +63,16 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             .map_err(From::from)
             .and_then(|record| acl::check(&*self.acl, Resource::Companies, Action::Create, self, Some(&record)).and_then(|_| Ok(record)))
             .map_err(|e: FailureError| e.context(format!("create new companies_packages {:?}.", payload)).into())
+    }
+
+    fn get(&self, id_arg: CompanyPackageId) -> RepoResult<CompaniesPackages> {
+        debug!("get companies_packages by id: {}.", id_arg);
+
+        acl::check(&*self.acl, Resource::CompaniesPackages, Action::Read, self, None)?;
+        let query = companies_packages.filter(id.eq(id_arg.clone()));
+        query
+            .get_result(self.db_conn)
+            .map_err(move |e| e.context(format!("get companies_packages id: {}.", id_arg)).into())
     }
 
     /// Getting available packages satisfying the constraints
