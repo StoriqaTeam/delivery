@@ -38,9 +38,7 @@ fn create_products(
         store_id: StoreId(1),
         company_package_id: CompanyPackageId(1),
         price: None,
-        deliveries_to: vec![DeliveriesTo {
-            country_labels: "rus".to_string().into(),
-        }],
+        deliveries_to: vec!["rus".to_string().into()],
     };
 
     let body: String = serde_json::to_string(&new_products).unwrap().to_string();

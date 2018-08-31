@@ -19,3 +19,14 @@ pub use self::products::*;
 pub use self::repo_factory::*;
 pub use self::types::*;
 pub use self::user_roles::*;
+
+use stq_types::CountryLabel;
+
+pub fn get_pg_str_json_array(countries: Vec<CountryLabel>) -> String {
+    let res = countries
+        .into_iter()
+        .map(|s| format!("'{}'", s.0))
+        .collect::<Vec<String>>()
+        .join(",");
+    format!("array[{}]", res)
+}

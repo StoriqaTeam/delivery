@@ -39,9 +39,7 @@ fn create_company(
         name,
         label: "UPS".to_string(),
         description: None,
-        deliveries_from: DeliveriesFrom {
-            country_labels: vec![CountryLabel("rus".to_string())],
-        },
+        deliveries_from: vec![CountryLabel("rus".to_string())],
         logo: "".to_string(),
     };
 

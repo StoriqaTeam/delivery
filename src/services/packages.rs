@@ -102,7 +102,7 @@ impl<
                         .map_err(|e| e.context(Error::Connection).into())
                         .and_then(move |conn| {
                             let packages_repo = repo_factory.create_packages_repo(&*conn, user_id);
-                            packages_repo.find_deliveries_to(country)
+                            packages_repo.find_deliveries_to(vec![country]) // TODO: take from countries tree all path
                         })
                 })
                 .map_err(|e| e.context("Service Packages, find_deliveries_to endpoint error occured.").into()),
@@ -195,7 +195,6 @@ impl<
 pub mod tests {
     use futures_cpupool::CpuPool;
     use r2d2;
-    use serde_json;
     use tokio_core::reactor::Core;
 
     use stq_types::*;

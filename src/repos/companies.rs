@@ -106,7 +106,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     fn find_deliveries_from(&self, country: CountryLabel) -> RepoResult<Vec<Company>> {
         debug!("Find in companies with country {:?}.", country);
 
-        let query_str = format!("SELECT * FROM companies WHERE deliveries_from @> {};", country);
+        let query_str = format!("SELECT * FROM companies WHERE deliveries_from ? {};", country);
         diesel::sql_query(query_str)
             .get_results(self.db_conn)
             .map_err(From::from)
