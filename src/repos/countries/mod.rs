@@ -168,6 +168,17 @@ pub fn get_all_children_till_the_end(country: Country) -> Vec<Country> {
     }
 }
 
+pub fn contains_country_label(country: &Country, country_label: &CountryLabel) -> bool {
+    if country.label == country_label.clone() {
+        true
+    } else {
+        country
+            .children
+            .iter()
+            .any(|country_child| contains_country_label(country_child, country_label))
+    }
+}
+
 impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> CheckScope<Scope, Country>
     for CountriesRepoImpl<'a, T>
 {

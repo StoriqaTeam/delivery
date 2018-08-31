@@ -533,6 +533,7 @@ pub mod tests {
                     id: CompanyPackageId(id.0),
                     name: "name".to_string(),
                     deliveries_to: vec![],
+                    local_available: false,
                 })
                 .collect())
         }
