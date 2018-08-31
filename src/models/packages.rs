@@ -7,11 +7,6 @@ use stq_types::{CountryLabel, PackageId};
 use errors::Error;
 use schema::packages;
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct DeliveriesTo {
-    pub country_labels: CountryLabel,
-}
-
 #[derive(Serialize, Deserialize, Associations, Queryable, Debug, QueryableByName)]
 #[table_name = "packages"]
 pub struct PackagesRaw {
@@ -32,7 +27,7 @@ pub struct Packages {
     pub min_size: f64,
     pub max_weight: f64,
     pub min_weight: f64,
-    pub deliveries_to: Vec<DeliveriesTo>,
+    pub deliveries_to: Vec<CountryLabel>,
 }
 
 impl PackagesRaw {
@@ -70,7 +65,7 @@ pub struct NewPackages {
     pub min_size: f64,
     pub max_weight: f64,
     pub min_weight: f64,
-    pub deliveries_to: Vec<DeliveriesTo>,
+    pub deliveries_to: Vec<CountryLabel>,
 }
 
 impl NewPackages {
@@ -107,7 +102,7 @@ pub struct UpdatePackages {
     pub min_size: Option<f64>,
     pub max_weight: Option<f64>,
     pub min_weight: Option<f64>,
-    pub deliveries_to: Option<Vec<DeliveriesTo>>,
+    pub deliveries_to: Option<Vec<CountryLabel>>,
 }
 
 impl UpdatePackages {

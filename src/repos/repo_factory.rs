@@ -142,7 +142,7 @@ pub mod tests {
             Box::new(ProductsRepoMock::default()) as Box<ProductsRepo>
         }
 
-        fn create_packages_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<PackagesRepo + 'a> {
+        fn create_packages_repo<'a>(&self, _db_conn: &'a C, _user_id: Option<UserId>) -> Box<PackagesRepo + 'a> {
             Box::new(PackagesRepoMock::default()) as Box<PackagesRepo>
         }
     }
@@ -326,7 +326,7 @@ pub mod tests {
                     name: "UPS Russia".to_string(),
                     label: "UPS".to_string(),
                     description: None,
-                    deliveries_from: DeliveriesFrom { country_labels: vec![] },
+                    deliveries_from: vec![],
                     logo: "".to_string(),
                 },
                 Company {
@@ -334,7 +334,7 @@ pub mod tests {
                     name: "UPS USA".to_string(),
                     label: "UPS".to_string(),
                     description: None,
-                    deliveries_from: DeliveriesFrom { country_labels: vec![] },
+                    deliveries_from: vec![],
                     logo: "".to_string(),
                 },
             ])
@@ -351,9 +351,7 @@ pub mod tests {
                     name: "UPS Russia".to_string(),
                     label: "UPS".to_string(),
                     description: None,
-                    deliveries_from: DeliveriesFrom {
-                        country_labels: vec![country.clone()],
-                    },
+                    deliveries_from: vec![country.clone()],
                     logo: "".to_string(),
                 },
                 Company {
@@ -361,9 +359,7 @@ pub mod tests {
                     name: "UPS USA".to_string(),
                     label: "UPS".to_string(),
                     description: None,
-                    deliveries_from: DeliveriesFrom {
-                        country_labels: vec![country.clone()],
-                    },
+                    deliveries_from: vec![country.clone()],
                     logo: "".to_string(),
                 },
             ])
@@ -386,7 +382,7 @@ pub mod tests {
                 name: "UPS USA".to_string(),
                 label: "UPS".to_string(),
                 description: None,
-                deliveries_from: DeliveriesFrom { country_labels: vec![] },
+                deliveries_from: vec![],
                 logo: "".to_string(),
             })
         }
@@ -408,7 +404,7 @@ pub mod tests {
             })
         }
 
-        fn find_deliveries_to(&self, country: CountryLabel) -> RepoResult<Vec<Packages>> {
+        fn find_deliveries_to(&self, countries: Vec<CountryLabel>) -> RepoResult<Vec<Packages>> {
             Ok(vec![Packages {
                 id: PackageId(1),
                 name: "package1".to_string(),
@@ -416,7 +412,7 @@ pub mod tests {
                 min_size: 0f64,
                 max_weight: 0f64,
                 min_weight: 0f64,
-                deliveries_to: vec![DeliveriesTo { country_labels: country }],
+                deliveries_to: countries,
             }])
         }
 
@@ -464,9 +460,7 @@ pub mod tests {
                 min_size: 0f64,
                 max_weight: 0f64,
                 min_weight: 0f64,
-                deliveries_to: vec![DeliveriesTo {
-                    country_labels: CountryLabel("rus".to_string()),
-                }],
+                deliveries_to: vec![CountryLabel("rus".to_string())],
             })
         }
     }

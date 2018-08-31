@@ -2,10 +2,9 @@ use failure::Error as FailureError;
 use failure::Fail;
 use serde_json;
 
-use stq_types::{BaseProductId, CompanyPackageId, ProductPrice, StoreId};
+use stq_types::{BaseProductId, CompanyPackageId, CountryLabel, ProductPrice, StoreId};
 
 use errors::Error;
-use models::packages::DeliveriesTo;
 use schema::products;
 
 #[derive(Serialize, Queryable, Insertable, Debug)]
@@ -43,7 +42,7 @@ pub struct Products {
     pub store_id: StoreId,
     pub company_package_id: CompanyPackageId,
     pub price: Option<ProductPrice>,
-    pub deliveries_to: Vec<DeliveriesTo>,
+    pub deliveries_to: Vec<CountryLabel>,
 }
 
 impl ProductsRaw {
@@ -67,7 +66,7 @@ pub struct NewProducts {
     pub store_id: StoreId,
     pub company_package_id: CompanyPackageId,
     pub price: Option<ProductPrice>,
-    pub deliveries_to: Vec<DeliveriesTo>,
+    pub deliveries_to: Vec<CountryLabel>,
 }
 
 impl NewProducts {
@@ -87,7 +86,7 @@ impl NewProducts {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct UpdateProducts {
     pub price: Option<ProductPrice>,
-    pub deliveries_to: Option<Vec<DeliveriesTo>>,
+    pub deliveries_to: Option<Vec<CountryLabel>>,
 }
 
 impl UpdateProducts {

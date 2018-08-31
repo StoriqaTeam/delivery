@@ -7,11 +7,6 @@ use stq_types::{CompanyId, CountryLabel};
 use errors::Error;
 use schema::companies;
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct DeliveriesFrom {
-    pub country_labels: Vec<CountryLabel>,
-}
-
 #[derive(Serialize, Deserialize, Associations, Queryable, Debug, QueryableByName)]
 #[table_name = "companies"]
 pub struct CompanyRaw {
@@ -29,7 +24,7 @@ pub struct Company {
     pub name: String,
     pub label: String,
     pub description: Option<String>,
-    pub deliveries_from: DeliveriesFrom,
+    pub deliveries_from: Vec<CountryLabel>,
     pub logo: String,
 }
 
@@ -64,7 +59,7 @@ pub struct NewCompany {
     pub name: String,
     pub label: String,
     pub description: Option<String>,
-    pub deliveries_from: DeliveriesFrom,
+    pub deliveries_from: Vec<CountryLabel>,
     pub logo: String,
 }
 
@@ -106,7 +101,7 @@ pub struct UpdateCompany {
     pub name: Option<String>,
     pub label: Option<String>,
     pub description: Option<String>,
-    pub deliveries_from: Option<DeliveriesFrom>,
+    pub deliveries_from: Option<Vec<CountryLabel>>,
     pub logo: Option<String>,
 }
 

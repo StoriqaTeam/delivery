@@ -27,7 +27,7 @@ pub trait PackagesRepo {
     fn create(&self, payload: NewPackages) -> RepoResult<Packages>;
 
     /// Returns list of packages supported by the country
-    fn find_deliveries_to(&self, country: CountryLabel) -> RepoResult<Vec<Packages>>;
+    fn find_deliveries_to(&self, countries: Vec<CountryLabel>) -> RepoResult<Vec<Packages>>;
 
     /// Returns list of packages
     fn list(&self) -> RepoResult<Vec<Packages>>;
@@ -74,10 +74,12 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     }
 
     /// Returns list of packages supported by the country
-    fn find_deliveries_to(&self, country: CountryLabel) -> RepoResult<Vec<Packages>> {
-        debug!("Find in packages with country {:?}.", country);
+    fn find_deliveries_to(&self, countries: Vec<CountryLabel>) -> RepoResult<Vec<Packages>> {
+        debug!("Find in packages with country {:?}.", countries);
 
-        let query_str = format!("SELECT * FROM packages WHERE deliveries_to @> {};", country);
+        let pg_str = get_pg_str_json_array(countries.clone());
+
+        let query_str = format!("SELECT * FROM packages WHERE deliveries_to ?| {};", pg_str);
         diesel::sql_query(query_str)
             .get_results(self.db_conn)
             .map_err(From::from)
@@ -89,7 +91,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 Ok(packages_res)
             })
             .map_err(|e: FailureError| {
-                e.context(format!("Find in packages with country {:?} error occured", country))
+                e.context(format!("Find in packages with country {:?} error occured", countries))
                     .into()
             })
     }

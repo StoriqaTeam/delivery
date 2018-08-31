@@ -1,6 +1,5 @@
-use stq_types::{CompanyId, CompanyPackageId, PackageId};
+use stq_types::{CompanyId, CompanyPackageId, CountryLabel, PackageId};
 
-use models::packages::DeliveriesTo;
 use schema::companies_packages;
 
 #[derive(Serialize, Deserialize, Associations, Queryable, Debug)]
@@ -22,5 +21,5 @@ pub struct NewCompaniesPackages {
 pub struct AvailablePackages {
     pub id: CompanyPackageId,
     pub name: String,
-    pub deliveries_to: Vec<DeliveriesTo>,
+    pub deliveries_to: Vec<CountryLabel>,
 }
