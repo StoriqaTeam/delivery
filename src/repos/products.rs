@@ -13,7 +13,7 @@ use failure::Error as FailureError;
 use stq_types::{BaseProductId, CompanyPackageId, UserId};
 
 use models::authorization::*;
-use models::products::{NewProducts, Products, ProductsRaw, UpdateProducts};
+use models::products::{NewProducts, NewProductsRaw, Products, ProductsRaw, UpdateProducts};
 use models::roles::UserRole;
 use repos::legacy_acl::*;
 use repos::types::RepoResult;
@@ -25,6 +25,9 @@ use schema::roles::dsl as Roles;
 pub trait ProductsRepo {
     /// Create a new products
     fn create(&self, payload: NewProducts) -> RepoResult<Products>;
+
+    /// Create a new products
+    fn create_many(&self, payload: Vec<NewProducts>) -> RepoResult<Vec<Products>>;
 
     /// Get a products
     fn get_by_base_product_id(&self, base_product_id: BaseProductId) -> RepoResult<Vec<Products>>;
@@ -38,7 +41,7 @@ pub trait ProductsRepo {
     ) -> RepoResult<Products>;
 
     /// Delete a products
-    fn delete(&self, base_product_id_arg: BaseProductId) -> RepoResult<Products>;
+    fn delete(&self, base_product_id_arg: BaseProductId) -> RepoResult<Vec<Products>>;
 }
 
 pub struct ProductsRepoImpl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> {
@@ -70,6 +73,32 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 Ok(product)
             })
             .map_err(|e: FailureError| e.context(format!("create new products {:?}.", payload)).into())
+    }
+
+    fn create_many(&self, payload: Vec<NewProducts>) -> RepoResult<Vec<Products>> {
+        debug!("create many new products {:?}.", payload);
+        let payload = payload
+            .into_iter()
+            .map(|v| v.to_raw().map_err(From::from))
+            .collect::<RepoResult<Vec<NewProductsRaw>>>()?;
+
+        let query = diesel::insert_into(products).values(&payload);
+        query
+            .get_results::<ProductsRaw>(self.db_conn)
+            .map_err(From::from)
+            .and_then(|products_: Vec<ProductsRaw>| {
+                let mut new_products = vec![];
+                for product in products_ {
+                    let product = product.to_products()?;
+                    acl::check(&*self.acl, Resource::Products, Action::Create, self, Some(&product))?;
+                    new_products.push(product);
+                }
+
+                new_products.sort_by(|a, b| a.id.cmp(&b.id));
+
+                Ok(new_products)
+            })
+            .map_err(|e: FailureError| e.context(format!("create many new products {:?}.", payload)).into())
     }
 
     fn get_by_base_product_id(&self, base_product_id_arg: BaseProductId) -> RepoResult<Vec<Products>> {
@@ -120,18 +149,22 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             .map_err(|e: FailureError| e.context(format!("Updating products payload {:?} failed.", payload)).into())
     }
 
-    fn delete(&self, base_product_id_arg: BaseProductId) -> RepoResult<Products> {
+    fn delete(&self, base_product_id_arg: BaseProductId) -> RepoResult<Vec<Products>> {
         debug!("delete products {:?}.", base_product_id_arg);
-        self.execute_query(products.filter(base_product_id.eq(base_product_id_arg)))
-            .and_then(|products_: ProductsRaw| products_.to_products())
-            .and_then(|product: Products| acl::check(&*self.acl, Resource::Products, Action::Delete, self, Some(&product)))
-            .and_then(|_| {
-                let filter = products.filter(base_product_id.eq(base_product_id_arg));
+        let query = products.filter(base_product_id.eq(base_product_id_arg));
 
-                let query = diesel::delete(filter);
-                query.get_result::<ProductsRaw>(self.db_conn).map_err(From::from)
+        query
+            .get_results(self.db_conn)
+            .map_err(From::from)
+            .and_then(|products_: Vec<ProductsRaw>| {
+                let mut delete_products = vec![];
+                for product in products_ {
+                    let product = product.to_products()?;
+                    acl::check(&*self.acl, Resource::Products, Action::Delete, self, Some(&product))?;
+                    delete_products.push(product);
+                }
+                Ok(delete_products)
             })
-            .and_then(|products_| products_.to_products())
             .map_err(|e: FailureError| {
                 e.context(format!("Delete products with base product id {:?} failed.", base_product_id_arg))
                     .into()

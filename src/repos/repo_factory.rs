@@ -16,6 +16,7 @@ pub trait ReposFactory<C: Connection<Backend = Pg, TransactionManager = AnsiTran
     fn create_countries_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<CountriesRepo + 'a>;
     fn create_products_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<ProductsRepo + 'a>;
     fn create_packages_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<PackagesRepo + 'a>;
+    fn create_pickups_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<PickupsRepo + 'a>;
 }
 
 #[derive(Clone)]
@@ -88,6 +89,11 @@ impl<C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 
         let acl = self.get_acl(db_conn, user_id);
         Box::new(PackagesRepoImpl::new(db_conn, acl)) as Box<PackagesRepo>
     }
+
+    fn create_pickups_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<PickupsRepo + 'a> {
+        let acl = self.get_acl(db_conn, user_id);
+        Box::new(PickupsRepoImpl::new(db_conn, acl)) as Box<PickupsRepo>
+    }
 }
 
 #[cfg(test)]
@@ -145,6 +151,10 @@ pub mod tests {
         fn create_packages_repo<'a>(&self, _db_conn: &'a C, _user_id: Option<UserId>) -> Box<PackagesRepo + 'a> {
             Box::new(PackagesRepoMock::default()) as Box<PackagesRepo>
         }
+
+        fn create_pickups_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<PickupsRepo + 'a> {
+            Box::new(PickupsRepoMock::default()) as Box<PickupsRepo>
+        }
     }
 
     #[derive(Clone, Default)]
@@ -197,9 +207,15 @@ pub mod tests {
                 base_product_id: payload.base_product_id,
                 store_id: payload.store_id,
                 company_package_id: payload.company_package_id,
+                shipping: payload.shipping,
                 price: payload.price,
                 deliveries_to: payload.deliveries_to,
             })
+        }
+
+        /// Create many a new products
+        fn create_many(&self, payload: Vec<NewProducts>) -> RepoResult<Vec<Products>> {
+            Ok(vec![]) // TODO: added objects
         }
 
         /// Get a products
@@ -209,6 +225,7 @@ pub mod tests {
                 base_product_id: base_product_id,
                 store_id: StoreId(1),
                 company_package_id: CompanyPackageId(1),
+                shipping: ShippingVariant::Local,
                 price: None,
                 deliveries_to: vec![],
             }])
@@ -226,21 +243,23 @@ pub mod tests {
                 base_product_id: base_product_id_arg,
                 store_id: StoreId(1),
                 company_package_id: company_package_id,
+                shipping: payload.shipping.unwrap(),
                 price: payload.price,
                 deliveries_to: payload.deliveries_to.unwrap_or_default(),
             })
         }
 
         /// Delete a products
-        fn delete(&self, base_product_id_arg: BaseProductId) -> RepoResult<Products> {
-            Ok(Products {
+        fn delete(&self, base_product_id_arg: BaseProductId) -> RepoResult<Vec<Products>> {
+            Ok(vec![Products {
                 id: 1,
                 base_product_id: base_product_id_arg,
                 store_id: StoreId(1),
                 company_package_id: CompanyPackageId(1),
+                shipping: ShippingVariant::Local,
                 price: None,
                 deliveries_to: vec![],
-            })
+            }])
         }
     }
 
@@ -384,6 +403,41 @@ pub mod tests {
                 description: None,
                 deliveries_from: vec![],
                 logo: "".to_string(),
+            })
+        }
+    }
+
+    #[derive(Clone, Default)]
+    pub struct PickupsRepoMock;
+
+    impl PickupsRepo for PickupsRepoMock {
+        fn create(&self, payload: NewPickups) -> RepoResult<Pickups> {
+            Ok(Pickups {
+                id: 1,
+                base_product_id: payload.base_product_id,
+                store_id: payload.store_id,
+                pickup: payload.pickup,
+                price: payload.price,
+            })
+        }
+
+        fn update(&self, base_product_id_arg: BaseProductId, payload: UpdatePickups) -> RepoResult<Pickups> {
+            Ok(Pickups {
+                id: 1,
+                base_product_id: base_product_id_arg,
+                store_id: StoreId(1),
+                pickup: payload.pickup.unwrap(),
+                price: payload.price,
+            })
+        }
+
+        fn delete(&self, base_product_id_arg: BaseProductId) -> RepoResult<Pickups> {
+            Ok(Pickups {
+                id: 1,
+                base_product_id: base_product_id_arg,
+                store_id: StoreId(1),
+                pickup: false,
+                price: Some(ProductPrice(1.0)),
             })
         }
     }

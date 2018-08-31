@@ -151,6 +151,23 @@ impl<
                 )
             }
 
+            // POST /products/<base_product_id>
+            (&Post, Some(Route::ProductsById { base_product_id })) => {
+                debug!(
+                    "User with id = '{:?}' is requesting  // POST /products/{}",
+                    user_id, base_product_id
+                );
+                serialize_future(
+                    parse_body::<NewShipping>(req.body())
+                        .map_err(|e| {
+                            e.context("Parsing body // POST /products in NewShipping failed!")
+                                .context(Error::Parse)
+                                .into()
+                        })
+                        .and_then(move |new_shipping| products_service.upsert(base_product_id, new_shipping)),
+                )
+            }
+
             // GET /products/<base_product_id>
             (&Get, Some(Route::ProductsById { base_product_id })) => {
                 debug!("User with id = '{:?}' is requesting  // GET /products/{}", user_id, base_product_id);
