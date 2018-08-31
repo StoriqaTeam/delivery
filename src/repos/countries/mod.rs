@@ -187,28 +187,21 @@ mod tests {
 
     fn create_mock_countries() -> Country {
         let country_3 = Country {
-            label: "rus".to_string().into(),
+            label: "RUS".to_string().into(),
             name: vec![],
             children: vec![],
-            level: 3,
+            level: 2,
             parent_label: Some("EEE".to_string().into()),
         };
         let country_2 = Country {
             label: "EEE".to_string().into(),
             name: vec![],
             children: vec![country_3],
-            level: 2,
-            parent_label: Some("ALL".to_string().into()),
-        };
-        let country_1 = Country {
-            label: "ALL".to_string().into(),
-            name: vec![],
-            children: vec![country_2],
             level: 1,
-            parent_label: Some("root".to_string().into()),
+            parent_label: Some(ALL_COUNTRIES.clone()),
         };
         Country {
-            children: vec![country_1],
+            children: vec![country_2],
             ..Default::default()
         }
     }
@@ -220,15 +213,15 @@ mod tests {
         let new_country = country
             .children
             .into_iter()
-            .find(|country_child| get_parent_country(&country_child, child_label.clone(), 2).is_some())
+            .find(|country_child| get_parent_country(&country_child, child_label.clone(), 1).is_some())
             .unwrap();
-        assert_eq!(new_country.label, "ALL".to_string().into());
+        assert_eq!(new_country.label, ALL_COUNTRIES.clone());
     }
 
     #[test]
     fn test_get_country() {
         let country = create_mock_countries();
-        let child_label = CountryLabel("rus".to_string());
+        let child_label = CountryLabel("RUS".to_string());
         let new_country = get_country(&country, child_label.clone()).unwrap();
         assert_eq!(new_country.label, child_label.clone().into());
     }

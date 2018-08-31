@@ -254,7 +254,7 @@ pub mod tests {
                 label: label_arg,
                 name: vec![],
                 children: vec![],
-                level: 3,
+                level: 2,
                 parent_label: Some("EEE".to_string().into()),
             }))
         }
@@ -278,28 +278,21 @@ pub mod tests {
 
     fn create_mock_countries() -> Country {
         let country_3 = Country {
-            label: "rus".to_string().into(),
+            label: "RUS".to_string().into(),
             name: vec![],
             children: vec![],
-            level: 3,
+            level: 2,
             parent_label: Some("EEE".to_string().into()),
         };
         let country_2 = Country {
             label: "EEE".to_string().into(),
             name: vec![],
             children: vec![country_3],
-            level: 2,
-            parent_label: Some("ALL".to_string().into()),
-        };
-        let country_1 = Country {
-            label: "ALL".to_string().into(),
-            name: vec![],
-            children: vec![country_2],
             level: 1,
-            parent_label: Some("root".to_string().into()),
+            parent_label: Some(ALL_COUNTRIES.clone()),
         };
         Country {
-            children: vec![country_1],
+            children: vec![country_2],
             ..Default::default()
         }
     }

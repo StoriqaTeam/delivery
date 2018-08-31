@@ -13,7 +13,9 @@ use stq_types::{CountryLabel, PackageId, UserId};
 use errors::Error;
 
 use super::types::ServiceFuture;
+use models::countries::ALL_COUNTRIES;
 use models::packages::{NewPackages, Packages, UpdatePackages};
+use repos::countries::get_country;
 use repos::ReposFactory;
 
 pub trait PackagesService {
@@ -102,7 +104,19 @@ impl<
                         .map_err(|e| e.context(Error::Connection).into())
                         .and_then(move |conn| {
                             let packages_repo = repo_factory.create_packages_repo(&*conn, user_id);
-                            packages_repo.find_deliveries_to(vec![country]) // TODO: take from countries tree all path
+                            let countries_repo = repo_factory.create_countries_repo(&*conn, user_id);
+                            countries_repo.get_all().and_then(|countries| {
+                                let countries_list = get_country(&countries, country.clone())
+                                    .map(|c| {
+                                        let mut countries_vec = vec![ALL_COUNTRIES.clone(), c.label];
+                                        if let Some(parent_label) = c.parent_label {
+                                            countries_vec.push(parent_label)
+                                        }
+                                        countries_vec
+                                    })
+                                    .unwrap_or(vec![country]);
+                                packages_repo.find_deliveries_to(countries_list)
+                            })
                         })
                 })
                 .map_err(|e| e.context("Service Packages, find_deliveries_to endpoint error occured.").into()),
