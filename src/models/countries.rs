@@ -13,6 +13,10 @@ use errors::Error;
 use models::validation_rules::*;
 use schema::countries;
 
+lazy_static! {
+    pub static ref ALL_COUNTRIES: CountryLabel = CountryLabel("ALL".to_string());
+}
+
 /// RawCountry is an object stored in PG, used only for Country tree creation,
 #[derive(Debug, Serialize, Deserialize, Associations, Queryable, Clone)]
 #[table_name = "countries"]
@@ -31,7 +35,7 @@ pub struct NewCountry {
     #[validate(custom = "validate_translation")]
     pub name: serde_json::Value,
     pub parent_label: Option<CountryLabel>,
-    #[validate(range(min = "1", max = "3"))]
+    #[validate(range(min = "1", max = "2"))]
     pub level: i32,
 }
 
@@ -47,8 +51,8 @@ pub struct Country {
 impl Default for Country {
     fn default() -> Self {
         Self {
-            label: "root".to_string().into(),
-            name: vec![Translation::new(Language::En, "root".to_string())],
+            label: ALL_COUNTRIES.clone(),
+            name: vec![Translation::new(Language::En, "all".to_string())],
             children: vec![],
             level: 0,
             parent_label: None,
