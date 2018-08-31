@@ -22,6 +22,7 @@ fn create_update_products(price: f64) -> UpdateProducts {
     UpdateProducts {
         price: Some(ProductPrice(price)),
         deliveries_to: None,
+        shipping: Some(ShippingVariant::Local),
     }
 }
 
@@ -39,6 +40,7 @@ fn create_products(
         company_package_id: CompanyPackageId(1),
         price: None,
         deliveries_to: vec!["rus".to_string().into()],
+        shipping: ShippingVariant::Local,
     };
 
     let body: String = serde_json::to_string(&new_products).unwrap().to_string();

@@ -21,7 +21,7 @@ pub trait ProductsService {
     /// Delete and Insert shipping values
     fn upsert(&self, base_product_id: BaseProductId, payload: NewShipping) -> ServiceFuture<Shipping>;
 
-    /// Get  products
+    /// Get products
     fn get_by_base_product_id(&self, base_product_id: BaseProductId) -> ServiceFuture<Vec<Products>>;
 
     /// Update a product
