@@ -22,4 +22,5 @@ pub struct AvailablePackages {
     pub id: CompanyPackageId,
     pub name: String,
     pub deliveries_to: Vec<CountryLabel>,
+    pub local_available: bool,
 }

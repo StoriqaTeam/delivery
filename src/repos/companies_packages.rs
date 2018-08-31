@@ -105,6 +105,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                         id: result.0,
                         name: format!("{}-{}", result.1, result.2),
                         deliveries_to,
+                        local_available: false,
                     });
                 }
                 //acl::check(&*self.acl, Resource::DeliveryTo, Action::Read, self, Some(&delivery))?;

@@ -11,6 +11,7 @@ use stq_types::{CompanyPackageId, CountryLabel, UserId};
 
 use errors::Error;
 use models::companies_packages::{AvailablePackages, CompaniesPackages, NewCompaniesPackages};
+use repos::countries::{contains_country_label, get_country};
 use repos::ReposFactory;
 use services::types::ServiceFuture;
 
@@ -105,7 +106,7 @@ impl<
     }
 
     /// Returns list of companies_packages supported by the country
-    fn find_available_from(&self, country: CountryLabel, size: f64, weight: f64) -> ServiceFuture<Vec<AvailablePackages>> {
+    fn find_available_from(&self, deliveries_from: CountryLabel, size: f64, weight: f64) -> ServiceFuture<Vec<AvailablePackages>> {
         let db_pool = self.db_pool.clone();
         let user_id = self.user_id;
         let repo_factory = self.repo_factory.clone();
@@ -119,10 +120,27 @@ impl<
                         .and_then(move |conn| {
                             let companies_repo = repo_factory.create_companies_repo(&*conn, user_id);
                             let companies_packages_repo = repo_factory.create_companies_packages_repo(&*conn, user_id);
+                            let countries_repo = repo_factory.create_countries_repo(&*conn, user_id);
                             companies_repo
-                                .find_deliveries_from(country)
+                                .find_deliveries_from(deliveries_from.clone())
                                 .map(|companies| companies.into_iter().map(|company| company.id).collect())
                                 .and_then(|companies_ids| companies_packages_repo.get_available_packages(companies_ids, size, weight))
+                                .and_then({
+                                    let deliveries_from = deliveries_from.clone();
+                                    move |mut packages| {
+                                        countries_repo.get_all().map(|countries| {
+                                            for package in &mut packages {
+                                                let local_available = package.deliveries_to.iter().any(|country_label| {
+                                                    get_country(&countries, country_label.clone())
+                                                        .map(|c| contains_country_label(&c, &deliveries_from))
+                                                        .unwrap_or_default()
+                                                });
+                                                package.local_available = local_available;
+                                            }
+                                            packages
+                                        })
+                                    }
+                                })
                         })
                 })
                 .map_err(|e| {
