@@ -56,6 +56,7 @@ table! {
         company_package_id -> Int4,
         price -> Nullable<Float8>,
         deliveries_to -> Jsonb,
+        shipping -> Varchar,
     }
 }
 

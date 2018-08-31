@@ -1,7 +1,7 @@
 use schema::pickups;
 use stq_types::{BaseProductId, ProductPrice, StoreId};
 
-#[derive(Serialize, Deserialize, Associations, Queryable, Debug)]
+#[derive(Serialize, Deserialize, Associations, Clone, Queryable, Debug)]
 #[table_name = "pickups"]
 pub struct Pickups {
     pub id: i32,

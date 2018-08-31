@@ -6,6 +6,7 @@ pub mod packages;
 pub mod pickups;
 pub mod products;
 pub mod roles;
+pub mod shipping;
 pub mod validation_rules;
 
 pub use self::authorization::*;
@@ -16,4 +17,5 @@ pub use self::packages::*;
 pub use self::pickups::*;
 pub use self::products::*;
 pub use self::roles::*;
+pub use self::shipping::*;
 pub use self::validation_rules::*;

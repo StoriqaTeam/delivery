@@ -10,7 +10,7 @@ use r2d2::{ManageConnection, Pool};
 use stq_types::{BaseProductId, CompanyPackageId, UserId};
 
 use errors::Error;
-use models::{NewProducts, Products, UpdateProducts};
+use models::{NewProducts, NewShipping, Products, Shipping, UpdateProducts};
 use repos::ReposFactory;
 use services::types::ServiceFuture;
 
@@ -18,7 +18,10 @@ pub trait ProductsService {
     /// Creates new products
     fn create(&self, payload: NewProducts) -> ServiceFuture<Products>;
 
-    /// Get  products
+    /// Delete and Insert shipping values
+    fn upsert(&self, base_product_id: BaseProductId, payload: NewShipping) -> ServiceFuture<Shipping>;
+
+    /// Get products
     fn get_by_base_product_id(&self, base_product_id: BaseProductId) -> ServiceFuture<Vec<Products>>;
 
     /// Update a product
@@ -29,8 +32,7 @@ pub trait ProductsService {
         payload: UpdateProducts,
     ) -> ServiceFuture<Products>;
 
-    /// Delete a products
-    fn delete(&self, base_product_id_arg: BaseProductId) -> ServiceFuture<Products>;
+    fn delete(&self, base_product_id_arg: BaseProductId) -> ServiceFuture<Vec<Products>>;
 }
 
 /// Products services, responsible for CRUD operations
@@ -87,6 +89,45 @@ impl<
         )
     }
 
+    fn upsert(&self, base_product_id: BaseProductId, payload: NewShipping) -> ServiceFuture<Shipping> {
+        let db_pool = self.db_pool.clone();
+        let repo_factory = self.repo_factory.clone();
+        let user_id = self.user_id;
+
+        Box::new(
+            self.cpu_pool
+                .spawn_fn(move || {
+                    db_pool
+                        .get()
+                        .map_err(|e| e.context(Error::Connection).into())
+                        .and_then(move |conn| {
+                            conn.transaction::<Shipping, _, _>(|| {
+                                let products_repo = repo_factory.create_products_repo(&*conn, user_id);
+                                let pickups_repo = repo_factory.create_pickups_repo(&*conn, user_id);
+                                let pickup = payload.pickup.clone();
+                                products_repo
+                                    .delete(base_product_id.clone())
+                                    .and_then(|_| products_repo.create_many(payload.items))
+                                    .and_then(|products| {
+                                        if let Some(pickup) = pickup {
+                                            pickups_repo
+                                                .delete(base_product_id)
+                                                .and_then(|_| pickups_repo.create(pickup))
+                                                .map(Some)
+                                        } else {
+                                            Ok(None)
+                                        }.map(|pickups| Shipping {
+                                            items: products,
+                                            pickup: pickups,
+                                        })
+                                    })
+                            })
+                        })
+                })
+                .map_err(|e| e.context("Service Products, upsert endpoint error occured.").into()),
+        )
+    }
+
     fn get_by_base_product_id(&self, base_product_id: BaseProductId) -> ServiceFuture<Vec<Products>> {
         let db_pool = self.db_pool.clone();
         let repo_factory = self.repo_factory.clone();
@@ -132,7 +173,7 @@ impl<
         )
     }
 
-    fn delete(&self, base_product_id_arg: BaseProductId) -> ServiceFuture<Products> {
+    fn delete(&self, base_product_id_arg: BaseProductId) -> ServiceFuture<Vec<Products>> {
         let db_pool = self.db_pool.clone();
         let repo_factory = self.repo_factory.clone();
         let user_id = self.user_id;

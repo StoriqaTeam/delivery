@@ -7,6 +7,12 @@ use stq_types::{BaseProductId, CompanyPackageId, CountryLabel, ProductPrice, Sto
 use errors::Error;
 use schema::products;
 
+#[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug, DieselTypes)]
+pub enum ShippingVariant {
+    Local,
+    International,
+}
+
 #[derive(Serialize, Queryable, Insertable, Debug)]
 #[table_name = "products"]
 pub struct ProductsRaw {
@@ -16,6 +22,7 @@ pub struct ProductsRaw {
     pub company_package_id: CompanyPackageId,
     pub price: Option<ProductPrice>,
     pub deliveries_to: serde_json::Value,
+    pub shipping: ShippingVariant,
 }
 
 #[derive(Serialize, Deserialize, Insertable, Clone, Debug)]
@@ -26,6 +33,7 @@ pub struct NewProductsRaw {
     pub company_package_id: CompanyPackageId,
     pub price: Option<ProductPrice>,
     pub deliveries_to: serde_json::Value,
+    pub shipping: ShippingVariant,
 }
 
 #[derive(Serialize, Deserialize, Insertable, AsChangeset, Clone, Debug)]
@@ -33,6 +41,7 @@ pub struct NewProductsRaw {
 pub struct UpdateProductsRaw {
     pub price: Option<ProductPrice>,
     pub deliveries_to: Option<serde_json::Value>,
+    pub shipping: Option<ShippingVariant>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -43,6 +52,7 @@ pub struct Products {
     pub company_package_id: CompanyPackageId,
     pub price: Option<ProductPrice>,
     pub deliveries_to: Vec<CountryLabel>,
+    pub shipping: ShippingVariant,
 }
 
 impl ProductsRaw {
@@ -56,6 +66,7 @@ impl ProductsRaw {
             company_package_id: self.company_package_id,
             price: self.price,
             deliveries_to,
+            shipping: self.shipping,
         })
     }
 }
@@ -67,6 +78,7 @@ pub struct NewProducts {
     pub company_package_id: CompanyPackageId,
     pub price: Option<ProductPrice>,
     pub deliveries_to: Vec<CountryLabel>,
+    pub shipping: ShippingVariant,
 }
 
 impl NewProducts {
@@ -79,6 +91,7 @@ impl NewProducts {
             company_package_id: self.company_package_id,
             price: self.price,
             deliveries_to,
+            shipping: self.shipping,
         })
     }
 }
@@ -87,6 +100,7 @@ impl NewProducts {
 pub struct UpdateProducts {
     pub price: Option<ProductPrice>,
     pub deliveries_to: Option<Vec<CountryLabel>>,
+    pub shipping: Option<ShippingVariant>,
 }
 
 impl UpdateProducts {
@@ -101,6 +115,7 @@ impl UpdateProducts {
         Ok(UpdateProductsRaw {
             price: self.price,
             deliveries_to,
+            shipping: self.shipping,
         })
     }
 }
