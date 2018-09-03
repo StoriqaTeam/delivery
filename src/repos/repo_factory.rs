@@ -298,10 +298,13 @@ pub mod tests {
         fn find(&self, label_arg: CountryLabel) -> RepoResult<Option<Country>> {
             Ok(Some(Country {
                 label: label_arg,
-                name: vec![],
                 children: vec![],
                 level: 2,
                 parent_label: Some("EEE".to_string().into()),
+                alpha2: "".to_string(),
+                alpha3: "".to_string(),
+                numeric: 0,
+                is_selected: false,
             }))
         }
 
@@ -309,10 +312,13 @@ pub mod tests {
         fn create(&self, payload: NewCountry) -> RepoResult<Country> {
             Ok(Country {
                 label: payload.label,
-                name: vec![],
                 children: vec![],
                 level: payload.level,
                 parent_label: None,
+                alpha2: "".to_string(),
+                alpha3: "".to_string(),
+                numeric: 0,
+                is_selected: false,
             })
         }
 
@@ -325,21 +331,33 @@ pub mod tests {
     fn create_mock_countries() -> Country {
         let country_3 = Country {
             label: "RUS".to_string().into(),
-            name: vec![],
             children: vec![],
             level: 2,
             parent_label: Some("EEE".to_string().into()),
+            alpha2: "".to_string(),
+            alpha3: "".to_string(),
+            numeric: 0,
+            is_selected: false,
         };
         let country_2 = Country {
             label: "EEE".to_string().into(),
-            name: vec![],
             children: vec![country_3],
             level: 1,
-            parent_label: Some(ALL_COUNTRIES.clone()),
+            parent_label: Some("ALL".to_string().into()),
+            alpha2: "".to_string(),
+            alpha3: "".to_string(),
+            numeric: 0,
+            is_selected: false,
         };
         Country {
+            label: "ALL".to_string().into(),
+            level: 2,
+            parent_label: None,
             children: vec![country_2],
-            ..Default::default()
+            alpha2: "".to_string(),
+            alpha3: "".to_string(),
+            numeric: 0,
+            is_selected: false,
         }
     }
 

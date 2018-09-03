@@ -20,9 +20,11 @@ table! {
 table! {
     countries (label) {
         label -> Varchar,
-        name -> Jsonb,
         parent_label -> Nullable<Varchar>,
         level -> Int4,
+        alpha2 -> Varchar,
+        alpha3 -> Varchar,
+        numeric -> Int4,
     }
 }
 

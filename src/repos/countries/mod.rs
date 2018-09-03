@@ -59,7 +59,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         query
             .get_result::<RawCountry>(self.db_conn)
             .map_err(From::from)
-            .and_then(|created_country| created_country.to_country())
+            .map(From::from)
             .and_then(|country| acl::check(&*self.acl, Resource::Countries, Action::Create, self, Some(&country)).and_then(|_| Ok(country)))
             .map_err(|e: FailureError| e.context(format!("Create new country: {:?} error occured", payload)).into())
     }
@@ -73,9 +73,11 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             acl::check(&*self.acl, Resource::Countries, Action::Read, self, None)
                 .and_then(|_| {
                     let countries_ = countries.load::<RawCountry>(self.db_conn)?;
-                    let mut root = Country::default();
-                    let children = create_tree(&countries_, None)?;
-                    root.children = children;
+                    let tree = create_tree(&countries_, None)?;
+                    let root = tree
+                        .into_iter()
+                        .nth(0)
+                        .ok_or_else(|| format_err!("Could not create countries tree"))?;
                     self.cache.set(root.clone());
                     Ok(root)
                 })
@@ -89,7 +91,7 @@ fn create_tree(countries_: &[RawCountry], parent_label_arg: Option<CountryLabel>
     for country in countries_ {
         if country.parent_label == parent_label_arg {
             let childs = create_tree(countries_, Some(country.label.clone()))?;
-            let mut country_tree: Country = country.to_country()?;
+            let mut country_tree: Country = country.into();
             country_tree.children = childs;
             branch.push(country_tree);
         }
@@ -168,6 +170,38 @@ pub fn get_all_children_till_the_end(country: Country) -> Vec<Country> {
     }
 }
 
+pub fn get_all_parent_labels(country: &Country, searched_country_label: CountryLabel, labels: &mut Vec<CountryLabel>) {
+    if country.label == searched_country_label {
+        labels.push(country.label.clone())
+    } else {
+        for child in &country.children {
+            let old_len = labels.len();
+            get_all_parent_labels(child, searched_country_label.clone(), labels);
+            if labels.len() > old_len {
+                labels.push(country.label.clone());
+                break;
+            }
+        }
+    }
+}
+
+pub fn set_selected(country: &mut Country, selected_labels: &[CountryLabel]) {
+    if selected_labels.iter().any(|country_label| &country.label == country_label) {
+        set_selected_till_end(country);
+    } else {
+        for child in &mut country.children {
+            set_selected(child, selected_labels);
+        }
+    }
+}
+
+pub fn set_selected_till_end(country: &mut Country) {
+    country.is_selected = true;
+    for child in &mut country.children {
+        set_selected_till_end(child);
+    }
+}
+
 pub fn contains_country_label(country: &Country, country_label: &CountryLabel) -> bool {
     if country.label == country_label.clone() {
         true
@@ -199,21 +233,33 @@ mod tests {
     fn create_mock_countries() -> Country {
         let country_3 = Country {
             label: "RUS".to_string().into(),
-            name: vec![],
             children: vec![],
             level: 2,
             parent_label: Some("EEE".to_string().into()),
+            alpha2: "".to_string(),
+            alpha3: "".to_string(),
+            numeric: 0,
+            is_selected: false,
         };
         let country_2 = Country {
             label: "EEE".to_string().into(),
-            name: vec![],
             children: vec![country_3],
             level: 1,
-            parent_label: Some(ALL_COUNTRIES.clone()),
+            parent_label: Some("ALL".to_string().into()),
+            alpha2: "".to_string(),
+            alpha3: "".to_string(),
+            numeric: 0,
+            is_selected: false,
         };
         Country {
+            label: "ALL".to_string().into(),
+            level: 2,
+            parent_label: None,
             children: vec![country_2],
-            ..Default::default()
+            alpha2: "".to_string(),
+            alpha3: "".to_string(),
+            numeric: 0,
+            is_selected: false,
         }
     }
 
@@ -226,7 +272,7 @@ mod tests {
             .into_iter()
             .find(|country_child| get_parent_country(&country_child, child_label.clone(), 1).is_some())
             .unwrap();
-        assert_eq!(new_country.label, ALL_COUNTRIES.clone());
+        assert_eq!(new_country.label, "ALL".to_string().into());
     }
 
     #[test]
