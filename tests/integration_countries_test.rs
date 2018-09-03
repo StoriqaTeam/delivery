@@ -31,9 +31,11 @@ fn create_country(
 ) -> Result<Country, client::Error> {
     let new_country = NewCountry {
         label,
-        name: serde_json::from_str("[{\"lang\" : \"en\", \"text\" : \"root\"}]").unwrap(),
-        level: 3,
-        parent_label: Some("EEE".to_string().into()),
+        level: 2,
+        parent_label: Some("Africa".to_string().into()),
+        alpha2: "".to_string(),
+        alpha3: "".to_string(),
+        numeric: 0,
     };
 
     let body: String = serde_json::to_string(&new_country).unwrap().to_string();

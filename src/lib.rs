@@ -12,8 +12,6 @@ extern crate hyper_tls;
 extern crate jsonwebtoken;
 #[macro_use]
 extern crate log;
-#[macro_use]
-extern crate lazy_static;
 extern crate r2d2;
 extern crate r2d2_diesel;
 extern crate rand;

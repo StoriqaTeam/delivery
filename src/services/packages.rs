@@ -13,9 +13,8 @@ use stq_types::{CountryLabel, PackageId, UserId};
 use errors::Error;
 
 use super::types::ServiceFuture;
-use models::countries::ALL_COUNTRIES;
 use models::packages::{NewPackages, Packages, UpdatePackages};
-use repos::countries::get_country;
+use repos::countries::get_all_parent_labels;
 use repos::ReposFactory;
 
 pub trait PackagesService {
@@ -106,15 +105,8 @@ impl<
                             let packages_repo = repo_factory.create_packages_repo(&*conn, user_id);
                             let countries_repo = repo_factory.create_countries_repo(&*conn, user_id);
                             countries_repo.get_all().and_then(|countries| {
-                                let countries_list = get_country(&countries, country.clone())
-                                    .map(|c| {
-                                        let mut countries_vec = vec![ALL_COUNTRIES.clone(), c.label];
-                                        if let Some(parent_label) = c.parent_label {
-                                            countries_vec.push(parent_label)
-                                        }
-                                        countries_vec
-                                    })
-                                    .unwrap_or(vec![country]);
+                                let mut countries_list = vec![];
+                                get_all_parent_labels(&countries, country.clone(), &mut countries_list);
                                 packages_repo.find_deliveries_to(countries_list)
                             })
                         })

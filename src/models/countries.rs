@@ -1,30 +1,22 @@
 //! Models contains all structures that are used in different
 //! modules of the app
 //! EAV model countries
-use failure::Error as FailureError;
-use failure::Fail;
-use serde_json;
 use validator::Validate;
 
-use stq_static_resources::{Language, Translation};
 use stq_types::CountryLabel;
 
-use errors::Error;
-use models::validation_rules::*;
 use schema::countries;
-
-lazy_static! {
-    pub static ref ALL_COUNTRIES: CountryLabel = CountryLabel("ALL".to_string());
-}
 
 /// RawCountry is an object stored in PG, used only for Country tree creation,
 #[derive(Debug, Serialize, Deserialize, Associations, Queryable, Clone)]
 #[table_name = "countries"]
 pub struct RawCountry {
     pub label: CountryLabel,
-    pub name: serde_json::Value,
     pub parent_label: Option<CountryLabel>,
     pub level: i32,
+    pub alpha2: String,
+    pub alpha3: String,
+    pub numeric: i32,
 }
 
 /// Payload for creating countries
@@ -32,44 +24,52 @@ pub struct RawCountry {
 #[table_name = "countries"]
 pub struct NewCountry {
     pub label: CountryLabel,
-    #[validate(custom = "validate_translation")]
-    pub name: serde_json::Value,
     pub parent_label: Option<CountryLabel>,
     #[validate(range(min = "1", max = "2"))]
     pub level: i32,
+    pub alpha2: String,
+    pub alpha3: String,
+    pub numeric: i32,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Country {
     pub label: CountryLabel,
-    pub name: Vec<Translation>,
     pub level: i32,
     pub parent_label: Option<CountryLabel>,
+    pub alpha2: String,
+    pub alpha3: String,
+    pub numeric: i32,
     pub children: Vec<Country>,
+    pub is_selected: bool,
 }
 
-impl Default for Country {
-    fn default() -> Self {
+impl From<RawCountry> for Country {
+    fn from(raw: RawCountry) -> Self {
         Self {
-            label: ALL_COUNTRIES.clone(),
-            name: vec![Translation::new(Language::En, "all".to_string())],
+            label: raw.label.clone(),
             children: vec![],
-            level: 0,
-            parent_label: None,
+            parent_label: raw.parent_label.clone(),
+            level: raw.level,
+            alpha2: raw.alpha2,
+            alpha3: raw.alpha3,
+            numeric: raw.numeric,
+            is_selected: false,
         }
     }
 }
 
-impl RawCountry {
-    pub fn to_country(&self) -> Result<Country, FailureError> {
-        let name = serde_json::from_value::<Vec<Translation>>(self.name.clone())
-            .map_err(|e| e.context("Can not parse name from db").context(Error::Parse))?;
-        Ok(Country {
-            label: self.label.clone(),
-            name,
+impl<'a> From<&'a RawCountry> for Country {
+    fn from(raw: &RawCountry) -> Self {
+        Self {
+            label: raw.label.clone(),
             children: vec![],
-            parent_label: self.parent_label.clone(),
-            level: self.level,
-        })
+            parent_label: raw.parent_label.clone(),
+            level: raw.level,
+            alpha2: raw.alpha2.clone(),
+            alpha3: raw.alpha3.clone(),
+            numeric: raw.numeric,
+            is_selected: false,
+        }
     }
 }
