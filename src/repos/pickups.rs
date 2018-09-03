@@ -29,6 +29,9 @@ pub trait PickupsRepo {
     /// Create a new pickups
     fn create(&self, payload: NewPickups) -> RepoResult<Pickups>;
 
+    /// Getting pickups
+    fn list(&self) -> RepoResult<Vec<Pickups>>;
+
     /// Update a pickups
     fn update(&self, base_product_id_arg: BaseProductId, payload: UpdatePickups) -> RepoResult<Pickups>;
 
@@ -61,6 +64,23 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             .map_err(From::from)
             .and_then(|record| acl::check(&*self.acl, Resource::Companies, Action::Create, self, Some(&record)).and_then(|_| Ok(record)))
             .map_err(|e: FailureError| e.context(format!("create new pickups {:?}.", payload)).into())
+    }
+
+    /// Getting pickups
+    fn list(&self) -> RepoResult<Vec<Pickups>> {
+        debug!("List pickups");
+        let query = pickups.order(id);
+
+        query
+            .get_results(self.db_conn)
+            .map_err(From::from)
+            .and_then(|results: Vec<Pickups>| {
+                for result in &results {
+                    acl::check(&*self.acl, Resource::Pickups, Action::Read, self, Some(&result))?;
+                }
+                Ok(results)
+            })
+            .map_err(|e: FailureError| e.context(format!("Find in pickups error occured")).into())
     }
 
     /// Update a pickups
