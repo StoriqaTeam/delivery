@@ -152,7 +152,7 @@ pub mod tests {
             Box::new(PackagesRepoMock::default()) as Box<PackagesRepo>
         }
 
-        fn create_pickups_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<PickupsRepo + 'a> {
+        fn create_pickups_repo<'a>(&self, _db_conn: &'a C, _user_id: Option<UserId>) -> Box<PickupsRepo + 'a> {
             Box::new(PickupsRepoMock::default()) as Box<PickupsRepo>
         }
     }
@@ -214,8 +214,21 @@ pub mod tests {
         }
 
         /// Create many a new products
-        fn create_many(&self, payload: Vec<NewProducts>) -> RepoResult<Vec<Products>> {
-            Ok(vec![]) // TODO: added objects
+        fn create_many(&self, payloads: Vec<NewProducts>) -> RepoResult<Vec<Products>> {
+            let mut result = vec![];
+            for item in payloads {
+                result.push(Products {
+                    id: 1,
+                    base_product_id: item.base_product_id,
+                    store_id: item.store_id,
+                    company_package_id: item.company_package_id,
+                    shipping: item.shipping,
+                    price: item.price,
+                    deliveries_to: item.deliveries_to,
+                });
+            }
+
+            Ok(result)
         }
 
         /// Get a products
@@ -229,6 +242,20 @@ pub mod tests {
                 price: None,
                 deliveries_to: vec![],
             }])
+        }
+
+        fn get_products_countries(&self, base_product_id_arg: BaseProductId) -> RepoResult<Vec<ProductsWithAvailableCountries>> {
+            let product = Products {
+                id: 1,
+                base_product_id: base_product_id_arg,
+                store_id: StoreId(1),
+                company_package_id: CompanyPackageId(1),
+                shipping: ShippingVariant::Local,
+                price: None,
+                deliveries_to: vec![],
+            };
+
+            Ok(vec![ProductsWithAvailableCountries(product, vec![])])
         }
 
         /// Update a products
@@ -412,6 +439,16 @@ pub mod tests {
                 pickup: payload.pickup,
                 price: payload.price,
             })
+        }
+
+        fn list(&self) -> RepoResult<Vec<Pickups>> {
+            Ok(vec![Pickups {
+                id: 1,
+                base_product_id: BaseProductId(1),
+                store_id: StoreId(1),
+                pickup: false,
+                price: Some(ProductPrice(1.0)),
+            }])
         }
 
         fn update(&self, base_product_id_arg: BaseProductId, payload: UpdatePickups) -> RepoResult<Pickups> {
