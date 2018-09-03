@@ -10,7 +10,7 @@ use r2d2::{ManageConnection, Pool};
 use stq_types::{CompanyPackageId, CountryLabel, UserId};
 
 use errors::Error;
-use models::companies_packages::{AvailablePackages, CompaniesPackages, NewCompaniesPackages};
+use models::{AvailablePackages, CompaniesPackages, Country, NewCompaniesPackages};
 use repos::countries::{contains_country_label, get_country};
 use repos::ReposFactory;
 use services::types::ServiceFuture;
@@ -127,17 +127,32 @@ impl<
                                 .and_then(|companies_ids| companies_packages_repo.get_available_packages(companies_ids, size, weight))
                                 .and_then({
                                     let deliveries_from = deliveries_from.clone();
-                                    move |mut packages| {
+                                    move |packages| {
                                         countries_repo.get_all().map(|countries| {
-                                            for package in &mut packages {
+                                            let mut data = vec![];
+                                            for package in packages {
                                                 let local_available = package.deliveries_to.iter().any(|country_label| {
                                                     get_country(&countries, country_label.clone())
                                                         .map(|c| contains_country_label(&c, &deliveries_from))
                                                         .unwrap_or_default()
                                                 });
-                                                package.local_available = local_available;
+
+                                                let deliveries_to = package
+                                                    .deliveries_to
+                                                    .iter()
+                                                    .filter_map(|country_label| get_country(&countries, country_label.clone()))
+                                                    .collect::<Vec<Country>>();
+
+                                                let element = AvailablePackages {
+                                                    id: package.id,
+                                                    name: package.name,
+                                                    deliveries_to,
+                                                    local_available,
+                                                };
+
+                                                data.push(element);
                                             }
-                                            packages
+                                            data
                                         })
                                     }
                                 })

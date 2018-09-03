@@ -7,8 +7,6 @@ use diesel::prelude::*;
 use diesel::query_dsl::RunQueryDsl;
 use diesel::Connection;
 
-use serde_json;
-
 use failure::Error as FailureError;
 use failure::Fail;
 
@@ -18,8 +16,7 @@ use models::authorization::*;
 use repos::legacy_acl::*;
 use repos::types::RepoResult;
 
-use errors::Error;
-use models::companies_packages::{AvailablePackages, CompaniesPackages, NewCompaniesPackages};
+use models::{CompaniesPackages, CompanyRaw, InnerAvailablePackages, NewCompaniesPackages, PackagesRaw};
 use repos::*;
 use schema::companies::dsl as DslCompanies;
 use schema::companies_packages::dsl::*;
@@ -31,7 +28,7 @@ pub trait CompaniesPackagesRepo {
     fn create(&self, payload: NewCompaniesPackages) -> RepoResult<CompaniesPackages>;
 
     /// Getting available packages satisfying the constraints
-    fn get_available_packages(&self, company_id_args: Vec<CompanyId>, size: f64, weight: f64) -> RepoResult<Vec<AvailablePackages>>;
+    fn get_available_packages(&self, company_id_args: Vec<CompanyId>, size: f64, weight: f64) -> RepoResult<Vec<InnerAvailablePackages>>;
 
     /// Returns company package by id
     fn get(&self, id: CompanyPackageId) -> RepoResult<CompaniesPackages>;
@@ -76,7 +73,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     }
 
     /// Getting available packages satisfying the constraints
-    fn get_available_packages(&self, company_id_args: Vec<CompanyId>, size: f64, weight: f64) -> RepoResult<Vec<AvailablePackages>> {
+    fn get_available_packages(&self, company_id_args: Vec<CompanyId>, size: f64, weight: f64) -> RepoResult<Vec<InnerAvailablePackages>> {
         debug!(
             "Find in packages with companies: {:?}, size: {}, weight: {}.",
             company_id_args, size, weight
@@ -90,25 +87,23 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             .filter(DslPackages::min_size.ge(size))
             .filter(DslPackages::max_weight.le(size))
             .filter(DslPackages::min_weight.ge(size))
-            .order(DslCompanies::label)
-            .select((id, DslCompanies::label, DslPackages::name, DslPackages::deliveries_to));
+            .order(DslCompanies::label);
 
         query
-            .get_results(self.db_conn)
+            .get_results::<(CompaniesPackages, CompanyRaw, PackagesRaw)>(self.db_conn)
             .map_err(From::from)
-            .and_then(|results: Vec<(CompanyPackageId, String, String, serde_json::Value)>| {
+            .and_then(|results| {
                 let mut data = vec![];
                 for result in results {
-                    let deliveries_to = serde_json::from_value(result.3)
-                        .map_err(|e| e.context("Can not parse deliveries_to from db").context(Error::Parse))?;
-                    data.push(AvailablePackages {
-                        id: result.0,
-                        name: format!("{}-{}", result.1, result.2),
-                        deliveries_to,
-                        local_available: false,
+                    let (companies_package, company_raw, package_raw) = result;
+                    let package = package_raw.to_packages()?;
+                    data.push(InnerAvailablePackages {
+                        id: companies_package.id,
+                        name: format!("{}-{}", company_raw.label, package.name),
+                        deliveries_to: package.deliveries_to,
                     });
                 }
-                //acl::check(&*self.acl, Resource::DeliveryTo, Action::Read, self, Some(&delivery))?;
+
                 Ok(data)
             })
             .map_err(|e: FailureError| {

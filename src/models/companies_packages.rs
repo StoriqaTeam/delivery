@@ -1,3 +1,4 @@
+use models::Country;
 use stq_types::{CompanyId, CompanyPackageId, CountryLabel, PackageId};
 
 use schema::companies_packages;
@@ -18,9 +19,16 @@ pub struct NewCompaniesPackages {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct AvailablePackages {
+pub struct InnerAvailablePackages {
     pub id: CompanyPackageId,
     pub name: String,
     pub deliveries_to: Vec<CountryLabel>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct AvailablePackages {
+    pub id: CompanyPackageId,
+    pub name: String,
+    pub deliveries_to: Vec<Country>,
     pub local_available: bool,
 }
