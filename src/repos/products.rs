@@ -13,13 +13,16 @@ use failure::Error as FailureError;
 use stq_types::{BaseProductId, CompanyPackageId, UserId};
 
 use models::authorization::*;
-use models::products::{NewProducts, NewProductsRaw, Products, ProductsRaw, UpdateProducts};
-use models::roles::UserRole;
+use models::{CompaniesPackages, NewProducts, NewProductsRaw, PackagesRaw, Products, ProductsRaw, UpdateProducts, UserRole};
 use repos::legacy_acl::*;
 use repos::types::RepoResult;
 use repos::*;
-use schema::products::dsl::*;
+use schema::companies_packages::dsl as DslCompaniesPackages;
+use schema::packages::dsl as DslPackages;
+use schema::products::dsl as DslProducts;
 use schema::roles::dsl as Roles;
+
+pub struct ProductsWithAvailableCountries(pub Products, pub Vec<CountryLabel>);
 
 /// Products repository for handling Products
 pub trait ProductsRepo {
@@ -31,6 +34,9 @@ pub trait ProductsRepo {
 
     /// Get a products
     fn get_by_base_product_id(&self, base_product_id: BaseProductId) -> RepoResult<Vec<Products>>;
+
+    /// Get a products with available countries for delivery by package
+    fn get_products_countries(&self, base_product_id: BaseProductId) -> RepoResult<Vec<ProductsWithAvailableCountries>>;
 
     /// Update a products
     fn update(
@@ -63,7 +69,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     fn create(&self, payload: NewProducts) -> RepoResult<Products> {
         debug!("create new products {:?}.", payload);
         let payload = payload.to_raw()?;
-        let query = diesel::insert_into(products).values(&payload);
+        let query = diesel::insert_into(DslProducts::products).values(&payload);
         query
             .get_result::<ProductsRaw>(self.db_conn)
             .map_err(From::from)
@@ -82,7 +88,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             .map(|v| v.to_raw().map_err(From::from))
             .collect::<RepoResult<Vec<NewProductsRaw>>>()?;
 
-        let query = diesel::insert_into(products).values(&payload);
+        let query = diesel::insert_into(DslProducts::products).values(&payload);
         query
             .get_results::<ProductsRaw>(self.db_conn)
             .map_err(From::from)
@@ -103,7 +109,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 
     fn get_by_base_product_id(&self, base_product_id_arg: BaseProductId) -> RepoResult<Vec<Products>> {
         debug!("get products by base_product_id {:?}.", base_product_id_arg);
-        let query = products.filter(base_product_id.eq(base_product_id_arg));
+        let query = DslProducts::products.filter(DslProducts::base_product_id.eq(base_product_id_arg));
 
         query
             .get_results(self.db_conn)
@@ -123,6 +129,38 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             })
     }
 
+    /// Get a products with countries from packages
+    fn get_products_countries(&self, base_product_id_arg: BaseProductId) -> RepoResult<Vec<ProductsWithAvailableCountries>> {
+        debug!(
+            "Find in available countries for delivery by base_product_id: {:?}.",
+            base_product_id_arg
+        );
+
+        let query = DslProducts::products
+            .filter(DslProducts::base_product_id.eq(base_product_id_arg))
+            .inner_join(DslCompaniesPackages::companies_packages.inner_join(DslPackages::packages));
+
+        query
+            .get_results::<(ProductsRaw, (CompaniesPackages, PackagesRaw))>(self.db_conn)
+            .map_err(From::from)
+            .and_then(|results| {
+                let mut data = vec![];
+                for result in results {
+                    let (product_raw, (_, package_raw)) = result;
+                    let element = ProductsWithAvailableCountries(product_raw.to_products()?, package_raw.to_packages()?.deliveries_to);
+
+                    data.push(element);
+                }
+                Ok(data)
+            })
+            .map_err(|e: FailureError| {
+                e.context(format!(
+                    "Find in available countries for delivery by base_product_id: {:?} error occured",
+                    base_product_id_arg
+                )).into()
+            })
+    }
+
     fn update(
         &self,
         base_product_id_arg: BaseProductId,
@@ -132,15 +170,15 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         debug!("Updating products payload {:?}.", payload);
         let payload = payload.to_raw()?;
         self.execute_query(
-            products
-                .filter(base_product_id.eq(base_product_id_arg))
-                .filter(company_package_id.eq(company_package_id_arg)),
+            DslProducts::products
+                .filter(DslProducts::base_product_id.eq(base_product_id_arg))
+                .filter(DslProducts::company_package_id.eq(company_package_id_arg)),
         ).and_then(|products_: ProductsRaw| products_.to_products())
             .and_then(|product: Products| acl::check(&*self.acl, Resource::Products, Action::Update, self, Some(&product)))
             .and_then(|_| {
-                let filter = products
-                    .filter(base_product_id.eq(base_product_id_arg))
-                    .filter(company_package_id.eq(company_package_id_arg));
+                let filter = DslProducts::products
+                    .filter(DslProducts::base_product_id.eq(base_product_id_arg))
+                    .filter(DslProducts::company_package_id.eq(company_package_id_arg));
 
                 let query = diesel::update(filter).set(&payload);
                 query.get_result::<ProductsRaw>(self.db_conn).map_err(From::from)
@@ -151,7 +189,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 
     fn delete(&self, base_product_id_arg: BaseProductId) -> RepoResult<Vec<Products>> {
         debug!("delete products {:?}.", base_product_id_arg);
-        let query = products.filter(base_product_id.eq(base_product_id_arg));
+        let query = DslProducts::products.filter(DslProducts::base_product_id.eq(base_product_id_arg));
 
         query
             .get_results(self.db_conn)
