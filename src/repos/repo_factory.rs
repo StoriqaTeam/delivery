@@ -469,6 +469,16 @@ pub mod tests {
             }])
         }
 
+        fn get(&self, base_product_id_arg: BaseProductId) -> RepoResult<Option<Pickups>> {
+            Ok(Some(Pickups {
+                id: 1,
+                base_product_id: base_product_id_arg,
+                store_id: StoreId(1),
+                pickup: false,
+                price: Some(ProductPrice(1.0)),
+            }))
+        }
+
         fn update(&self, base_product_id_arg: BaseProductId, payload: UpdatePickups) -> RepoResult<Pickups> {
             Ok(Pickups {
                 id: 1,

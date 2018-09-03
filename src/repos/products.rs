@@ -138,7 +138,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 
         let query = DslProducts::products
             .filter(DslProducts::base_product_id.eq(base_product_id_arg))
-            .inner_join(DslCompaniesPackages::companies_packages.inner_join(DslPackages::packages));
+            .inner_join(DslCompaniesPackages::companies_packages.inner_join(DslPackages::packages))
+            .order(DslPackages::id);
 
         query
             .get_results::<(ProductsRaw, (CompaniesPackages, PackagesRaw))>(self.db_conn)
