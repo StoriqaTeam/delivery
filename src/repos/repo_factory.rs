@@ -591,14 +591,18 @@ pub mod tests {
         }
 
         /// Getting available packages satisfying the constraints
-        fn get_available_packages(&self, company_id_args: Vec<CompanyId>, _size: f64, _weight: f64) -> RepoResult<Vec<AvailablePackages>> {
+        fn get_available_packages(
+            &self,
+            company_id_args: Vec<CompanyId>,
+            _size: f64,
+            _weight: f64,
+        ) -> RepoResult<Vec<InnerAvailablePackages>> {
             Ok(company_id_args
                 .into_iter()
-                .map(|id| AvailablePackages {
+                .map(|id| InnerAvailablePackages {
                     id: CompanyPackageId(id.0),
                     name: "name".to_string(),
                     deliveries_to: vec![],
-                    local_available: false,
                 })
                 .collect())
         }
