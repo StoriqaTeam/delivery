@@ -10,7 +10,9 @@ use r2d2::{ManageConnection, Pool};
 use stq_types::{BaseProductId, CompanyPackageId, UserId};
 
 use errors::Error;
-use models::{NewProducts, NewShipping, Products, Shipping, UpdateProducts};
+use models::{Country, NewProducts, NewShipping, Products, Shipping, ShippingProducts, UpdateProducts};
+use repos::countries::{get_country, set_selected};
+use repos::products::ProductsWithAvailableCountries;
 use repos::ReposFactory;
 use services::types::ServiceFuture;
 
@@ -22,7 +24,7 @@ pub trait ProductsService {
     fn upsert(&self, base_product_id: BaseProductId, payload: NewShipping) -> ServiceFuture<Shipping>;
 
     /// Get products
-    fn get_by_base_product_id(&self, base_product_id: BaseProductId) -> ServiceFuture<Vec<Products>>;
+    fn get_by_base_product_id(&self, base_product_id: BaseProductId) -> ServiceFuture<Shipping>;
 
     /// Update a product
     fn update(
@@ -104,10 +106,36 @@ impl<
                             conn.transaction::<Shipping, _, _>(|| {
                                 let products_repo = repo_factory.create_products_repo(&*conn, user_id);
                                 let pickups_repo = repo_factory.create_pickups_repo(&*conn, user_id);
+                                let countries_repo = repo_factory.create_countries_repo(&*conn, user_id);
                                 let pickup = payload.pickup.clone();
                                 products_repo
                                     .delete(base_product_id.clone())
                                     .and_then(|_| products_repo.create_many(payload.items))
+                                    .and_then(|_| products_repo.get_products_countries(base_product_id.clone()))
+                                    .and_then(|products_with_countries| {
+                                        countries_repo.get_all().map(|countries| {
+                                            // getting all countries
+                                            products_with_countries
+                                                .into_iter()
+                                                .map(|product_with_countries| {
+                                                    // getting product with chosen package deliveries to
+                                                    let ProductsWithAvailableCountries(product, package_countries) = product_with_countries;
+                                                    // at first - take all package deliveries to country labels and make Vec of Country
+                                                    let deliveries_to = package_countries
+                                                        .into_iter()
+                                                        .filter_map(|label| {
+                                                            get_country(&countries, label).map(|mut country| {
+                                                                // now select only countries that in products deliveries to
+                                                                set_selected(&mut country, &product.deliveries_to);
+                                                                country
+                                                            })
+                                                        })
+                                                        .collect::<Vec<Country>>();
+                                                    ShippingProducts { product, deliveries_to }
+                                                })
+                                                .collect::<Vec<ShippingProducts>>()
+                                        })
+                                    })
                                     .and_then(|products| {
                                         if let Some(pickup) = pickup {
                                             pickups_repo
@@ -128,7 +156,7 @@ impl<
         )
     }
 
-    fn get_by_base_product_id(&self, base_product_id: BaseProductId) -> ServiceFuture<Vec<Products>> {
+    fn get_by_base_product_id(&self, base_product_id: BaseProductId) -> ServiceFuture<Shipping> {
         let db_pool = self.db_pool.clone();
         let repo_factory = self.repo_factory.clone();
         let user_id = self.user_id;
@@ -141,7 +169,40 @@ impl<
                         .map_err(|e| e.context(Error::Connection).into())
                         .and_then(move |conn| {
                             let products_repo = repo_factory.create_products_repo(&*conn, user_id);
-                            products_repo.get_by_base_product_id(base_product_id)
+                            let pickups_repo = repo_factory.create_pickups_repo(&*conn, user_id);
+                            let countries_repo = repo_factory.create_countries_repo(&*conn, user_id);
+                            products_repo
+                                .get_products_countries(base_product_id)
+                                .and_then(|products_with_countries| {
+                                    countries_repo.get_all().map(|countries| {
+                                        // getting all countries
+                                        products_with_countries
+                                            .into_iter()
+                                            .map(|product_with_countries| {
+                                                // getting product with chosen package deliveries to
+                                                let ProductsWithAvailableCountries(product, package_countries) = product_with_countries;
+                                                // at first - take all package deliveries to country labels and make Vec of Country
+                                                let deliveries_to = package_countries
+                                                    .into_iter()
+                                                    .filter_map(|label| {
+                                                        get_country(&countries, label).map(|mut country| {
+                                                            // now select only countries that in products deliveries to
+                                                            set_selected(&mut country, &product.deliveries_to);
+                                                            country
+                                                        })
+                                                    })
+                                                    .collect::<Vec<Country>>();
+                                                ShippingProducts { product, deliveries_to }
+                                            })
+                                            .collect::<Vec<ShippingProducts>>()
+                                    })
+                                })
+                                .and_then(|products| {
+                                    pickups_repo.get(base_product_id).map(|pickups| Shipping {
+                                        items: products,
+                                        pickup: pickups,
+                                    })
+                                })
                         })
                 })
                 .map_err(|e| e.context("Service Products, get_by_base_product_id endpoint error occured.").into()),
