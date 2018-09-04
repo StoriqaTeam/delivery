@@ -48,7 +48,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     fn find(&self, label_arg: CountryLabel) -> RepoResult<Option<Country>> {
         debug!("Find in countries with label {}.", label_arg);
         acl::check(&*self.acl, Resource::Countries, Action::Read, self, None)?;
-        self.get_all().map(|root| get_country(&root, label_arg))
+        self.get_all().map(|root| get_country(&root, &label_arg))
     }
 
     /// Creates new country
@@ -131,28 +131,28 @@ pub fn clear_child_countries(mut country: Country, stack_level: i32) -> Country 
     country
 }
 
-pub fn get_parent_country(country: &Country, child_label: CountryLabel, stack_level: i32) -> Option<Country> {
+pub fn get_parent_country(country: &Country, child_label: &CountryLabel, stack_level: i32) -> Option<Country> {
     if stack_level != 0 {
         country
             .children
             .iter()
-            .find(|country_child| get_parent_country(country_child, child_label.clone(), stack_level - 1).is_some())
+            .find(|country_child| get_parent_country(country_child, child_label, stack_level - 1).is_some())
             .and_then(|_| Some(country.clone()))
-    } else if country.label == child_label {
+    } else if country.label == *child_label {
         Some(country.clone())
     } else {
         None
     }
 }
 
-pub fn get_country(country: &Country, country_label: CountryLabel) -> Option<Country> {
-    if country.label == country_label {
+pub fn get_country(country: &Country, country_label: &CountryLabel) -> Option<Country> {
+    if country.label == *country_label {
         Some(country.clone())
     } else {
         country
             .children
             .iter()
-            .filter_map(|country_child| get_country(country_child, country_label.clone()))
+            .filter_map(|country_child| get_country(country_child, country_label))
             .next()
     }
 }
@@ -170,13 +170,13 @@ pub fn get_all_children_till_the_end(country: Country) -> Vec<Country> {
     }
 }
 
-pub fn get_all_parent_labels(country: &Country, searched_country_label: CountryLabel, labels: &mut Vec<CountryLabel>) {
-    if country.label == searched_country_label {
+pub fn get_all_parent_labels(country: &Country, searched_country_label: &CountryLabel, labels: &mut Vec<CountryLabel>) {
+    if country.label == *searched_country_label {
         labels.push(country.label.clone())
     } else {
         for child in &country.children {
             let old_len = labels.len();
-            get_all_parent_labels(child, searched_country_label.clone(), labels);
+            get_all_parent_labels(child, searched_country_label, labels);
             if labels.len() > old_len {
                 labels.push(country.label.clone());
                 break;
@@ -232,28 +232,28 @@ mod tests {
 
     fn create_mock_countries() -> Country {
         let country_3 = Country {
-            label: "RUS".to_string().into(),
+            label: "Russia".to_string().into(),
             children: vec![],
             level: 2,
-            parent_label: Some("EEE".to_string().into()),
+            parent_label: Some("Europe".to_string().into()),
             alpha2: "".to_string(),
             alpha3: "".to_string(),
             numeric: 0,
             is_selected: false,
         };
         let country_2 = Country {
-            label: "EEE".to_string().into(),
+            label: "Europe".to_string().into(),
             children: vec![country_3],
             level: 1,
-            parent_label: Some("ALL".to_string().into()),
+            parent_label: Some("All".to_string().into()),
             alpha2: "".to_string(),
             alpha3: "".to_string(),
             numeric: 0,
             is_selected: false,
         };
         Country {
-            label: "ALL".to_string().into(),
-            level: 2,
+            label: "All".to_string().into(),
+            level: 0,
             parent_label: None,
             children: vec![country_2],
             alpha2: "".to_string(),
@@ -266,20 +266,20 @@ mod tests {
     #[test]
     fn test_parent_countries() {
         let country = create_mock_countries();
-        let child_label = CountryLabel("rus".to_string());
+        let child_label = CountryLabel("Russia".to_string());
         let new_country = country
             .children
             .into_iter()
-            .find(|country_child| get_parent_country(&country_child, child_label.clone(), 1).is_some())
+            .find(|country_child| get_parent_country(&country_child, &child_label, 1).is_some())
             .unwrap();
-        assert_eq!(new_country.label, "ALL".to_string().into());
+        assert_eq!(new_country.label, "Europe".to_string().into());
     }
 
     #[test]
     fn test_get_country() {
         let country = create_mock_countries();
-        let child_label = CountryLabel("RUS".to_string());
-        let new_country = get_country(&country, child_label.clone()).unwrap();
+        let child_label = CountryLabel("Russia".to_string());
+        let new_country = get_country(&country, &child_label).unwrap();
         assert_eq!(new_country.label, child_label.clone().into());
     }
 }

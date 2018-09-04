@@ -106,7 +106,7 @@ impl<
                             let countries_repo = repo_factory.create_countries_repo(&*conn, user_id);
                             countries_repo.get_all().and_then(|countries| {
                                 let mut countries_list = vec![];
-                                get_all_parent_labels(&countries, country.clone(), &mut countries_list);
+                                get_all_parent_labels(&countries, &country, &mut countries_list);
                                 packages_repo.find_deliveries_to(countries_list)
                             })
                         })
@@ -215,9 +215,9 @@ pub mod tests {
         let cpu_pool = CpuPool::new(1);
 
         PackagesServiceImpl {
-            db_pool: db_pool,
-            cpu_pool: cpu_pool,
-            user_id: user_id,
+            db_pool,
+            cpu_pool,
+            user_id,
             repo_factory: MOCK_REPO_FACTORY,
         }
     }

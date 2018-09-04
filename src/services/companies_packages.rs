@@ -132,7 +132,7 @@ impl<
                                             let mut data = vec![];
                                             for package in packages {
                                                 let local_available = package.deliveries_to.iter().any(|country_label| {
-                                                    get_country(&countries, country_label.clone())
+                                                    get_country(&countries, country_label)
                                                         .map(|c| contains_country_label(&c, &deliveries_from))
                                                         .unwrap_or_default()
                                                 });
@@ -140,7 +140,7 @@ impl<
                                                 let deliveries_to = package
                                                     .deliveries_to
                                                     .iter()
-                                                    .filter_map(|country_label| get_country(&countries, country_label.clone()))
+                                                    .filter_map(|country_label| get_country(&countries, country_label))
                                                     .collect::<Vec<Country>>();
 
                                                 let element = AvailablePackages {

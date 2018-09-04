@@ -66,7 +66,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         debug!("get companies_packages by id: {}.", id_arg);
 
         acl::check(&*self.acl, Resource::CompaniesPackages, Action::Read, self, None)?;
-        let query = companies_packages.filter(id.eq(id_arg.clone()));
+        let query = companies_packages.filter(id.eq(id_arg));
         query
             .get_result(self.db_conn)
             .map_err(move |e| e.context(format!("get companies_packages id: {}.", id_arg)).into())
@@ -118,7 +118,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         debug!("delete companies_packages by id: {}.", id_arg);
 
         acl::check(&*self.acl, Resource::CompaniesPackages, Action::Delete, self, None)?;
-        let filtered = companies_packages.filter(id.eq(id_arg.clone()));
+        let filtered = companies_packages.filter(id.eq(id_arg));
         let query = diesel::delete(filtered);
         query
             .get_result(self.db_conn)

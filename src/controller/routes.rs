@@ -94,7 +94,7 @@ pub fn create_route_parser() -> RouteParser<Route> {
     });
 
     route_parser.add_route(r"^/companies_packages$", || Route::CompaniesPackages);
-    route_parser.add_route_with_params(r"^/companies_packages$/(\d+)$", |params| {
+    route_parser.add_route_with_params(r"^/companies_packages/(\d+)$", |params| {
         params
             .get(0)
             .and_then(|string_id| string_id.parse().ok())

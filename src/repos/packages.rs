@@ -111,7 +111,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 }
                 Ok(results)
             })
-            .map_err(|e: FailureError| e.context(format!("Find in packages error occured")).into())
+            .map_err(|e: FailureError| e.context("Find in packages error occured").into())
     }
 
     /// Find specific package by ID

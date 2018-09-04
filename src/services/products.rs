@@ -109,9 +109,9 @@ impl<
                                 let countries_repo = repo_factory.create_countries_repo(&*conn, user_id);
                                 let pickup = payload.pickup.clone();
                                 products_repo
-                                    .delete(base_product_id.clone())
+                                    .delete(base_product_id)
                                     .and_then(|_| products_repo.create_many(payload.items))
-                                    .and_then(|_| products_repo.get_products_countries(base_product_id.clone()))
+                                    .and_then(|_| products_repo.get_products_countries(base_product_id))
                                     .and_then(|products_with_countries| {
                                         countries_repo.get_all().map(|countries| {
                                             // getting all countries
@@ -124,7 +124,7 @@ impl<
                                                     let deliveries_to = package_countries
                                                         .into_iter()
                                                         .filter_map(|label| {
-                                                            get_country(&countries, label).map(|mut country| {
+                                                            get_country(&countries, &label).map(|mut country| {
                                                                 // now select only countries that in products deliveries to
                                                                 set_selected(&mut country, &product.deliveries_to);
                                                                 country
@@ -185,7 +185,7 @@ impl<
                                                 let deliveries_to = package_countries
                                                     .into_iter()
                                                     .filter_map(|label| {
-                                                        get_country(&countries, label).map(|mut country| {
+                                                        get_country(&countries, &label).map(|mut country| {
                                                             // now select only countries that in products deliveries to
                                                             set_selected(&mut country, &product.deliveries_to);
                                                             country
