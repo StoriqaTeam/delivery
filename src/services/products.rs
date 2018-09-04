@@ -10,7 +10,7 @@ use r2d2::{ManageConnection, Pool};
 use stq_types::{BaseProductId, CompanyPackageId, UserId};
 
 use errors::Error;
-use models::{Country, NewProducts, NewShipping, Products, Shipping, ShippingProducts, UpdateProducts};
+use models::{Country, InnerNewProducts, NewShipping, NewShippingProducts, Products, Shipping, ShippingProducts, UpdateProducts};
 use repos::countries::{get_country, set_selected};
 use repos::products::ProductsWithAvailableCountries;
 use repos::ReposFactory;
@@ -18,7 +18,7 @@ use services::types::ServiceFuture;
 
 pub trait ProductsService {
     /// Creates new products
-    fn create(&self, payload: NewProducts) -> ServiceFuture<Products>;
+    fn create(&self, payload: NewShippingProducts) -> ServiceFuture<Products>;
 
     /// Delete and Insert shipping values
     fn upsert(&self, base_product_id: BaseProductId, payload: NewShipping) -> ServiceFuture<Shipping>;
@@ -34,7 +34,7 @@ pub trait ProductsService {
         payload: UpdateProducts,
     ) -> ServiceFuture<Products>;
 
-    fn delete(&self, base_product_id_arg: BaseProductId) -> ServiceFuture<Vec<Products>>;
+    fn delete(&self, base_product_id_arg: BaseProductId) -> ServiceFuture<()>;
 }
 
 /// Products services, responsible for CRUD operations
@@ -71,7 +71,7 @@ impl<
         F: ReposFactory<T>,
     > ProductsService for ProductsServiceImpl<T, M, F>
 {
-    fn create(&self, payload: NewProducts) -> ServiceFuture<Products> {
+    fn create(&self, payload: NewShippingProducts) -> ServiceFuture<Products> {
         let db_pool = self.db_pool.clone();
         let repo_factory = self.repo_factory.clone();
         let user_id = self.user_id;
@@ -84,7 +84,7 @@ impl<
                         .map_err(|e| e.context(Error::Connection).into())
                         .and_then(move |conn| {
                             let products_repo = repo_factory.create_products_repo(&*conn, user_id);
-                            products_repo.create(payload)
+                            products_repo.create(payload.into())
                         })
                 })
                 .map_err(|e| e.context("Service Products, create endpoint error occured.").into()),
@@ -108,12 +108,18 @@ impl<
                                 let pickups_repo = repo_factory.create_pickups_repo(&*conn, user_id);
                                 let countries_repo = repo_factory.create_countries_repo(&*conn, user_id);
                                 let pickup = payload.pickup.clone();
+                                info!("delete products by base_product_id: {} in upsert Service Products", base_product_id);
                                 products_repo
-                                    .delete(base_product_id)
-                                    .and_then(|_| products_repo.create_many(payload.items))
-                                    .and_then(|_| products_repo.get_products_countries(base_product_id))
+                                    .delete(base_product_id.clone())
+                                    .and_then(|_| {
+                                        info!("delete products by base_product_id: {} in upsert Service Products", base_product_id);
+                                        let items = payload.items.into_iter().map(From::from).collect::<Vec<InnerNewProducts>>();
+                                        products_repo.create_many(items)
+                                    })
+                                    .and_then(|_| products_repo.get_products_countries(base_product_id.clone()))
                                     .and_then(|products_with_countries| {
                                         countries_repo.get_all().map(|countries| {
+                                            info!("getting countries in upsert Service Products");
                                             // getting all countries
                                             products_with_countries
                                                 .into_iter()
@@ -125,6 +131,7 @@ impl<
                                                         .into_iter()
                                                         .filter_map(|label| {
                                                             get_country(&countries, &label).map(|mut country| {
+                                                                info!("selected countries in upsert Service Products");
                                                                 // now select only countries that in products deliveries to
                                                                 set_selected(&mut country, &product.deliveries_to);
                                                                 country
@@ -138,15 +145,19 @@ impl<
                                     })
                                     .and_then(|products| {
                                         if let Some(pickup) = pickup {
+                                            info!("delete pickups by base_product_id: {} in upsert Service Products", base_product_id);
                                             pickups_repo
                                                 .delete(base_product_id)
                                                 .and_then(|_| pickups_repo.create(pickup))
                                                 .map(Some)
                                         } else {
                                             Ok(None)
-                                        }.map(|pickups| Shipping {
-                                            items: products,
-                                            pickup: pickups,
+                                        }.map(|pickups| {
+                                            info!("create Shipping in upsert Service Products");
+                                            Shipping {
+                                                items: products,
+                                                pickup: pickups,
+                                            }
                                         })
                                     })
                             })
@@ -234,7 +245,7 @@ impl<
         )
     }
 
-    fn delete(&self, base_product_id_arg: BaseProductId) -> ServiceFuture<Vec<Products>> {
+    fn delete(&self, base_product_id_arg: BaseProductId) -> ServiceFuture<()> {
         let db_pool = self.db_pool.clone();
         let repo_factory = self.repo_factory.clone();
         let user_id = self.user_id;
@@ -246,8 +257,13 @@ impl<
                         .get()
                         .map_err(|e| e.context(Error::Connection).into())
                         .and_then(move |conn| {
-                            let products_repo = repo_factory.create_products_repo(&*conn, user_id);
-                            products_repo.delete(base_product_id_arg)
+                            conn.transaction::<(), _, _>(|| {
+                                let products_repo = repo_factory.create_products_repo(&*conn, user_id);
+                                let pickups_repo = repo_factory.create_pickups_repo(&*conn, user_id);
+                                products_repo
+                                    .delete(base_product_id_arg.clone())
+                                    .and_then(|_| pickups_repo.delete(base_product_id_arg).and_then(|_| Ok(())))
+                            })
                         })
                 })
                 .map_err(|e| e.context("Service Products, delete endpoint error occured.").into()),

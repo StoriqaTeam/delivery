@@ -195,6 +195,16 @@ pub fn set_selected(country: &mut Country, selected_labels: &[CountryLabel]) {
     }
 }
 
+pub fn get_selected(country: &Country, labels: &mut Vec<CountryLabel>) {
+    if country.is_selected {
+        labels.push(country.label.clone())
+    } else {
+        for child in &country.children {
+            get_selected(child, labels);
+        }
+    }
+}
+
 pub fn set_selected_till_end(country: &mut Country) {
     country.is_selected = true;
     for child in &mut country.children {

@@ -5,6 +5,8 @@ use serde_json;
 use stq_types::{BaseProductId, CompanyPackageId, CountryLabel, ProductPrice, StoreId};
 
 use errors::Error;
+use models::NewShippingProducts;
+use repos::countries::get_selected;
 use schema::products;
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug, DieselTypes)]
@@ -72,7 +74,7 @@ impl ProductsRaw {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct NewProducts {
+pub struct InnerNewProducts {
     pub base_product_id: BaseProductId,
     pub store_id: StoreId,
     pub company_package_id: CompanyPackageId,
@@ -81,7 +83,7 @@ pub struct NewProducts {
     pub shipping: ShippingVariant,
 }
 
-impl NewProducts {
+impl InnerNewProducts {
     pub fn to_raw(self) -> Result<NewProductsRaw, FailureError> {
         let deliveries_to =
             serde_json::to_value(self.deliveries_to).map_err(|e| e.context("Can not parse products from db").context(Error::Parse))?;
@@ -93,6 +95,35 @@ impl NewProducts {
             deliveries_to,
             shipping: self.shipping,
         })
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct NewProducts {
+    pub base_product_id: BaseProductId,
+    pub store_id: StoreId,
+    pub company_package_id: CompanyPackageId,
+    pub price: Option<ProductPrice>,
+    pub shipping: ShippingVariant,
+}
+
+impl From<NewShippingProducts> for InnerNewProducts {
+    fn from(other: NewShippingProducts) -> Self {
+        let NewShippingProducts { product, deliveries_to } = other;
+        let deliveries_to = deliveries_to.into_iter().fold(Vec::new(), |mut v, country| {
+            get_selected(&country, &mut v);
+
+            v
+        });
+
+        Self {
+            base_product_id: product.base_product_id,
+            store_id: product.store_id,
+            company_package_id: product.company_package_id,
+            price: product.price,
+            deliveries_to,
+            shipping: product.shipping,
+        }
     }
 }
 

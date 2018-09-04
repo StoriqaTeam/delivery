@@ -39,7 +39,7 @@ pub trait PickupsRepo {
     fn update(&self, base_product_id_arg: BaseProductId, payload: UpdatePickups) -> RepoResult<Pickups>;
 
     /// Delete a pickups
-    fn delete(&self, base_product_id_arg: BaseProductId) -> RepoResult<Pickups>;
+    fn delete(&self, base_product_id_arg: BaseProductId) -> RepoResult<Option<Pickups>>;
 }
 
 /// Implementation of PickupsRepo trait
@@ -120,16 +120,18 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             .map_err(|e: FailureError| e.context(format!("Updating products payload {:?} failed.", payload)).into())
     }
 
-    fn delete(&self, base_product_id_arg: BaseProductId) -> RepoResult<Pickups> {
+    fn delete(&self, base_product_id_arg: BaseProductId) -> RepoResult<Option<Pickups>> {
         debug!("delete pickups by base_product_id: {}.", base_product_id_arg);
-
-        acl::check(&*self.acl, Resource::Pickups, Action::Delete, self, None)?;
-        let filtered = pickups.filter(base_product_id.eq(base_product_id_arg));
-        let query = diesel::delete(filtered);
-        query.get_result(self.db_conn).map_err(move |e| {
-            e.context(format!("delete pickups by base_product_id: {}", base_product_id_arg))
-                .into()
-        })
+        self.execute_query(pickups.filter(base_product_id.eq(base_product_id_arg)))
+            .and_then(|pickup_: Pickups| acl::check(&*self.acl, Resource::Pickups, Action::Delete, self, Some(&pickup_)))
+            .and_then(|_| {
+                let filtered = pickups.filter(base_product_id.eq(base_product_id_arg));
+                let query = diesel::delete(filtered);
+                query.get_result(self.db_conn).optional().map_err(move |e| {
+                    e.context(format!("delete pickups by base_product_id: {}", base_product_id_arg))
+                        .into()
+                })
+            })
     }
 }
 
