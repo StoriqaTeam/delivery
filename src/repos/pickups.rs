@@ -65,7 +65,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         query
             .get_result::<Pickups>(self.db_conn)
             .map_err(From::from)
-            .and_then(|record| acl::check(&*self.acl, Resource::Companies, Action::Create, self, Some(&record)).and_then(|_| Ok(record)))
+            .and_then(|record| acl::check(&*self.acl, Resource::Pickups, Action::Create, self, Some(&record)).and_then(|_| Ok(record)))
             .map_err(|e: FailureError| e.context(format!("create new pickups {:?}.", payload)).into())
     }
 

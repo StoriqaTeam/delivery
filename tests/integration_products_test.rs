@@ -116,14 +116,13 @@ fn get_all_countries(
 fn create_shipping(
     base_product_id: BaseProductId,
     company_package_id: CompanyPackageId,
+    store_id: StoreId,
     deliveries_to: Vec<Country>,
     core: &mut tokio_core::reactor::Core,
     http_client: &HttpClientHandle,
     base_url: String,
     user_id: Option<String>,
 ) -> Result<Shipping, client::Error> {
-    let store_id = StoreId(1);
-
     let new_product = NewProducts {
         base_product_id: base_product_id.clone(),
         store_id: store_id.clone(),
@@ -241,6 +240,7 @@ fn test_products_superuser_crud() {
     let base_url = common::setup();
     let user_id = UserId(1);
     let base_product_id = BaseProductId(1);
+    let store_id = StoreId(1);
     let url_crd = get_url_request_by_base_product_id(base_url.clone(), base_product_id);
 
     let package_name = "Avia".to_string();
@@ -265,6 +265,7 @@ fn test_products_superuser_crud() {
     let create_result = create_shipping(
         base_product_id,
         companies_package_id.clone(),
+        store_id,
         countries,
         &mut core,
         &http_client,
@@ -289,12 +290,12 @@ fn test_products_superuser_crud() {
 }
 
 // test products by regular user
-#[ignore]
 #[test]
 fn test_products_regular_user_crud() {
     let (mut core, http_client) = common::make_utils();
     let base_url = common::setup();
     let base_product_id = BaseProductId(2);
+    let store_id = StoreId(1);
     let package_name = "Avia".to_string();
     let company_name = "US UPS".to_string();
     let super_user_id = UserId(1);
@@ -325,6 +326,7 @@ fn test_products_regular_user_crud() {
     let create_result = create_shipping(
         base_product_id,
         companies_package_id.clone(),
+        store_id,
         countries,
         &mut core,
         &http_client,
@@ -353,12 +355,12 @@ fn test_products_regular_user_crud() {
 }
 
 // test update products without authorization data
-#[ignore]
 #[test]
 fn test_products_unauthorized() {
     let (mut core, http_client) = common::make_utils();
     let base_url = common::setup();
     let base_product_id = BaseProductId(3);
+    let store_id = StoreId(1);
     let package_name = "Avia".to_string();
     let company_name = "US UPS".to_string();
     let super_user_id = UserId(1);
@@ -384,6 +386,7 @@ fn test_products_unauthorized() {
     let create_result = create_shipping(
         base_product_id,
         companies_package_id.clone(),
+        store_id,
         countries,
         &mut core,
         &http_client,
@@ -408,7 +411,6 @@ fn test_products_unauthorized() {
 }
 
 // test products by store manager
-#[ignore]
 #[test]
 fn test_products_store_manager() {
     let (mut core, http_client) = common::make_utils();
@@ -446,6 +448,7 @@ fn test_products_store_manager() {
     let create_result = create_shipping(
         base_product_id,
         companies_package_id.clone(),
+        store_id,
         countries,
         &mut core,
         &http_client,
