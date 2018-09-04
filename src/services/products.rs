@@ -2,6 +2,7 @@
 use diesel::connection::AnsiTransactionManager;
 use diesel::pg::Pg;
 use diesel::Connection;
+use failure::Error as FailureError;
 use failure::Fail;
 use futures::future::*;
 use futures_cpupool::CpuPool;
@@ -108,18 +109,15 @@ impl<
                                 let pickups_repo = repo_factory.create_pickups_repo(&*conn, user_id);
                                 let countries_repo = repo_factory.create_countries_repo(&*conn, user_id);
                                 let pickup = payload.pickup.clone();
-                                info!("delete products by base_product_id: {} in upsert Service Products", base_product_id);
                                 products_repo
                                     .delete(base_product_id.clone())
                                     .and_then(|_| {
-                                        info!("delete products by base_product_id: {} in upsert Service Products", base_product_id);
                                         let items = payload.items.into_iter().map(From::from).collect::<Vec<InnerNewProducts>>();
                                         products_repo.create_many(items)
                                     })
                                     .and_then(|_| products_repo.get_products_countries(base_product_id.clone()))
                                     .and_then(|products_with_countries| {
                                         countries_repo.get_all().map(|countries| {
-                                            info!("getting countries in upsert Service Products");
                                             // getting all countries
                                             products_with_countries
                                                 .into_iter()
@@ -131,7 +129,6 @@ impl<
                                                         .into_iter()
                                                         .filter_map(|label| {
                                                             get_country(&countries, &label).map(|mut country| {
-                                                                info!("selected countries in upsert Service Products");
                                                                 // now select only countries that in products deliveries to
                                                                 set_selected(&mut country, &product.deliveries_to);
                                                                 country
@@ -145,25 +142,21 @@ impl<
                                     })
                                     .and_then(|products| {
                                         if let Some(pickup) = pickup {
-                                            info!("delete pickups by base_product_id: {} in upsert Service Products", base_product_id);
                                             pickups_repo
                                                 .delete(base_product_id)
                                                 .and_then(|_| pickups_repo.create(pickup))
                                                 .map(Some)
                                         } else {
                                             Ok(None)
-                                        }.map(|pickups| {
-                                            info!("create Shipping in upsert Service Products");
-                                            Shipping {
-                                                items: products,
-                                                pickup: pickups,
-                                            }
+                                        }.map(|pickups| Shipping {
+                                            items: products,
+                                            pickup: pickups,
                                         })
                                     })
                             })
                         })
                 })
-                .map_err(|e| e.context("Service Products, upsert endpoint error occured.").into()),
+                .map_err(|e: FailureError| e.context("Service Products, upsert endpoint error occured.").into()),
         )
     }
 
