@@ -64,7 +64,7 @@ use repos::countries::CountryCacheImpl;
 use repos::repo_factory::ReposFactoryImpl;
 
 /// Starts new web service from provided `Config`
-pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: &Option<i32>, callback: F) {
+pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: Option<i32>, callback: F) {
     let thread_count = config.server.thread_count;
     let cpu_pool = CpuPool::new(thread_count);
     // Prepare reactor

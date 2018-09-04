@@ -80,7 +80,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 }
                 Ok(results)
             })
-            .map_err(|e: FailureError| e.context(format!("Find in companies error occured")).into())
+            .map_err(|e: FailureError| e.context("Find in companies error occured").into())
     }
 
     /// Find specific company by ID
@@ -126,7 +126,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     fn update(&self, id_arg: CompanyId, payload: UpdateCompany) -> RepoResult<Company> {
         debug!("Updating company {} with payload {:?}.", id_arg, payload);
         let payload = payload.to_raw()?;
-        let query = companies.filter(id.eq(id_arg.clone()));
+        let query = companies.filter(id.eq(id_arg));
 
         query
             .get_result::<CompanyRaw>(self.db_conn)
@@ -134,7 +134,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             .and_then(Company::from_raw)
             .and_then(|company: Company| acl::check(&*self.acl, Resource::Companies, Action::Update, self, Some(&company)))
             .and_then(|_| {
-                let filtered = companies.filter(id.eq(id_arg.clone()));
+                let filtered = companies.filter(id.eq(id_arg));
 
                 let query = diesel::update(filtered).set(&payload);
                 query
@@ -149,7 +149,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         debug!("delete company by company_id: {}.", id_arg);
 
         acl::check(&*self.acl, Resource::Companies, Action::Delete, self, None)?;
-        let filtered = companies.filter(id.eq(id_arg.clone()));
+        let filtered = companies.filter(id.eq(id_arg));
         let query = diesel::delete(filtered);
         query
             .get_result::<CompanyRaw>(self.db_conn)

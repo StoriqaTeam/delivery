@@ -9,5 +9,5 @@ fn main() {
     // Prepare logger
     stq_logging::init(config.graylog.as_ref());
 
-    delivery_lib::start_server(config, &None, || ());
+    delivery_lib::start_server(config, None, || ());
 }

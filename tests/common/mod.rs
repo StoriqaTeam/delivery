@@ -27,7 +27,7 @@ pub fn setup() -> String {
         let tx = tx.clone();
         move || {
             let config = lib::config::Config::new().expect("Can't load app config!");
-            lib::start_server(config, &Some(port), move || {
+            lib::start_server(config, Some(port), move || {
                 let _ = tx.send(true);
             });
         }

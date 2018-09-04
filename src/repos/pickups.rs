@@ -83,7 +83,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 }
                 Ok(results)
             })
-            .map_err(|e: FailureError| e.context(format!("Find in pickups error occured")).into())
+            .map_err(|e: FailureError| e.context("Find in pickups error occured").into())
     }
 
     /// Getting pickups by base_product_id
@@ -124,7 +124,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         debug!("delete pickups by base_product_id: {}.", base_product_id_arg);
 
         acl::check(&*self.acl, Resource::Pickups, Action::Delete, self, None)?;
-        let filtered = pickups.filter(base_product_id.eq(base_product_id_arg.clone()));
+        let filtered = pickups.filter(base_product_id.eq(base_product_id_arg));
         let query = diesel::delete(filtered);
         query.get_result(self.db_conn).map_err(move |e| {
             e.context(format!("delete pickups by base_product_id: {}", base_product_id_arg))

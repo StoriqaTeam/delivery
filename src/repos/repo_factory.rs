@@ -188,7 +188,7 @@ pub mod tests {
 
         fn delete_by_id(&self, id: RoleId) -> RepoResult<UserRole> {
             Ok(UserRole {
-                id: id,
+                id,
                 user_id: UserId(1),
                 name: StoresRole::User,
                 data: None,
@@ -269,7 +269,7 @@ pub mod tests {
                 id: 1,
                 base_product_id: base_product_id_arg,
                 store_id: StoreId(1),
-                company_package_id: company_package_id,
+                company_package_id,
                 shipping: payload.shipping.unwrap(),
                 price: payload.price,
                 deliveries_to: payload.deliveries_to.unwrap_or_default(),
