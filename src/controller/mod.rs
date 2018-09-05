@@ -137,20 +137,6 @@ impl<
                 serialize_future({ user_roles_service.delete_by_id(id) })
             }
 
-            // POST /products
-            (&Post, Some(Route::Products)) => {
-                debug!("User with id = '{:?}' is requesting  // POST /products", user_id);
-                serialize_future(
-                    parse_body::<NewProducts>(req.body())
-                        .map_err(|e| {
-                            e.context("Parsing body // POST /products in NewProducts failed!")
-                                .context(Error::Parse)
-                                .into()
-                        })
-                        .and_then(move |new_products| products_service.create(new_products)),
-                )
-            }
-
             // POST /products/<base_product_id>
             (&Post, Some(Route::ProductsById { base_product_id })) => {
                 debug!(

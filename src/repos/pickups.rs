@@ -39,7 +39,7 @@ pub trait PickupsRepo {
     fn update(&self, base_product_id_arg: BaseProductId, payload: UpdatePickups) -> RepoResult<Pickups>;
 
     /// Delete a pickups
-    fn delete(&self, base_product_id_arg: BaseProductId) -> RepoResult<Pickups>;
+    fn delete(&self, base_product_id_arg: BaseProductId) -> RepoResult<Option<Pickups>>;
 }
 
 /// Implementation of PickupsRepo trait
@@ -65,7 +65,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         query
             .get_result::<Pickups>(self.db_conn)
             .map_err(From::from)
-            .and_then(|record| acl::check(&*self.acl, Resource::Companies, Action::Create, self, Some(&record)).and_then(|_| Ok(record)))
+            .and_then(|record| acl::check(&*self.acl, Resource::Pickups, Action::Create, self, Some(&record)).and_then(|_| Ok(record)))
             .map_err(|e: FailureError| e.context(format!("create new pickups {:?}.", payload)).into())
     }
 
@@ -120,16 +120,32 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             .map_err(|e: FailureError| e.context(format!("Updating products payload {:?} failed.", payload)).into())
     }
 
-    fn delete(&self, base_product_id_arg: BaseProductId) -> RepoResult<Pickups> {
+    fn delete(&self, base_product_id_arg: BaseProductId) -> RepoResult<Option<Pickups>> {
         debug!("delete pickups by base_product_id: {}.", base_product_id_arg);
+        let query = pickups.filter(base_product_id.eq(base_product_id_arg)).order(id);
 
-        acl::check(&*self.acl, Resource::Pickups, Action::Delete, self, None)?;
-        let filtered = pickups.filter(base_product_id.eq(base_product_id_arg));
-        let query = diesel::delete(filtered);
-        query.get_result(self.db_conn).map_err(move |e| {
-            e.context(format!("delete pickups by base_product_id: {}", base_product_id_arg))
-                .into()
-        })
+        query
+            .get_result(self.db_conn)
+            .optional()
+            .map_err(From::from)
+            .and_then(|pickup_: Option<Pickups>| {
+                if let Some(ref pickup_) = pickup_ {
+                    acl::check(&*self.acl, Resource::Pickups, Action::Delete, self, Some(pickup_))?;
+                }
+                Ok(pickup_)
+            })
+            .and_then(|_| {
+                let filtered = pickups.filter(base_product_id.eq(base_product_id_arg));
+                let query = diesel::delete(filtered);
+                query.get_result(self.db_conn).optional().map_err(move |e| {
+                    e.context(format!("delete pickups by base_product_id: {}", base_product_id_arg))
+                        .into()
+                })
+            })
+            .map_err(|e: FailureError| {
+                e.context(format!("delete pickups by base_product_id: {} failed", base_product_id_arg))
+                    .into()
+            })
     }
 }
 
