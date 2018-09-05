@@ -2,7 +2,9 @@
 use diesel;
 use diesel::connection::AnsiTransactionManager;
 use diesel::pg::Pg;
+use diesel::prelude::*;
 use diesel::query_dsl::RunQueryDsl;
+use diesel::sql_types::Bool;
 use diesel::Connection;
 use failure::Error as FailureError;
 
@@ -19,6 +21,13 @@ pub mod cache;
 
 pub use self::cache::*;
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub enum CountrySearch {
+    Alpha2(String),
+    Alpha3(String),
+    Numeric(i32),
+}
+
 /// Countries repository, responsible for handling countries
 pub struct CountriesRepoImpl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> {
     pub db_conn: &'a T,
@@ -29,6 +38,9 @@ pub struct CountriesRepoImpl<'a, T: Connection<Backend = Pg, TransactionManager 
 pub trait CountriesRepo {
     /// Find specific country by label
     fn find(&self, label_arg: CountryLabel) -> RepoResult<Option<Country>>;
+
+    /// Returns country by codes
+    fn find_by(&self, search: CountrySearch) -> RepoResult<Option<Country>>;
 
     /// Creates new country
     fn create(&self, payload: NewCountry) -> RepoResult<Country>;
@@ -49,6 +61,32 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         debug!("Find in countries with label {}.", label_arg);
         acl::check(&*self.acl, Resource::Countries, Action::Read, self, None)?;
         self.get_all().map(|root| get_country(&root, &label_arg))
+    }
+
+    fn find_by(&self, search: CountrySearch) -> RepoResult<Option<Country>> {
+        debug!("Get countries by search: {:?}.", search);
+
+        let search_exp: Box<BoxableExpression<countries, _, SqlType = Bool>> = match search.clone() {
+            CountrySearch::Alpha2(value) => Box::new(alpha2.eq(value)),
+            CountrySearch::Alpha3(value) => Box::new(alpha3.eq(value)),
+            CountrySearch::Numeric(value) => Box::new(numeric.eq(value)),
+        };
+
+        let query = countries.filter(search_exp);
+        query
+            .get_result(self.db_conn)
+            .optional()
+            .map_err(From::from)
+            .and_then(|raw_country: Option<RawCountry>| match raw_country {
+                Some(raw_country) => {
+                    let country: Country = raw_country.into();
+                    acl::check(&*self.acl, Resource::Countries, Action::Read, self, Some(&country))?;
+
+                    Ok(Some(country))
+                }
+                None => Ok(None),
+            })
+            .map_err(|e: FailureError| e.context(format!("Get countries by search: {:?}.", search)).into())
     }
 
     /// Creates new country

@@ -321,6 +321,19 @@ pub mod tests {
             }))
         }
 
+        fn find_by(&self, _search: CountrySearch) -> RepoResult<Option<Country>> {
+            Ok(Some(Country {
+                label: CountryLabel("Russia".to_string()),
+                children: vec![],
+                level: 2,
+                parent_label: Some("EEE".to_string().into()),
+                alpha2: "".to_string(),
+                alpha3: "".to_string(),
+                numeric: 0,
+                is_selected: false,
+            }))
+        }
+
         /// Creates new country
         fn create(&self, payload: NewCountry) -> RepoResult<Country> {
             Ok(Country {

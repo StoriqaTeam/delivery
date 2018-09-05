@@ -15,11 +15,13 @@ use errors::Error;
 
 use super::types::ServiceFuture;
 use models::{Country, NewCountry};
-use repos::ReposFactory;
+use repos::{CountrySearch, ReposFactory};
 
 pub trait CountriesService {
     /// Returns country by label
     fn get(&self, label: CountryLabel) -> ServiceFuture<Option<Country>>;
+    /// Returns country by codes
+    fn find_by(&self, search: CountrySearch) -> ServiceFuture<Option<Country>>;
     /// Creates new country
     fn create(&self, payload: NewCountry) -> ServiceFuture<Country>;
     /// Returns all countries as a tree
@@ -78,6 +80,27 @@ impl<
                         })
                 })
                 .map_err(|e| e.context("Service Countries, get endpoint error occured.").into()),
+        )
+    }
+
+    /// Returns country by codes
+    fn find_by(&self, search: CountrySearch) -> ServiceFuture<Option<Country>> {
+        let db_pool = self.db_pool.clone();
+        let user_id = self.user_id;
+        let repo_factory = self.repo_factory.clone();
+
+        Box::new(
+            self.cpu_pool
+                .spawn_fn(move || {
+                    db_pool
+                        .get()
+                        .map_err(|e| e.context(Error::Connection).into())
+                        .and_then(move |conn| {
+                            let countries_repo = repo_factory.create_countries_repo(&*conn, user_id);
+                            countries_repo.find_by(search)
+                        })
+                })
+                .map_err(|e| e.context("Service Countries, find_by endpoint error occured.").into()),
         )
     }
 
