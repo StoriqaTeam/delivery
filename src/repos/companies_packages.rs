@@ -82,9 +82,9 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         );
 
         let query = companies_packages
+            .filter(company_id.eq_any(&company_id_args))
             .inner_join(DslCompanies::companies)
             .inner_join(DslPackages::packages)
-            .filter(company_id.eq_any(&company_id_args))
             .filter(DslPackages::max_size.le(size))
             .filter(DslPackages::min_size.ge(size))
             .filter(DslPackages::max_weight.le(size))
@@ -101,7 +101,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                     let package = package_raw.to_packages()?;
                     data.push(InnerAvailablePackages {
                         id: companies_package.id,
-                        name: format!("{}-{}", company_raw.label, package.name),
+                        name: get_company_package_name(company_raw.label, package.name),
                         deliveries_to: package.deliveries_to,
                     });
                 }

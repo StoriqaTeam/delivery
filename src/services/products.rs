@@ -8,10 +8,13 @@ use futures::future::*;
 use futures_cpupool::CpuPool;
 use r2d2::{ManageConnection, Pool};
 
-use stq_types::{BaseProductId, CompanyPackageId, UserId};
+use stq_types::{BaseProductId, CompanyPackageId, CountryLabel, UserId};
 
 use errors::Error;
-use models::{Country, InnerNewProducts, NewShipping, NewShippingProducts, Products, Shipping, ShippingProducts, UpdateProducts};
+use models::{
+    AvailableShipppingForUser, Country, InnerNewProducts, NewShipping, NewShippingProducts, Products, Shipping, ShippingProducts,
+    UpdateProducts,
+};
 use repos::countries::{get_country, set_selected};
 use repos::products::ProductsWithAvailableCountries;
 use repos::ReposFactory;
@@ -26,6 +29,9 @@ pub trait ProductsService {
 
     /// Get products
     fn get_by_base_product_id(&self, base_product_id: BaseProductId) -> ServiceFuture<Shipping>;
+
+    /// find available product delivery to users country
+    fn find_available_to(&self, base_product_id: BaseProductId, user_country: CountryLabel) -> ServiceFuture<AvailableShipppingForUser>;
 
     /// Update a product
     fn update(
@@ -210,6 +216,32 @@ impl<
                         })
                 })
                 .map_err(|e| e.context("Service Products, get_by_base_product_id endpoint error occured.").into()),
+        )
+    }
+
+    /// find available product delivery to users country
+    fn find_available_to(&self, base_product_id: BaseProductId, user_country: CountryLabel) -> ServiceFuture<AvailableShipppingForUser> {
+        let db_pool = self.db_pool.clone();
+        let repo_factory = self.repo_factory.clone();
+        let user_id = self.user_id;
+
+        Box::new(
+            self.cpu_pool
+                .spawn_fn(move || {
+                    db_pool
+                        .get()
+                        .map_err(|e| e.context(Error::Connection).into())
+                        .and_then(move |conn| {
+                            let products_repo = repo_factory.create_products_repo(&*conn, user_id);
+                            let pickups_repo = repo_factory.create_pickups_repo(&*conn, user_id);
+                            products_repo.find_available_to(base_product_id, user_country).and_then(|packages| {
+                                pickups_repo
+                                    .get(base_product_id)
+                                    .map(|pickups| AvailableShipppingForUser { packages, pickups })
+                            })
+                        })
+                })
+                .map_err(|e| e.context("Service Products, find_available_to endpoint error occured.").into()),
         )
     }
 

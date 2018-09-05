@@ -10,7 +10,7 @@ services:
     command: ["sh", "-c", "/utils/wait_for_it.sh delivery-pg:5432 ; diesel migration run ; cargo run"]
     volumes:
       - ..:/app
-      - delivery_cargo_cache:/usr/local/cargo
+      - stq_cargo_cache:/usr/local/cargo
     environment:
       - "DATABASE_URL=postgresql://delivery:delivery@delivery-pg/delivery"
       - "RUST_LOG=delivery=debug"
@@ -35,7 +35,7 @@ services:
       - 5432
 
 volumes:
-  delivery_cargo_cache:
+  stq_cargo_cache:
   stq_delivery_postgres_data:
 
 networks:

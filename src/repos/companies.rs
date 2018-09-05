@@ -2,6 +2,7 @@
 
 use diesel;
 use diesel::connection::AnsiTransactionManager;
+use diesel::dsl::sql;
 use diesel::pg::Pg;
 use diesel::prelude::*;
 use diesel::query_dsl::RunQueryDsl;
@@ -106,8 +107,9 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     fn find_deliveries_from(&self, country: CountryLabel) -> RepoResult<Vec<Company>> {
         debug!("Find in companies with country {:?}.", country);
 
-        let query_str = format!("SELECT * FROM companies WHERE deliveries_from ? {};", country);
-        diesel::sql_query(query_str)
+        let query = companies.filter(sql(format!("deliveries_from ? {}", country).as_ref()));
+
+        query
             .get_results(self.db_conn)
             .map_err(From::from)
             .and_then(|raw: Vec<CompanyRaw>| raw.into_iter().map(Company::from_raw).collect())
