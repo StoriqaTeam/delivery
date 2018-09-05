@@ -244,10 +244,10 @@ pub mod tests {
             }])
         }
 
-        fn get_products_countries(&self, base_product_id_arg: BaseProductId) -> RepoResult<Vec<ProductsWithAvailableCountries>> {
+        fn get_products_countries(&self, base_product_id: BaseProductId) -> RepoResult<Vec<ProductsWithAvailableCountries>> {
             let product = Products {
                 id: 1,
-                base_product_id: base_product_id_arg,
+                base_product_id,
                 store_id: StoreId(1),
                 company_package_id: CompanyPackageId(1),
                 shipping: ShippingVariant::Local,
@@ -256,6 +256,19 @@ pub mod tests {
             };
 
             Ok(vec![ProductsWithAvailableCountries(product, vec![])])
+        }
+
+        /// find available product delivery to users country
+        fn find_available_to(
+            &self,
+            _base_product_id: BaseProductId,
+            _user_country: CountryLabel,
+        ) -> RepoResult<Vec<AvailablePackageForUser>> {
+            Ok(vec![AvailablePackageForUser {
+                id: CompanyPackageId(1),
+                name: "UPS-avia".to_string(),
+                price: None,
+            }])
         }
 
         /// Update a products

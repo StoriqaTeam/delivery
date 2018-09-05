@@ -3,6 +3,7 @@
 
 use diesel;
 use diesel::connection::AnsiTransactionManager;
+use diesel::dsl::sql;
 use diesel::pg::Pg;
 use diesel::prelude::*;
 use diesel::query_dsl::LoadQuery;
@@ -13,10 +14,14 @@ use failure::Error as FailureError;
 use stq_types::{BaseProductId, CompanyPackageId, UserId};
 
 use models::authorization::*;
-use models::{CompaniesPackages, InnerNewProducts, NewProductsRaw, PackagesRaw, Products, ProductsRaw, UpdateProducts, UserRole};
+use models::{
+    AvailablePackageForUser, CompaniesPackages, CompanyRaw, InnerNewProducts, NewProductsRaw, PackagesRaw, Products, ProductsRaw,
+    UpdateProducts, UserRole,
+};
 use repos::legacy_acl::*;
 use repos::types::RepoResult;
 use repos::*;
+use schema::companies::dsl as DslCompanies;
 use schema::companies_packages::dsl as DslCompaniesPackages;
 use schema::packages::dsl as DslPackages;
 use schema::products::dsl as DslProducts;
@@ -37,6 +42,9 @@ pub trait ProductsRepo {
 
     /// Get a products with available countries for delivery by package
     fn get_products_countries(&self, base_product_id: BaseProductId) -> RepoResult<Vec<ProductsWithAvailableCountries>>;
+
+    /// find available product delivery to users country
+    fn find_available_to(&self, base_product_id: BaseProductId, user_country: CountryLabel) -> RepoResult<Vec<AvailablePackageForUser>>;
 
     /// Update a products
     fn update(
@@ -158,6 +166,53 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 e.context(format!(
                     "Find in available countries for delivery by base_product_id: {:?} error occured",
                     base_product_id_arg
+                )).into()
+            })
+    }
+
+    /// find available product delivery to users country
+    fn find_available_to(
+        &self,
+        base_product_id_arg: BaseProductId,
+        user_country: CountryLabel,
+    ) -> RepoResult<Vec<AvailablePackageForUser>> {
+        debug!(
+            "Find available product {} delivery to users country {}.",
+            base_product_id_arg, user_country
+        );
+
+        let pg_str = get_pg_str_json_array(vec![user_country.clone()]);
+
+        let query = DslProducts::products
+            .filter(DslProducts::base_product_id.eq(base_product_id_arg))
+            .filter(sql(format!("deliveries_to ?| {}", pg_str).as_ref()))
+            .inner_join(
+                DslCompaniesPackages::companies_packages
+                    .inner_join(DslCompanies::companies)
+                    .inner_join(DslPackages::packages),
+            )
+            .order(DslCompanies::label);
+
+        query
+            .get_results::<(ProductsRaw, (CompaniesPackages, CompanyRaw, PackagesRaw))>(self.db_conn)
+            .map_err(From::from)
+            .and_then(|results| {
+                let mut data = vec![];
+                for result in results {
+                    let (product_raw, (companies_package, company_raw, package_raw)) = result;
+                    data.push(AvailablePackageForUser {
+                        id: companies_package.id,
+                        name: get_company_package_name(company_raw.label, package_raw.name),
+                        price: product_raw.price,
+                    });
+                }
+
+                Ok(data)
+            })
+            .map_err(move |e: FailureError| {
+                e.context(format!(
+                    "Find available product {} delivery to users country {} failure.",
+                    base_product_id_arg, user_country
                 )).into()
             })
     }

@@ -15,7 +15,7 @@ pub enum ShippingVariant {
     International,
 }
 
-#[derive(Serialize, Queryable, Insertable, Debug)]
+#[derive(Serialize, Queryable, Insertable, Debug, QueryableByName)]
 #[table_name = "products"]
 pub struct ProductsRaw {
     pub id: i32,

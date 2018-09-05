@@ -30,3 +30,7 @@ pub fn get_pg_str_json_array(countries: Vec<CountryLabel>) -> String {
         .join(",");
     format!("array[{}]", res)
 }
+
+pub fn get_company_package_name(company_name: String, package_name: String) -> String {
+    format!("{}-{}", company_name, package_name)
+}

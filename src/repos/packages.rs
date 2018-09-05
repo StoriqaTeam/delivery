@@ -2,6 +2,7 @@
 
 use diesel;
 use diesel::connection::AnsiTransactionManager;
+use diesel::dsl::sql;
 use diesel::pg::Pg;
 use diesel::prelude::*;
 use diesel::query_dsl::LoadQuery;
@@ -79,8 +80,9 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 
         let pg_str = get_pg_str_json_array(countries.clone());
 
-        let query_str = format!("SELECT * FROM packages WHERE deliveries_to ?| {};", pg_str);
-        diesel::sql_query(query_str)
+        let query = packages.filter(sql(format!("deliveries_to ?| {}", pg_str).as_ref()));
+
+        query
             .get_results(self.db_conn)
             .map_err(From::from)
             .and_then(|packages_raw: Vec<PackagesRaw>| packages_raw.into_iter().map(|packages_raw| packages_raw.to_packages()).collect())

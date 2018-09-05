@@ -264,6 +264,25 @@ impl<
                 }
             }
 
+            // GET /available_packages_for_user/<base_product_id>
+            (&Get, Some(Route::AvailablePackagesForUser { base_product_id })) => {
+                debug!(
+                    "User with id = '{:?}' is requesting  // GET /available_packages_for_user/{}",
+                    user_id, base_product_id
+                );
+                if let Some(user_country) = parse_query!(req.query().unwrap_or_default(), "user_country" => CountryLabel) {
+                    serialize_future(products_service.find_available_to(base_product_id, user_country))
+                } else {
+                    Box::new(future::err(
+                        format_err!(
+                            "Parsing query parameters // GET /available_packages_for_user/{} failed!",
+                            base_product_id
+                        ).context(Error::Parse)
+                            .into(),
+                    ))
+                }
+            }
+
             // Get /companies_packages/<company_package_id>
             (&Get, Some(Route::CompaniesPackagesById { company_package_id })) => {
                 debug!(
