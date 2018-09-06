@@ -30,6 +30,7 @@ use errors::Error;
 use models::*;
 use repos::acl::RolesCacheImpl;
 use repos::repo_factory::*;
+use repos::CountrySearch;
 use services::companies::{CompaniesService, CompaniesServiceImpl};
 use services::companies_packages::{CompaniesPackagesService, CompaniesPackagesServiceImpl};
 use services::countries::{CountriesService, CountriesServiceImpl};
@@ -305,6 +306,30 @@ impl<
             (&Get, Some(Route::Countries)) => {
                 debug!("User with id = '{:?}' is requesting  // GET /countries", user_id);
                 serialize_future(countries_service.get_all())
+            }
+
+            // Get /countries/alpha2/<alpha2>
+            (&Get, Some(Route::CountryByAlpha2 { alpha2 })) => {
+                debug!("User with id = '{:?}' is requesting  // GET /countries/alpha2/{}", user_id, alpha2);
+                let search = CountrySearch::Alpha2(alpha2.to_uppercase());
+                serialize_future(countries_service.find_by(search))
+            }
+
+            // Get /countries/alpha3/<alpha3>
+            (&Get, Some(Route::CountryByAlpha3 { alpha3 })) => {
+                debug!("User with id = '{:?}' is requesting  // GET /countries/alpha3/{}", user_id, alpha3);
+                let search = CountrySearch::Alpha3(alpha3.to_uppercase());
+                serialize_future(countries_service.find_by(search))
+            }
+
+            // Get /countries/numeric/<numeric_id>
+            (&Get, Some(Route::CountryByNumeric { numeric })) => {
+                debug!(
+                    "User with id = '{:?}' is requesting  // GET /countries/numeric/{}",
+                    user_id, numeric
+                );
+                let search = CountrySearch::Numeric(numeric);
+                serialize_future(countries_service.find_by(search))
             }
 
             // POST /countries

@@ -12,6 +12,15 @@ pub enum Route {
         user_id: UserId,
     },
     Countries,
+    CountryByAlpha2 {
+        alpha2: String,
+    },
+    CountryByAlpha3 {
+        alpha3: String,
+    },
+    CountryByNumeric {
+        numeric: i32,
+    },
     Products,
     ProductsById {
         base_product_id: BaseProductId,
@@ -56,6 +65,26 @@ pub fn create_route_parser() -> RouteParser<Route> {
     });
 
     route_parser.add_route(r"^/countries$", || Route::Countries);
+
+    // Countries search
+    route_parser.add_route_with_params(r"^/countries/alpha2/(\S+)$", |params| {
+        params.get(0).map(|alpha2| Route::CountryByAlpha2 {
+            alpha2: alpha2.to_string(),
+        })
+    });
+
+    route_parser.add_route_with_params(r"^/countries/alpha3/(\S+)$", |params| {
+        params.get(0).map(|alpha3| Route::CountryByAlpha3 {
+            alpha3: alpha3.to_string(),
+        })
+    });
+
+    route_parser.add_route_with_params(r"^/countries/numeric/(\d+)$", |params| {
+        params
+            .get(0)
+            .and_then(|string_id| string_id.parse().ok())
+            .map(|numeric| Route::CountryByNumeric { numeric })
+    });
 
     route_parser.add_route(r"^/products$", || Route::Products);
     route_parser.add_route_with_params(r"^/products/(\d+)$", |params| {

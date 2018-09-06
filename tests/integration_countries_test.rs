@@ -148,5 +148,56 @@ fn test_country_unauthorized() {
     println!("run read country for label {}", label);
     let read_result = core.run(http_client.request_with_auth_header::<Country>(Method::Get, url_crud.clone(), None, None));
     println!("{:?}", read_result);
-    assert!(read_result.is_err());
+    assert!(read_result.is_ok());
+}
+
+#[test]
+fn test_read_alpha2_country_unauthorized() {
+    let (mut core, http_client) = common::make_utils();
+    let base_url = common::setup();
+    let alpha2 = "ru";
+    // read
+    println!("run read country by  alpha2: {}", alpha2);
+    let read_result = core.run(http_client.request_with_auth_header::<Country>(
+        Method::Get,
+        format!("{}/{}/alpha2/{}", base_url, MOCK_COUNTRY_ENDPOINT, alpha2),
+        None,
+        None,
+    ));
+    println!("{:?}", read_result);
+    assert!(read_result.is_ok());
+}
+
+#[test]
+fn test_read_alpha3_country_unauthorized() {
+    let (mut core, http_client) = common::make_utils();
+    let base_url = common::setup();
+    let alpha3 = "rus";
+    // read
+    println!("run read country by  alpha3: {}", alpha3);
+    let read_result = core.run(http_client.request_with_auth_header::<Country>(
+        Method::Get,
+        format!("{}/{}/alpha3/{}", base_url, MOCK_COUNTRY_ENDPOINT, alpha3),
+        None,
+        None,
+    ));
+    println!("{:?}", read_result);
+    assert!(read_result.is_ok());
+}
+
+#[test]
+fn test_read_numeric_country_unauthorized() {
+    let (mut core, http_client) = common::make_utils();
+    let base_url = common::setup();
+    let numeric = 643;
+    // read
+    println!("run read country by  numeric: {}", numeric);
+    let read_result = core.run(http_client.request_with_auth_header::<Country>(
+        Method::Get,
+        format!("{}/{}/numeric/{}", base_url, MOCK_COUNTRY_ENDPOINT, numeric),
+        None,
+        None,
+    ));
+    println!("{:?}", read_result);
+    assert!(read_result.is_ok());
 }
