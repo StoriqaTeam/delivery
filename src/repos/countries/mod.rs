@@ -8,7 +8,7 @@ use diesel::sql_types::Bool;
 use diesel::Connection;
 use failure::Error as FailureError;
 
-use stq_types::{self, CountryLabel, UserId};
+use stq_types::{self, Alpha3, CountryLabel, UserId};
 
 use models::authorization::*;
 use models::{Country, NewCountry, RawCountry};
@@ -23,6 +23,7 @@ pub use self::cache::*;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum CountrySearch {
+    Label(CountryLabel),
     Alpha2(stq_types::Alpha2),
     Alpha3(stq_types::Alpha3),
     Numeric(i32),
@@ -36,8 +37,8 @@ pub struct CountriesRepoImpl<'a, T: Connection<Backend = Pg, TransactionManager 
 }
 
 pub trait CountriesRepo {
-    /// Find specific country by label
-    fn find(&self, label_arg: CountryLabel) -> RepoResult<Option<Country>>;
+    /// Returns tree country
+    fn find(&self, label_arg: Alpha3) -> RepoResult<Option<Country>>;
 
     /// Returns country by codes
     fn find_by(&self, search: CountrySearch) -> RepoResult<Option<Country>>;
@@ -57,16 +58,17 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 
 impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> CountriesRepo for CountriesRepoImpl<'a, T> {
     /// Find specific country by label
-    fn find(&self, label_arg: CountryLabel) -> RepoResult<Option<Country>> {
-        debug!("Find in countries with label {}.", label_arg);
+    fn find(&self, arg: Alpha3) -> RepoResult<Option<Country>> {
+        debug!("Find in countries with aplha3 {}.", arg);
         acl::check(&*self.acl, Resource::Countries, Action::Read, self, None)?;
-        self.get_all().map(|root| get_country(&root, &label_arg))
+        self.get_all().map(|root| get_country(&root, &arg))
     }
 
     fn find_by(&self, search: CountrySearch) -> RepoResult<Option<Country>> {
         debug!("Get countries by search: {:?}.", search);
 
         let search_exp: Box<BoxableExpression<countries, _, SqlType = Bool>> = match search.clone() {
+            CountrySearch::Label(value) => Box::new(label.eq(value)),
             CountrySearch::Alpha2(value) => Box::new(alpha2.eq(value)),
             CountrySearch::Alpha3(value) => Box::new(alpha3.eq(value)),
             CountrySearch::Numeric(value) => Box::new(numeric.eq(value)),
@@ -124,11 +126,11 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     }
 }
 
-fn create_tree(countries_: &[RawCountry], parent_label_arg: Option<CountryLabel>) -> RepoResult<Vec<Country>> {
+fn create_tree(countries_: &[RawCountry], parent_arg: Option<Alpha3>) -> RepoResult<Vec<Country>> {
     let mut branch = vec![];
     for country in countries_ {
-        if country.parent_label == parent_label_arg {
-            let childs = create_tree(countries_, Some(country.label.clone()))?;
+        if country.parent == parent_arg {
+            let childs = create_tree(countries_, Some(country.alpha3.clone()))?;
             let mut country_tree: Country = country.into();
             country_tree.children = childs;
             branch.push(country_tree);
@@ -137,15 +139,15 @@ fn create_tree(countries_: &[RawCountry], parent_label_arg: Option<CountryLabel>
     Ok(branch)
 }
 
-pub fn remove_unused_countries(mut country: Country, used_countries_labels: &[CountryLabel], stack_level: i32) -> Country {
+pub fn remove_unused_countries(mut country: Country, used_countries_codes: &[Alpha3], stack_level: i32) -> Country {
     let mut children = vec![];
     for country_child in country.children {
         if stack_level == 0 {
-            if used_countries_labels.iter().any(|used_label| country_child.label == *used_label) {
+            if used_countries_codes.iter().any(|used_code| country_child.alpha3 == *used_code) {
                 children.push(country_child);
             }
         } else {
-            let new_country = remove_unused_countries(country_child, used_countries_labels, stack_level - 1);
+            let new_country = remove_unused_countries(country_child, used_countries_codes, stack_level - 1);
             if !new_country.children.is_empty() {
                 children.push(new_country);
             }
@@ -169,28 +171,28 @@ pub fn clear_child_countries(mut country: Country, stack_level: i32) -> Country 
     country
 }
 
-pub fn get_parent_country(country: &Country, child_label: &CountryLabel, stack_level: i32) -> Option<Country> {
+pub fn get_parent_country(country: &Country, child_code: &Alpha3, stack_level: i32) -> Option<Country> {
     if stack_level != 0 {
         country
             .children
             .iter()
-            .find(|country_child| get_parent_country(country_child, child_label, stack_level - 1).is_some())
+            .find(|country_child| get_parent_country(country_child, child_code, stack_level - 1).is_some())
             .and_then(|_| Some(country.clone()))
-    } else if country.label == *child_label {
+    } else if country.alpha3 == *child_code {
         Some(country.clone())
     } else {
         None
     }
 }
 
-pub fn get_country(country: &Country, country_label: &CountryLabel) -> Option<Country> {
-    if country.label == *country_label {
+pub fn get_country(country: &Country, country_id: &Alpha3) -> Option<Country> {
+    if country.alpha3 == *country_id {
         Some(country.clone())
     } else {
         country
             .children
             .iter()
-            .filter_map(|country_child| get_country(country_child, country_label))
+            .filter_map(|country_child| get_country(country_child, country_id))
             .next()
     }
 }
@@ -208,37 +210,37 @@ pub fn get_all_children_till_the_end(country: Country) -> Vec<Country> {
     }
 }
 
-pub fn get_all_parent_labels(country: &Country, searched_country_label: &CountryLabel, labels: &mut Vec<CountryLabel>) {
-    if country.label == *searched_country_label {
-        labels.push(country.label.clone())
+pub fn get_all_parent_codes(country: &Country, searched_country_id: &Alpha3, codes: &mut Vec<Alpha3>) {
+    if country.alpha3 == *searched_country_id {
+        codes.push(country.alpha3.clone())
     } else {
         for child in &country.children {
-            let old_len = labels.len();
-            get_all_parent_labels(child, searched_country_label, labels);
-            if labels.len() > old_len {
-                labels.push(country.label.clone());
+            let old_len = codes.len();
+            get_all_parent_codes(child, searched_country_id, codes);
+            if codes.len() > old_len {
+                codes.push(country.alpha3.clone());
                 break;
             }
         }
     }
 }
 
-pub fn set_selected(country: &mut Country, selected_labels: &[CountryLabel]) {
-    if selected_labels.iter().any(|country_label| &country.label == country_label) {
+pub fn set_selected(country: &mut Country, selected_codes: &[Alpha3]) {
+    if selected_codes.iter().any(|country_code| &country.alpha3 == country_code) {
         set_selected_till_end(country);
     } else {
         for child in &mut country.children {
-            set_selected(child, selected_labels);
+            set_selected(child, selected_codes);
         }
     }
 }
 
-pub fn get_selected(country: &Country, labels: &mut Vec<CountryLabel>) {
+pub fn get_selected(country: &Country, codes: &mut Vec<Alpha3>) {
     if country.is_selected {
-        labels.push(country.label.clone())
+        codes.push(country.alpha3.clone())
     } else {
         for child in &country.children {
-            get_selected(child, labels);
+            get_selected(child, codes);
         }
     }
 }
@@ -250,14 +252,14 @@ pub fn set_selected_till_end(country: &mut Country) {
     }
 }
 
-pub fn contains_country_label(country: &Country, country_label: &CountryLabel) -> bool {
-    if country.label == country_label.clone() {
+pub fn contains_country_code(country: &Country, country_code: &Alpha3) -> bool {
+    if country.alpha3 == country_code.clone() {
         true
     } else {
         country
             .children
             .iter()
-            .any(|country_child| contains_country_label(country_child, country_label))
+            .any(|country_child| contains_country_code(country_child, country_code))
     }
 }
 
@@ -276,14 +278,14 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 mod tests {
     use super::*;
     use models::*;
-    use stq_types::{Alpha2, Alpha3, CountryLabel};
+    use stq_types::{Alpha2, Alpha3};
 
     fn create_mock_countries() -> Country {
         let country_3 = Country {
             label: "Russia".to_string().into(),
             children: vec![],
             level: 2,
-            parent_label: Some("Europe".to_string().into()),
+            parent: Some("XEU".to_string().into()),
             alpha2: Alpha2("RU".to_string()),
             alpha3: Alpha3("RUS".to_string()),
             numeric: 0,
@@ -293,19 +295,19 @@ mod tests {
             label: "Europe".to_string().into(),
             children: vec![country_3],
             level: 1,
-            parent_label: Some("All".to_string().into()),
-            alpha2: Alpha2("RU".to_string()),
-            alpha3: Alpha3("RUS".to_string()),
+            parent: Some("XAL".to_string().into()),
+            alpha2: Alpha2("".to_string()),
+            alpha3: Alpha3("XEU".to_string()),
             numeric: 0,
             is_selected: false,
         };
         Country {
             label: "All".to_string().into(),
             level: 0,
-            parent_label: None,
+            parent: None,
             children: vec![country_2],
-            alpha2: Alpha2("RU".to_string()),
-            alpha3: Alpha3("RUS".to_string()),
+            alpha2: Alpha2("".to_string()),
+            alpha3: Alpha3("XAL".to_string()),
             numeric: 0,
             is_selected: false,
         }
@@ -314,11 +316,11 @@ mod tests {
     #[test]
     fn test_parent_countries() {
         let country = create_mock_countries();
-        let child_label = CountryLabel("Russia".to_string());
+        let child_code = Alpha3("RUS".to_string());
         let new_country = country
             .children
             .into_iter()
-            .find(|country_child| get_parent_country(&country_child, &child_label, 1).is_some())
+            .find(|country_child| get_parent_country(&country_child, &child_code, 1).is_some())
             .unwrap();
         assert_eq!(new_country.label, "Europe".to_string().into());
     }
@@ -326,8 +328,8 @@ mod tests {
     #[test]
     fn test_get_country() {
         let country = create_mock_countries();
-        let child_label = CountryLabel("Russia".to_string());
-        let new_country = get_country(&country, &child_label).unwrap();
-        assert_eq!(new_country.label, child_label.clone().into());
+        let child_code = Alpha3("RUS".to_string());
+        let new_country = get_country(&country, &child_code).unwrap();
+        assert_eq!(new_country.alpha3, child_code.clone().into());
     }
 }

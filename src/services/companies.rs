@@ -7,7 +7,7 @@ use futures::future::*;
 use futures_cpupool::CpuPool;
 use r2d2::{ManageConnection, Pool};
 
-use stq_types::{CompanyId, CountryLabel, UserId};
+use stq_types::{Alpha3, CompanyId, UserId};
 
 use errors::Error;
 use models::companies::{Company, NewCompany, UpdateCompany};
@@ -25,7 +25,7 @@ pub trait CompaniesService {
     fn find(&self, id: CompanyId) -> ServiceFuture<Option<Company>>;
 
     /// Returns list of companies supported by the country
-    fn find_deliveries_from(&self, country: CountryLabel) -> ServiceFuture<Vec<Company>>;
+    fn find_deliveries_from(&self, country: Alpha3) -> ServiceFuture<Vec<Company>>;
 
     /// Update a company
     fn update(&self, id: CompanyId, payload: UpdateCompany) -> ServiceFuture<Company>;
@@ -132,7 +132,7 @@ impl<
     }
 
     /// Returns list of companies supported by the country
-    fn find_deliveries_from(&self, country: CountryLabel) -> ServiceFuture<Vec<Company>> {
+    fn find_deliveries_from(&self, country: Alpha3) -> ServiceFuture<Vec<Company>> {
         let db_pool = self.db_pool.clone();
         let user_id = self.user_id;
         let repo_factory = self.repo_factory.clone();

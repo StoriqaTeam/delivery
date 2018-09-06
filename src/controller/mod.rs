@@ -253,7 +253,7 @@ impl<
             (&Get, Some(Route::AvailablePackages)) => {
                 debug!("User with id = '{:?}' is requesting  // GET /available_packages", user_id);
                 if let (Some(country), Some(size), Some(weight)) =
-                    parse_query!(req.query().unwrap_or_default(), "country" => CountryLabel, "size" => f64, "weight" => f64)
+                    parse_query!(req.query().unwrap_or_default(), "country" => Alpha3, "size" => f64, "weight" => f64)
                 {
                     serialize_future(companies_packages_service.find_available_from(country, size, weight))
                 } else {
@@ -271,7 +271,7 @@ impl<
                     "User with id = '{:?}' is requesting  // GET /available_packages_for_user/{}",
                     user_id, base_product_id
                 );
-                if let Some(user_country) = parse_query!(req.query().unwrap_or_default(), "user_country" => CountryLabel) {
+                if let Some(user_country) = parse_query!(req.query().unwrap_or_default(), "user_country" => Alpha3) {
                     serialize_future(products_service.find_available_to(base_product_id, user_country))
                 } else {
                     Box::new(future::err(

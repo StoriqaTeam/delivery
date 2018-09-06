@@ -2,7 +2,7 @@ use failure::Error as FailureError;
 use failure::Fail;
 use serde_json;
 
-use stq_types::{CountryLabel, PackageId};
+use stq_types::{Alpha3, PackageId};
 
 use errors::Error;
 use schema::packages;
@@ -27,7 +27,7 @@ pub struct Packages {
     pub min_size: f64,
     pub max_weight: f64,
     pub min_weight: f64,
-    pub deliveries_to: Vec<CountryLabel>,
+    pub deliveries_to: Vec<Alpha3>,
 }
 
 impl PackagesRaw {
@@ -65,7 +65,7 @@ pub struct NewPackages {
     pub min_size: f64,
     pub max_weight: f64,
     pub min_weight: f64,
-    pub deliveries_to: Vec<CountryLabel>,
+    pub deliveries_to: Vec<Alpha3>,
 }
 
 impl NewPackages {
@@ -102,7 +102,7 @@ pub struct UpdatePackages {
     pub min_size: Option<f64>,
     pub max_weight: Option<f64>,
     pub min_weight: Option<f64>,
-    pub deliveries_to: Option<Vec<CountryLabel>>,
+    pub deliveries_to: Option<Vec<Alpha3>>,
 }
 
 impl UpdatePackages {

@@ -27,7 +27,7 @@ use schema::packages::dsl as DslPackages;
 use schema::products::dsl as DslProducts;
 use schema::roles::dsl as Roles;
 
-pub struct ProductsWithAvailableCountries(pub Products, pub Vec<CountryLabel>);
+pub struct ProductsWithAvailableCountries(pub Products, pub Vec<Alpha3>);
 
 /// Products repository for handling Products
 pub trait ProductsRepo {
@@ -44,7 +44,7 @@ pub trait ProductsRepo {
     fn get_products_countries(&self, base_product_id: BaseProductId) -> RepoResult<Vec<ProductsWithAvailableCountries>>;
 
     /// find available product delivery to users country
-    fn find_available_to(&self, base_product_id: BaseProductId, user_country: CountryLabel) -> RepoResult<Vec<AvailablePackageForUser>>;
+    fn find_available_to(&self, base_product_id: BaseProductId, user_country: Alpha3) -> RepoResult<Vec<AvailablePackageForUser>>;
 
     /// Update a products
     fn update(
@@ -171,11 +171,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     }
 
     /// find available product delivery to users country
-    fn find_available_to(
-        &self,
-        base_product_id_arg: BaseProductId,
-        user_country: CountryLabel,
-    ) -> RepoResult<Vec<AvailablePackageForUser>> {
+    fn find_available_to(&self, base_product_id_arg: BaseProductId, user_country: Alpha3) -> RepoResult<Vec<AvailablePackageForUser>> {
         debug!(
             "Find available product {} delivery to users country {}.",
             base_product_id_arg, user_country

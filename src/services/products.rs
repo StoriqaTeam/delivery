@@ -8,7 +8,7 @@ use futures::future::*;
 use futures_cpupool::CpuPool;
 use r2d2::{ManageConnection, Pool};
 
-use stq_types::{BaseProductId, CompanyPackageId, CountryLabel, UserId};
+use stq_types::{Alpha3, BaseProductId, CompanyPackageId, UserId};
 
 use errors::Error;
 use models::{
@@ -31,7 +31,7 @@ pub trait ProductsService {
     fn get_by_base_product_id(&self, base_product_id: BaseProductId) -> ServiceFuture<Shipping>;
 
     /// find available product delivery to users country
-    fn find_available_to(&self, base_product_id: BaseProductId, user_country: CountryLabel) -> ServiceFuture<AvailableShipppingForUser>;
+    fn find_available_to(&self, base_product_id: BaseProductId, user_country: Alpha3) -> ServiceFuture<AvailableShipppingForUser>;
 
     /// Update a product
     fn update(
@@ -220,7 +220,7 @@ impl<
     }
 
     /// find available product delivery to users country
-    fn find_available_to(&self, base_product_id: BaseProductId, user_country: CountryLabel) -> ServiceFuture<AvailableShipppingForUser> {
+    fn find_available_to(&self, base_product_id: BaseProductId, user_country: Alpha3) -> ServiceFuture<AvailableShipppingForUser> {
         let db_pool = self.db_pool.clone();
         let repo_factory = self.repo_factory.clone();
         let user_id = self.user_id;

@@ -32,7 +32,7 @@ fn create_country(
     let new_country = NewCountry {
         label,
         level: 2,
-        parent_label: Some("Africa".to_string().into()),
+        parent: Some("XAF".to_string().into()),
         alpha2: Alpha2("GN".to_string()),
         alpha3: Alpha3("GIN".to_string()),
         numeric: 0,

@@ -8,13 +8,13 @@ use futures::future::*;
 use futures_cpupool::CpuPool;
 use r2d2::{ManageConnection, Pool};
 
-use stq_types::{CountryLabel, PackageId, UserId};
+use stq_types::{Alpha3, PackageId, UserId};
 
 use errors::Error;
 
 use super::types::ServiceFuture;
 use models::packages::{NewPackages, Packages, UpdatePackages};
-use repos::countries::get_all_parent_labels;
+use repos::countries::get_all_parent_codes;
 use repos::ReposFactory;
 
 pub trait PackagesService {
@@ -22,7 +22,7 @@ pub trait PackagesService {
     fn create(&self, payload: NewPackages) -> ServiceFuture<Packages>;
 
     /// Returns list of packages supported by the country
-    fn find_deliveries_to(&self, country: CountryLabel) -> ServiceFuture<Vec<Packages>>;
+    fn find_deliveries_to(&self, country: Alpha3) -> ServiceFuture<Vec<Packages>>;
 
     /// Returns list of packages
     fn list(&self) -> ServiceFuture<Vec<Packages>>;
@@ -90,7 +90,7 @@ impl<
         )
     }
 
-    fn find_deliveries_to(&self, country: CountryLabel) -> ServiceFuture<Vec<Packages>> {
+    fn find_deliveries_to(&self, country: Alpha3) -> ServiceFuture<Vec<Packages>> {
         let db_pool = self.db_pool.clone();
         let repo_factory = self.repo_factory.clone();
         let user_id = self.user_id;
@@ -106,7 +106,7 @@ impl<
                             let countries_repo = repo_factory.create_countries_repo(&*conn, user_id);
                             countries_repo.get_all().and_then(|countries| {
                                 let mut countries_list = vec![];
-                                get_all_parent_labels(&countries, &country, &mut countries_list);
+                                get_all_parent_codes(&countries, &country, &mut countries_list);
                                 packages_repo.find_deliveries_to(countries_list)
                             })
                         })
