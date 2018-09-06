@@ -7,6 +7,7 @@ pub mod pickups;
 pub mod products;
 pub mod repo_factory;
 pub mod types;
+pub mod user_addresses;
 pub mod user_roles;
 
 pub use self::acl::*;
@@ -18,6 +19,7 @@ pub use self::pickups::*;
 pub use self::products::*;
 pub use self::repo_factory::*;
 pub use self::types::*;
+pub use self::user_addresses::*;
 pub use self::user_roles::*;
 
 use stq_types::Alpha3;

@@ -59,6 +59,7 @@ impl ApplicationAcl {
                 permission!(Resource::Packages),
                 permission!(Resource::Pickups),
                 permission!(Resource::Products),
+                permission!(Resource::UserAddresses),
                 permission!(Resource::UserRoles),
             ],
         );
@@ -72,6 +73,7 @@ impl ApplicationAcl {
                 permission!(Resource::Packages, Action::Read),
                 permission!(Resource::Pickups, Action::Read),
                 permission!(Resource::Products, Action::Read),
+                permission!(Resource::UserAddresses, Action::All, Scope::Owned),
                 permission!(Resource::UserRoles, Action::Read, Scope::Owned),
             ],
         );

@@ -36,6 +36,7 @@ use services::companies_packages::{CompaniesPackagesService, CompaniesPackagesSe
 use services::countries::{CountriesService, CountriesServiceImpl};
 use services::packages::{PackagesService, PackagesServiceImpl};
 use services::products::{ProductsService, ProductsServiceImpl};
+use services::user_addresses::{UserAddressService, UserAddressServiceImpl};
 use services::user_roles::{UserRolesService, UserRolesServiceImpl};
 
 /// Controller handles route parsing and calling `Service` layer
@@ -115,6 +116,9 @@ impl<
 
         let companies_packages_service =
             CompaniesPackagesServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), user_id, self.repo_factory.clone());
+
+        let user_address_service =
+            UserAddressServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), user_id, self.repo_factory.clone());
 
         let path = req.path().to_string();
 
@@ -345,7 +349,7 @@ impl<
                         .and_then(move |new_country| {
                             new_country
                                 .validate()
-                                .map_err(|e| e.context("Validation of NewCountry failed!").context(Error::Parse).into())
+                                .map_err(|e| format_err!("Validation of NewCountry failed!").context(Error::Validate(e)).into())
                                 .into_future()
                                 .and_then(move |_| countries_service.create(new_country))
                         }),
@@ -396,6 +400,68 @@ impl<
             (&Delete, Some(Route::PackagesById { package_id })) => {
                 debug!("User with id = '{:?}' is requesting  // DELETE /packages/{}", user_id, package_id);
                 serialize_future(packages_service.delete(package_id))
+            }
+
+            // GET /users/<user_id>/addresses
+            (&Get, Some(Route::UserAddress { user_id })) => {
+                debug!("Received request to get addresses for user {}", user_id);
+                serialize_future(user_address_service.get_addresses(user_id))
+            }
+
+            // POST /users/addresses
+            (&Post, Some(Route::UsersAddresses)) => {
+                debug!("Received request to create delivery address with user id {:?}", user_id);
+                serialize_future(
+                    parse_body::<NewUserAddress>(req.body())
+                        .map_err(|e| {
+                            e.context("Parsing body // POST /users/addresses in NewUserAddress failed!")
+                                .context(Error::Parse)
+                                .into()
+                        })
+                        .and_then(move |new_address| {
+                            new_address
+                                .validate()
+                                .map_err(|e| {
+                                    format_err!("Validation of NewUserAddress failed!")
+                                        .context(Error::Validate(e))
+                                        .into()
+                                })
+                                .into_future()
+                                .and_then(move |_| user_address_service.create(new_address))
+                        }),
+                )
+            }
+
+            // PUT /users/addresses/<id>
+            (&Put, Some(Route::UserAddressById { user_address_id })) => {
+                debug!("Received request to update user address {}", user_address_id);
+                serialize_future(
+                    parse_body::<UpdateUserAddress>(req.body())
+                        .map_err(move |e| {
+                            e.context(format!(
+                                "Parsing body PUT /users/addresses/{} in UpdateUserAddress failed!",
+                                user_address_id
+                            )).context(Error::Parse)
+                                .into()
+                        })
+                        .and_then(move |new_address| {
+                            new_address
+                                .validate()
+                                .map_err(|e| {
+                                    format_err!("Validation of UpdateUserAddress failed!")
+                                        .context(Error::Validate(e))
+                                        .into()
+                                })
+                                .into_future()
+                                .and_then(move |_| user_address_service.update(user_address_id, new_address))
+                        }),
+                )
+            }
+
+            // DELETE /users/addresses/<id>
+            (&Delete, Some(Route::UserAddressById { user_address_id })) => {
+                debug!("Received request to delete user  address with id {}", user_address_id);
+                serialize_future(user_address_service.delete(user_address_id))
             }
 
             // Fallback
