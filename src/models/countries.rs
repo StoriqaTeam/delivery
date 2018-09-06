@@ -13,11 +13,11 @@ use schema::countries;
 #[table_name = "countries"]
 pub struct RawCountry {
     pub label: CountryLabel,
-    pub parent_label: Option<CountryLabel>,
     pub level: i32,
     pub alpha2: Alpha2,
     pub alpha3: Alpha3,
     pub numeric: i32,
+    pub parent: Option<Alpha3>,
 }
 
 /// Payload for creating countries
@@ -25,7 +25,6 @@ pub struct RawCountry {
 #[table_name = "countries"]
 pub struct NewCountry {
     pub label: CountryLabel,
-    pub parent_label: Option<CountryLabel>,
     #[validate(range(min = "1", max = "2"))]
     pub level: i32,
     #[validate(custom = "validate_alpha2")]
@@ -33,18 +32,19 @@ pub struct NewCountry {
     #[validate(custom = "validate_alpha3")]
     pub alpha3: Alpha3,
     pub numeric: i32,
+    pub parent: Option<Alpha3>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Country {
     pub label: CountryLabel,
     pub level: i32,
-    pub parent_label: Option<CountryLabel>,
     pub alpha2: Alpha2,
     pub alpha3: Alpha3,
     pub numeric: i32,
     pub children: Vec<Country>,
     pub is_selected: bool,
+    pub parent: Option<Alpha3>,
 }
 
 impl From<RawCountry> for Country {
@@ -52,12 +52,12 @@ impl From<RawCountry> for Country {
         Self {
             label: raw.label.clone(),
             children: vec![],
-            parent_label: raw.parent_label.clone(),
             level: raw.level,
             alpha2: raw.alpha2,
             alpha3: raw.alpha3,
             numeric: raw.numeric,
             is_selected: false,
+            parent: raw.parent.clone(),
         }
     }
 }
@@ -67,12 +67,12 @@ impl<'a> From<&'a RawCountry> for Country {
         Self {
             label: raw.label.clone(),
             children: vec![],
-            parent_label: raw.parent_label.clone(),
             level: raw.level,
             alpha2: raw.alpha2.clone(),
             alpha3: raw.alpha3.clone(),
             numeric: raw.numeric,
             is_selected: false,
+            parent: raw.parent.clone(),
         }
     }
 }

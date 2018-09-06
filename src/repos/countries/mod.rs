@@ -126,11 +126,11 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     }
 }
 
-fn create_tree(countries_: &[RawCountry], parent_label_arg: Option<CountryLabel>) -> RepoResult<Vec<Country>> {
+fn create_tree(countries_: &[RawCountry], parent_arg: Option<Alpha3>) -> RepoResult<Vec<Country>> {
     let mut branch = vec![];
     for country in countries_ {
-        if country.parent_label == parent_label_arg {
-            let childs = create_tree(countries_, Some(country.label.clone()))?;
+        if country.parent == parent_arg {
+            let childs = create_tree(countries_, Some(country.alpha3.clone()))?;
             let mut country_tree: Country = country.into();
             country_tree.children = childs;
             branch.push(country_tree);
@@ -285,7 +285,7 @@ mod tests {
             label: "Russia".to_string().into(),
             children: vec![],
             level: 2,
-            parent_label: Some("Europe".to_string().into()),
+            parent: Some("XEU".to_string().into()),
             alpha2: Alpha2("RU".to_string()),
             alpha3: Alpha3("RUS".to_string()),
             numeric: 0,
@@ -295,7 +295,7 @@ mod tests {
             label: "Europe".to_string().into(),
             children: vec![country_3],
             level: 1,
-            parent_label: Some("All".to_string().into()),
+            parent: Some("XAL".to_string().into()),
             alpha2: Alpha2("".to_string()),
             alpha3: Alpha3("XEU".to_string()),
             numeric: 0,
@@ -304,7 +304,7 @@ mod tests {
         Country {
             label: "All".to_string().into(),
             level: 0,
-            parent_label: None,
+            parent: None,
             children: vec![country_2],
             alpha2: Alpha2("".to_string()),
             alpha3: Alpha3("XAL".to_string()),
