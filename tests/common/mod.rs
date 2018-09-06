@@ -22,7 +22,7 @@ use std::thread;
 pub fn setup() -> String {
     let (tx, rx) = channel::<bool>();
     let mut rng = rand::thread_rng();
-    let port = rng.gen_range(50000, 60000);
+    let port = rng.gen_range(40000, 60000);
     thread::spawn({
         let tx = tx.clone();
         move || {
