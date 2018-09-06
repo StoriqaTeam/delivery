@@ -17,6 +17,7 @@ pub trait ReposFactory<C: Connection<Backend = Pg, TransactionManager = AnsiTran
     fn create_products_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<ProductsRepo + 'a>;
     fn create_packages_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<PackagesRepo + 'a>;
     fn create_pickups_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<PickupsRepo + 'a>;
+    fn create_users_addresses_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<UserAddressesRepo + 'a>;
 }
 
 #[derive(Clone)]
@@ -94,6 +95,11 @@ impl<C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 
         let acl = self.get_acl(db_conn, user_id);
         Box::new(PickupsRepoImpl::new(db_conn, acl)) as Box<PickupsRepo>
     }
+
+    fn create_users_addresses_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<UserAddressesRepo + 'a> {
+        let acl = self.get_acl(db_conn, user_id);
+        Box::new(UserAddressesRepoImpl::new(db_conn, acl)) as Box<UserAddressesRepo>
+    }
 }
 
 #[cfg(test)]
@@ -101,6 +107,7 @@ pub mod tests {
 
     use std::error::Error;
     use std::fmt;
+    use std::time::SystemTime;
 
     use diesel::connection::AnsiTransactionManager;
     use diesel::connection::SimpleConnection;
@@ -154,6 +161,10 @@ pub mod tests {
 
         fn create_pickups_repo<'a>(&self, _db_conn: &'a C, _user_id: Option<UserId>) -> Box<PickupsRepo + 'a> {
             Box::new(PickupsRepoMock::default()) as Box<PickupsRepo>
+        }
+
+        fn create_users_addresses_repo<'a>(&self, _db_conn: &'a C, _user_id: Option<UserId>) -> Box<UserAddressesRepo + 'a> {
+            Box::new(UserAddressesRepoMock::default()) as Box<UserAddressesRepo>
         }
     }
 
@@ -647,6 +658,91 @@ pub mod tests {
                 id: id_arg,
                 company_id: CompanyId(1),
                 package_id: PackageId(1),
+            })
+        }
+    }
+
+    #[derive(Clone, Default)]
+    pub struct UserAddressesRepoMock;
+
+    impl UserAddressesRepo for UserAddressesRepoMock {
+        /// Returns list of user_delivery_address for a specific user
+        fn list_for_user(&self, user_id: UserId) -> RepoResult<Vec<UserAddress>> {
+            Ok(vec![UserAddress {
+                id: 1,
+                user_id,
+                administrative_area_level_1: None,
+                administrative_area_level_2: None,
+                country: "None".to_string(),
+                locality: None,
+                political: None,
+                postal_code: "None".to_string(),
+                route: None,
+                street_number: None,
+                is_priority: true,
+                address: None,
+                created_at: SystemTime::now(),
+                updated_at: SystemTime::now(),
+            }])
+        }
+
+        /// Create a new user delivery address
+        fn create(&self, payload: NewUserAddress) -> RepoResult<UserAddress> {
+            Ok(UserAddress {
+                id: 1,
+                user_id: payload.user_id,
+                administrative_area_level_1: payload.administrative_area_level_1,
+                administrative_area_level_2: payload.administrative_area_level_2,
+                country: payload.country,
+                locality: payload.locality,
+                political: payload.political,
+                postal_code: payload.postal_code,
+                route: payload.route,
+                street_number: payload.street_number,
+                is_priority: payload.is_priority,
+                address: None,
+                created_at: SystemTime::now(),
+                updated_at: SystemTime::now(),
+            })
+        }
+
+        /// Update a user delivery address
+        fn update(&self, id: i32, payload: UpdateUserAddress) -> RepoResult<UserAddress> {
+            Ok(UserAddress {
+                id,
+                user_id: UserId(1),
+                administrative_area_level_1: payload.administrative_area_level_1,
+                administrative_area_level_2: payload.administrative_area_level_2,
+                country: payload.country.unwrap_or_default(),
+                locality: payload.locality,
+                political: payload.political,
+                postal_code: payload.postal_code.unwrap_or_default(),
+                route: payload.route,
+                street_number: payload.street_number,
+                is_priority: payload.is_priority.unwrap_or_default(),
+                address: None,
+                created_at: SystemTime::now(),
+                updated_at: SystemTime::now(),
+            })
+        }
+
+        /// Delete user delivery address
+        fn delete(&self, id: i32) -> RepoResult<UserAddress> {
+            Ok(UserAddress {
+                id,
+                user_id: UserId(1),
+                administrative_area_level_1: None,
+                administrative_area_level_2: None,
+                country: "None".to_string(),
+                locality: None,
+                political: None,
+                postal_code: "None".to_string(),
+                route: None,
+                street_number: None,
+                is_priority: true,
+                address: None,
+                created_at: SystemTime::now(),
+                updated_at: SystemTime::now(),
             })
         }
     }

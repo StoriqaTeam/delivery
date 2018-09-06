@@ -45,6 +45,13 @@ pub enum Route {
     AvailablePackagesForUser {
         base_product_id: BaseProductId,
     },
+    UsersAddresses,
+    UserAddress {
+        user_id: UserId,
+    },
+    UserAddressById {
+        user_address_id: i32,
+    },
 }
 
 pub fn create_route_parser() -> RouteParser<Route> {
@@ -143,6 +150,25 @@ pub fn create_route_parser() -> RouteParser<Route> {
             .get(0)
             .and_then(|string_id| string_id.parse().ok())
             .map(|base_product_id| Route::AvailablePackagesForUser { base_product_id })
+    });
+
+    // /users/addresses route
+    route_parser.add_route(r"^/users/addresses$", || Route::UsersAddresses);
+
+    // /users/:id/addresses route
+    route_parser.add_route_with_params(r"^/users/(\d+)/addresses$", |params| {
+        params
+            .get(0)
+            .and_then(|string_id| string_id.parse().ok())
+            .map(|user_id| Route::UserAddress { user_id })
+    });
+
+    // /users/addresses/:id route
+    route_parser.add_route_with_params(r"^/users/addresses/(\d+)$", |params| {
+        params
+            .get(0)
+            .and_then(|string_id| string_id.parse().ok())
+            .map(|user_address_id| Route::UserAddressById { user_address_id })
     });
 
     route_parser

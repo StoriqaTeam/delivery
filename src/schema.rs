@@ -71,8 +71,36 @@ table! {
     }
 }
 
+table! {
+    user_addresses (id) {
+        id -> Int4,
+        user_id -> Int4,
+        administrative_area_level_1 -> Nullable<Varchar>,
+        administrative_area_level_2 -> Nullable<Varchar>,
+        country -> Varchar,
+        locality -> Nullable<Varchar>,
+        political -> Nullable<Varchar>,
+        postal_code -> Varchar,
+        route -> Nullable<Varchar>,
+        street_number -> Nullable<Varchar>,
+        address -> Nullable<Varchar>,
+        is_priority -> Bool,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+    }
+}
+
 joinable!(companies_packages -> companies (company_id));
 joinable!(companies_packages -> packages (package_id));
 joinable!(products -> companies_packages (company_package_id));
 
-allow_tables_to_appear_in_same_query!(companies, companies_packages, countries, packages, pickups, products, roles,);
+allow_tables_to_appear_in_same_query!(
+    companies,
+    companies_packages,
+    countries,
+    packages,
+    pickups,
+    products,
+    roles,
+    user_addresses,
+);
