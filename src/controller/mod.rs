@@ -311,14 +311,14 @@ impl<
             // Get /countries/alpha2/<alpha2>
             (&Get, Some(Route::CountryByAlpha2 { alpha2 })) => {
                 debug!("User with id = '{:?}' is requesting  // GET /countries/alpha2/{}", user_id, alpha2);
-                let search = CountrySearch::Alpha2(alpha2.to_uppercase());
+                let search = CountrySearch::Alpha2(alpha2);
                 serialize_future(countries_service.find_by(search))
             }
 
             // Get /countries/alpha3/<alpha3>
             (&Get, Some(Route::CountryByAlpha3 { alpha3 })) => {
                 debug!("User with id = '{:?}' is requesting  // GET /countries/alpha3/{}", user_id, alpha3);
-                let search = CountrySearch::Alpha3(alpha3.to_uppercase());
+                let search = CountrySearch::Alpha3(alpha3);
                 serialize_future(countries_service.find_by(search))
             }
 

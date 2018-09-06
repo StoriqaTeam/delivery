@@ -3,8 +3,9 @@
 //! EAV model countries
 use validator::Validate;
 
-use stq_types::CountryLabel;
+use stq_types::{Alpha2, Alpha3, CountryLabel};
 
+use models::validation_rules::*;
 use schema::countries;
 
 /// RawCountry is an object stored in PG, used only for Country tree creation,
@@ -14,8 +15,8 @@ pub struct RawCountry {
     pub label: CountryLabel,
     pub parent_label: Option<CountryLabel>,
     pub level: i32,
-    pub alpha2: String,
-    pub alpha3: String,
+    pub alpha2: Alpha2,
+    pub alpha3: Alpha3,
     pub numeric: i32,
 }
 
@@ -27,10 +28,10 @@ pub struct NewCountry {
     pub parent_label: Option<CountryLabel>,
     #[validate(range(min = "1", max = "2"))]
     pub level: i32,
-    #[validate(length(max = "2"))]
-    pub alpha2: String,
-    #[validate(length(max = "3"))]
-    pub alpha3: String,
+    #[validate(custom = "validate_alpha2")]
+    pub alpha2: Alpha2,
+    #[validate(custom = "validate_alpha3")]
+    pub alpha3: Alpha3,
     pub numeric: i32,
 }
 
@@ -39,8 +40,8 @@ pub struct Country {
     pub label: CountryLabel,
     pub level: i32,
     pub parent_label: Option<CountryLabel>,
-    pub alpha2: String,
-    pub alpha3: String,
+    pub alpha2: Alpha2,
+    pub alpha3: Alpha3,
     pub numeric: i32,
     pub children: Vec<Country>,
     pub is_selected: bool,
