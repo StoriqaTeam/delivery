@@ -8,7 +8,7 @@ use diesel::sql_types::Bool;
 use diesel::Connection;
 use failure::Error as FailureError;
 
-use stq_types::{CountryLabel, UserId};
+use stq_types::{self, CountryLabel, UserId};
 
 use models::authorization::*;
 use models::{Country, NewCountry, RawCountry};
@@ -23,8 +23,8 @@ pub use self::cache::*;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum CountrySearch {
-    Alpha2(String),
-    Alpha3(String),
+    Alpha2(stq_types::Alpha2),
+    Alpha3(stq_types::Alpha3),
     Numeric(i32),
 }
 
@@ -276,7 +276,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 mod tests {
     use super::*;
     use models::*;
-    use stq_types::CountryLabel;
+    use stq_types::{Alpha2, Alpha3, CountryLabel};
 
     fn create_mock_countries() -> Country {
         let country_3 = Country {
@@ -284,8 +284,8 @@ mod tests {
             children: vec![],
             level: 2,
             parent_label: Some("Europe".to_string().into()),
-            alpha2: "".to_string(),
-            alpha3: "".to_string(),
+            alpha2: Alpha2("RU".to_string()),
+            alpha3: Alpha3("RUS".to_string()),
             numeric: 0,
             is_selected: false,
         };
@@ -294,8 +294,8 @@ mod tests {
             children: vec![country_3],
             level: 1,
             parent_label: Some("All".to_string().into()),
-            alpha2: "".to_string(),
-            alpha3: "".to_string(),
+            alpha2: Alpha2("RU".to_string()),
+            alpha3: Alpha3("RUS".to_string()),
             numeric: 0,
             is_selected: false,
         };
@@ -304,8 +304,8 @@ mod tests {
             level: 0,
             parent_label: None,
             children: vec![country_2],
-            alpha2: "".to_string(),
-            alpha3: "".to_string(),
+            alpha2: Alpha2("RU".to_string()),
+            alpha3: Alpha3("RUS".to_string()),
             numeric: 0,
             is_selected: false,
         }

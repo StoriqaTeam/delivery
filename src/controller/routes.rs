@@ -13,10 +13,10 @@ pub enum Route {
     },
     Countries,
     CountryByAlpha2 {
-        alpha2: String,
+        alpha2: Alpha2,
     },
     CountryByAlpha3 {
-        alpha3: String,
+        alpha3: Alpha3,
     },
     CountryByNumeric {
         numeric: i32,
@@ -68,15 +68,19 @@ pub fn create_route_parser() -> RouteParser<Route> {
 
     // Countries search
     route_parser.add_route_with_params(r"^/countries/alpha2/(\S+)$", |params| {
-        params.get(0).map(|alpha2| Route::CountryByAlpha2 {
-            alpha2: alpha2.to_string(),
-        })
+        params
+            .get(0)
+            .map(|param| param.to_string().to_uppercase())
+            .map(|string_id| Alpha2(string_id))
+            .map(|alpha2| Route::CountryByAlpha2 { alpha2 })
     });
 
     route_parser.add_route_with_params(r"^/countries/alpha3/(\S+)$", |params| {
-        params.get(0).map(|alpha3| Route::CountryByAlpha3 {
-            alpha3: alpha3.to_string(),
-        })
+        params
+            .get(0)
+            .map(|param| param.to_string().to_uppercase())
+            .map(|string_id| Alpha3(string_id))
+            .map(|alpha3| Route::CountryByAlpha3 { alpha3 })
     });
 
     route_parser.add_route_with_params(r"^/countries/numeric/(\d+)$", |params| {

@@ -33,8 +33,8 @@ fn create_country(
         label,
         level: 2,
         parent_label: Some("Africa".to_string().into()),
-        alpha2: "".to_string(),
-        alpha3: "".to_string(),
+        alpha2: Alpha2("GN".to_string()),
+        alpha3: Alpha3("GIN".to_string()),
         numeric: 0,
     };
 
@@ -155,12 +155,12 @@ fn test_country_unauthorized() {
 fn test_read_alpha2_country_unauthorized() {
     let (mut core, http_client) = common::make_utils();
     let base_url = common::setup();
-    let alpha2 = "ru";
+    let alpha2 = Alpha2("ru".to_string());
     // read
-    println!("run read country by  alpha2: {}", alpha2);
+    println!("run read country by  alpha2: {:?}", alpha2);
     let read_result = core.run(http_client.request_with_auth_header::<Country>(
         Method::Get,
-        format!("{}/{}/alpha2/{}", base_url, MOCK_COUNTRY_ENDPOINT, alpha2),
+        format!("{}/{}/alpha2/{}", base_url, MOCK_COUNTRY_ENDPOINT, alpha2.0),
         None,
         None,
     ));
@@ -172,17 +172,20 @@ fn test_read_alpha2_country_unauthorized() {
 fn test_read_alpha3_country_unauthorized() {
     let (mut core, http_client) = common::make_utils();
     let base_url = common::setup();
-    let alpha3 = "rus";
-    // read
-    println!("run read country by  alpha3: {}", alpha3);
-    let read_result = core.run(http_client.request_with_auth_header::<Country>(
-        Method::Get,
-        format!("{}/{}/alpha3/{}", base_url, MOCK_COUNTRY_ENDPOINT, alpha3),
-        None,
-        None,
-    ));
-    println!("{:?}", read_result);
-    assert!(read_result.is_ok());
+    let codes = vec![Alpha3("rus".to_string()), Alpha3("XEU".to_string())];
+
+    for item in codes {
+        // read
+        println!("run read country by  alpha3: {:?}", item);
+        let read_result = core.run(http_client.request_with_auth_header::<Country>(
+            Method::Get,
+            format!("{}/{}/alpha3/{}", base_url, MOCK_COUNTRY_ENDPOINT, item.0),
+            None,
+            None,
+        ));
+        println!("{:?}", read_result);
+        assert!(read_result.is_ok());
+    }
 }
 
 #[test]
