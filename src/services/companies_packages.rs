@@ -7,11 +7,11 @@ use futures::future::*;
 use futures_cpupool::CpuPool;
 use r2d2::{ManageConnection, Pool};
 
-use stq_types::{CompanyPackageId, CountryLabel, UserId};
+use stq_types::{Alpha3, CompanyPackageId, UserId};
 
 use errors::Error;
 use models::{AvailablePackages, CompaniesPackages, Country, NewCompaniesPackages};
-use repos::countries::{contains_country_label, get_country};
+use repos::countries::{contains_country_code, get_country};
 use repos::ReposFactory;
 use services::types::ServiceFuture;
 
@@ -20,7 +20,7 @@ pub trait CompaniesPackagesService {
     fn create(&self, payload: NewCompaniesPackages) -> ServiceFuture<CompaniesPackages>;
 
     /// Returns available packages supported by the country
-    fn find_available_from(&self, country: CountryLabel, size: f64, weight: f64) -> ServiceFuture<Vec<AvailablePackages>>;
+    fn find_available_from(&self, country: Alpha3, size: f64, weight: f64) -> ServiceFuture<Vec<AvailablePackages>>;
 
     /// Returns company package by id
     fn get(&self, id: CompanyPackageId) -> ServiceFuture<CompaniesPackages>;
@@ -106,7 +106,7 @@ impl<
     }
 
     /// Returns list of companies_packages supported by the country
-    fn find_available_from(&self, deliveries_from: CountryLabel, size: f64, weight: f64) -> ServiceFuture<Vec<AvailablePackages>> {
+    fn find_available_from(&self, deliveries_from: Alpha3, size: f64, weight: f64) -> ServiceFuture<Vec<AvailablePackages>> {
         let db_pool = self.db_pool.clone();
         let user_id = self.user_id;
         let repo_factory = self.repo_factory.clone();
@@ -131,16 +131,16 @@ impl<
                                         countries_repo.get_all().map(|countries| {
                                             let mut data = vec![];
                                             for package in packages {
-                                                let local_available = package.deliveries_to.iter().any(|country_label| {
-                                                    get_country(&countries, country_label)
-                                                        .map(|c| contains_country_label(&c, &deliveries_from))
+                                                let local_available = package.deliveries_to.iter().any(|country_code| {
+                                                    get_country(&countries, country_code)
+                                                        .map(|c| contains_country_code(&c, &deliveries_from))
                                                         .unwrap_or_default()
                                                 });
 
                                                 let deliveries_to = package
                                                     .deliveries_to
                                                     .iter()
-                                                    .filter_map(|country_label| get_country(&countries, country_label))
+                                                    .filter_map(|country_code| get_country(&countries, country_code))
                                                     .collect::<Vec<Country>>();
 
                                                 let element = AvailablePackages {

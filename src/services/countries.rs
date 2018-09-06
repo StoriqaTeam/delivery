@@ -9,7 +9,7 @@ use futures::future::*;
 use futures_cpupool::CpuPool;
 use r2d2::{ManageConnection, Pool};
 
-use stq_types::{CountryLabel, UserId};
+use stq_types::{Alpha3, UserId};
 
 use errors::Error;
 
@@ -18,8 +18,8 @@ use models::{Country, NewCountry};
 use repos::{CountrySearch, ReposFactory};
 
 pub trait CountriesService {
-    /// Returns country by label
-    fn get(&self, label: CountryLabel) -> ServiceFuture<Option<Country>>;
+    /// Returns country by code
+    fn get(&self, label: Alpha3) -> ServiceFuture<Option<Country>>;
     /// Returns country by codes
     fn find_by(&self, search: CountrySearch) -> ServiceFuture<Option<Country>>;
     /// Creates new country
@@ -62,8 +62,8 @@ impl<
         F: ReposFactory<T>,
     > CountriesService for CountriesServiceImpl<T, M, F>
 {
-    /// Returns country by label
-    fn get(&self, label: CountryLabel) -> ServiceFuture<Option<Country>> {
+    /// Returns country by code
+    fn get(&self, code: Alpha3) -> ServiceFuture<Option<Country>> {
         let db_pool = self.db_pool.clone();
         let user_id = self.user_id;
         let repo_factory = self.repo_factory.clone();
@@ -76,7 +76,7 @@ impl<
                         .map_err(|e| e.context(Error::Connection).into())
                         .and_then(move |conn| {
                             let countries_repo = repo_factory.create_countries_repo(&*conn, user_id);
-                            countries_repo.find(label)
+                            countries_repo.find(code)
                         })
                 })
                 .map_err(|e| e.context("Service Countries, get endpoint error occured.").into()),

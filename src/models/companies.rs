@@ -2,7 +2,7 @@ use failure::Error as FailureError;
 use failure::Fail;
 use serde_json;
 
-use stq_types::{CompanyId, CountryLabel};
+use stq_types::{Alpha3, CompanyId};
 
 use errors::Error;
 use schema::companies;
@@ -24,7 +24,7 @@ pub struct Company {
     pub name: String,
     pub label: String,
     pub description: Option<String>,
-    pub deliveries_from: Vec<CountryLabel>,
+    pub deliveries_from: Vec<Alpha3>,
     pub logo: String,
 }
 
@@ -59,7 +59,7 @@ pub struct NewCompany {
     pub name: String,
     pub label: String,
     pub description: Option<String>,
-    pub deliveries_from: Vec<CountryLabel>,
+    pub deliveries_from: Vec<Alpha3>,
     pub logo: String,
 }
 
@@ -101,7 +101,7 @@ pub struct UpdateCompany {
     pub name: Option<String>,
     pub label: Option<String>,
     pub description: Option<String>,
-    pub deliveries_from: Option<Vec<CountryLabel>>,
+    pub deliveries_from: Option<Vec<Alpha3>>,
     pub logo: Option<String>,
 }
 

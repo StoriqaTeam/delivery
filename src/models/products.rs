@@ -2,7 +2,7 @@ use failure::Error as FailureError;
 use failure::Fail;
 use serde_json;
 
-use stq_types::{BaseProductId, CompanyPackageId, CountryLabel, ProductPrice, StoreId};
+use stq_types::{Alpha3, BaseProductId, CompanyPackageId, ProductPrice, StoreId};
 
 use errors::Error;
 use models::NewShippingProducts;
@@ -53,7 +53,7 @@ pub struct Products {
     pub store_id: StoreId,
     pub company_package_id: CompanyPackageId,
     pub price: Option<ProductPrice>,
-    pub deliveries_to: Vec<CountryLabel>,
+    pub deliveries_to: Vec<Alpha3>,
     pub shipping: ShippingVariant,
 }
 
@@ -79,7 +79,7 @@ pub struct InnerNewProducts {
     pub store_id: StoreId,
     pub company_package_id: CompanyPackageId,
     pub price: Option<ProductPrice>,
-    pub deliveries_to: Vec<CountryLabel>,
+    pub deliveries_to: Vec<Alpha3>,
     pub shipping: ShippingVariant,
 }
 
@@ -130,7 +130,7 @@ impl From<NewShippingProducts> for InnerNewProducts {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct UpdateProducts {
     pub price: Option<ProductPrice>,
-    pub deliveries_to: Option<Vec<CountryLabel>>,
+    pub deliveries_to: Option<Vec<Alpha3>>,
     pub shipping: Option<ShippingVariant>,
 }
 

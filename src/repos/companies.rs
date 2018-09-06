@@ -11,7 +11,7 @@ use diesel::Connection;
 use failure::Error as FailureError;
 use failure::Fail;
 
-use stq_types::{CompanyId, CountryLabel, UserId};
+use stq_types::{Alpha3, CompanyId, UserId};
 
 use models::authorization::*;
 use repos::legacy_acl::*;
@@ -33,7 +33,7 @@ pub trait CompaniesRepo {
     fn find(&self, id_arg: CompanyId) -> RepoResult<Option<Company>>;
 
     /// Returns list of companies supported by the country
-    fn find_deliveries_from(&self, country: CountryLabel) -> RepoResult<Vec<Company>>;
+    fn find_deliveries_from(&self, country: Alpha3) -> RepoResult<Vec<Company>>;
 
     /// Update a company
     fn update(&self, id_arg: CompanyId, payload: UpdateCompany) -> RepoResult<Company>;
@@ -104,7 +104,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     }
 
     /// Returns list of companies supported by the country
-    fn find_deliveries_from(&self, country: CountryLabel) -> RepoResult<Vec<Company>> {
+    fn find_deliveries_from(&self, country: Alpha3) -> RepoResult<Vec<Company>> {
         debug!("Find in companies with country {:?}.", country);
 
         let query = companies.filter(sql(format!("deliveries_from ? {}", country).as_ref()));

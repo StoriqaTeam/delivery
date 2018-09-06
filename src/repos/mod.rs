@@ -20,9 +20,9 @@ pub use self::repo_factory::*;
 pub use self::types::*;
 pub use self::user_roles::*;
 
-use stq_types::CountryLabel;
+use stq_types::Alpha3;
 
-pub fn get_pg_str_json_array(countries: Vec<CountryLabel>) -> String {
+pub fn get_pg_str_json_array(countries: Vec<Alpha3>) -> String {
     let res = countries
         .into_iter()
         .map(|s| format!("'{}'", s.0))

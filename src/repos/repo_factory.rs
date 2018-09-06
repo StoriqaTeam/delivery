@@ -259,11 +259,7 @@ pub mod tests {
         }
 
         /// find available product delivery to users country
-        fn find_available_to(
-            &self,
-            _base_product_id: BaseProductId,
-            _user_country: CountryLabel,
-        ) -> RepoResult<Vec<AvailablePackageForUser>> {
+        fn find_available_to(&self, _base_product_id: BaseProductId, _user_country: Alpha3) -> RepoResult<Vec<AvailablePackageForUser>> {
             Ok(vec![AvailablePackageForUser {
                 id: CompanyPackageId(1),
                 name: "UPS-avia".to_string(),
@@ -308,30 +304,62 @@ pub mod tests {
 
     impl CountriesRepo for CountriesRepoMock {
         /// Find specific country by label
-        fn find(&self, label_arg: CountryLabel) -> RepoResult<Option<Country>> {
-            Ok(Some(Country {
-                label: label_arg,
-                children: vec![],
-                level: 2,
-                parent_label: Some("EEE".to_string().into()),
-                alpha2: Alpha2("RU".to_string()),
-                alpha3: Alpha3("RUS".to_string()),
-                numeric: 0,
-                is_selected: false,
-            }))
-        }
-
-        fn find_by(&self, _search: CountrySearch) -> RepoResult<Option<Country>> {
+        fn find(&self, arg: Alpha3) -> RepoResult<Option<Country>> {
             Ok(Some(Country {
                 label: CountryLabel("Russia".to_string()),
                 children: vec![],
                 level: 2,
                 parent_label: Some("EEE".to_string().into()),
                 alpha2: Alpha2("RU".to_string()),
-                alpha3: Alpha3("RUS".to_string()),
+                alpha3: arg,
                 numeric: 0,
                 is_selected: false,
             }))
+        }
+
+        fn find_by(&self, search: CountrySearch) -> RepoResult<Option<Country>> {
+            match search {
+                CountrySearch::Label(label) => Ok(Some(Country {
+                    label,
+                    children: vec![],
+                    level: 2,
+                    parent_label: Some("EEE".to_string().into()),
+                    alpha2: Alpha2("RU".to_string()),
+                    alpha3: Alpha3("RUS".to_string()),
+                    numeric: 0,
+                    is_selected: false,
+                })),
+                CountrySearch::Alpha2(alpha2) => Ok(Some(Country {
+                    label: CountryLabel("Russia".to_string()),
+                    children: vec![],
+                    level: 2,
+                    parent_label: Some("EEE".to_string().into()),
+                    alpha2,
+                    alpha3: Alpha3("RUS".to_string()),
+                    numeric: 0,
+                    is_selected: false,
+                })),
+                CountrySearch::Alpha3(alpha3) => Ok(Some(Country {
+                    label: CountryLabel("Russia".to_string()),
+                    children: vec![],
+                    level: 2,
+                    parent_label: Some("EEE".to_string().into()),
+                    alpha2: Alpha2("RU".to_string()),
+                    alpha3,
+                    numeric: 0,
+                    is_selected: false,
+                })),
+                CountrySearch::Numeric(numeric) => Ok(Some(Country {
+                    label: CountryLabel("Russia".to_string()),
+                    children: vec![],
+                    level: 2,
+                    parent_label: Some("EEE".to_string().into()),
+                    alpha2: Alpha2("RU".to_string()),
+                    alpha3: Alpha3("RUS".to_string()),
+                    numeric,
+                    is_selected: false,
+                })),
+            }
         }
 
         /// Creates new country
@@ -427,7 +455,7 @@ pub mod tests {
             Ok(None)
         }
 
-        fn find_deliveries_from(&self, country: CountryLabel) -> RepoResult<Vec<Company>> {
+        fn find_deliveries_from(&self, country: Alpha3) -> RepoResult<Vec<Company>> {
             Ok(vec![
                 Company {
                     id: CompanyId(1),
@@ -542,7 +570,7 @@ pub mod tests {
             })
         }
 
-        fn find_deliveries_to(&self, countries: Vec<CountryLabel>) -> RepoResult<Vec<Packages>> {
+        fn find_deliveries_to(&self, countries: Vec<Alpha3>) -> RepoResult<Vec<Packages>> {
             Ok(vec![Packages {
                 id: PackageId(1),
                 name: "package1".to_string(),
@@ -598,7 +626,7 @@ pub mod tests {
                 min_size: 0f64,
                 max_weight: 0f64,
                 min_weight: 0f64,
-                deliveries_to: vec![CountryLabel("rus".to_string())],
+                deliveries_to: vec![Alpha3("RUS".to_string())],
             })
         }
     }
