@@ -27,7 +27,9 @@ pub struct NewCountry {
     pub parent_label: Option<CountryLabel>,
     #[validate(range(min = "1", max = "2"))]
     pub level: i32,
+    #[validate(length(max = "2"))]
     pub alpha2: String,
+    #[validate(length(max = "3"))]
     pub alpha3: String,
     pub numeric: i32,
 }
