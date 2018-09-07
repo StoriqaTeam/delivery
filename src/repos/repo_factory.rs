@@ -680,6 +680,31 @@ pub mod tests {
             })
         }
 
+        /// Returns companies by package id
+        fn get_companies(&self, _package_id: PackageId) -> RepoResult<Vec<Company>> {
+            Ok(vec![Company {
+                id: CompanyId(1),
+                name: "UPS USA".to_string(),
+                label: "UPS".to_string(),
+                description: None,
+                deliveries_from: vec![],
+                logo: "".to_string(),
+            }])
+        }
+
+        /// Returns packages by company id
+        fn get_packages(&self, _company_id: CompanyId) -> RepoResult<Vec<Packages>> {
+            Ok(vec![Packages {
+                id: PackageId(1),
+                name: "package1".to_string(),
+                max_size: 0f64,
+                min_size: 0f64,
+                max_weight: 0f64,
+                min_weight: 0f64,
+                deliveries_to: vec![],
+            }])
+        }
+
         /// Delete a companies_packages
         fn delete(&self, id_arg: CompanyPackageId) -> RepoResult<CompaniesPackages> {
             Ok(CompaniesPackages {

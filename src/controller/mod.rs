@@ -297,6 +297,24 @@ impl<
                 serialize_future(companies_packages_service.get(company_package_id))
             }
 
+            // Get /packages/<package_id>/companies
+            (&Get, Some(Route::CompaniesByPackageId { package_id })) => {
+                debug!(
+                    "User with id = '{:?}' is requesting // GET /packages/{}/companies",
+                    user_id, package_id
+                );
+                serialize_future(companies_packages_service.get_companies(package_id))
+            }
+
+            // Get /companies/<company_id>/packages
+            (&Get, Some(Route::PackagesByCompanyId { company_id })) => {
+                debug!(
+                    "User with id = '{:?}' is requesting // GET /companies/{}/packages",
+                    user_id, company_id
+                );
+                serialize_future(companies_packages_service.get_packages(company_id))
+            }
+
             // DELETE /companies_packages/<company_package_id>
             (&Delete, Some(Route::CompaniesPackagesById { company_package_id })) => {
                 debug!(

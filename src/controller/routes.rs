@@ -41,6 +41,12 @@ pub enum Route {
     CompaniesPackagesById {
         company_package_id: CompanyPackageId,
     },
+    PackagesByCompanyId {
+        company_id: CompanyId,
+    },
+    CompaniesByPackageId {
+        package_id: PackageId,
+    },
     AvailablePackages,
     AvailablePackagesForUser {
         base_product_id: BaseProductId,
@@ -144,6 +150,19 @@ pub fn create_route_parser() -> RouteParser<Route> {
             .map(|company_package_id| Route::CompaniesPackagesById { company_package_id })
     });
 
+    route_parser.add_route_with_params(r"^/companies/(\d+)/packages$", |params| {
+        params
+            .get(0)
+            .and_then(|string_id| string_id.parse().ok())
+            .map(|company_id| Route::PackagesByCompanyId { company_id })
+    });
+
+    route_parser.add_route_with_params(r"^/packages/(\d+)/companies$", |params| {
+        params
+            .get(0)
+            .and_then(|string_id| string_id.parse().ok())
+            .map(|package_id| Route::CompaniesByPackageId { package_id })
+    });
     route_parser.add_route(r"^/available_packages$", || Route::AvailablePackages);
     route_parser.add_route_with_params(r"^/available_packages_for_user/(\d+)$", |params| {
         params
