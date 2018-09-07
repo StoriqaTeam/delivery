@@ -7,10 +7,10 @@ use futures::future::*;
 use futures_cpupool::CpuPool;
 use r2d2::{ManageConnection, Pool};
 
-use stq_types::{Alpha3, CompanyPackageId, UserId};
+use stq_types::{Alpha3, CompanyId, CompanyPackageId, PackageId, UserId};
 
 use errors::Error;
-use models::{AvailablePackages, CompaniesPackages, Country, NewCompaniesPackages};
+use models::{AvailablePackages, CompaniesPackages, Company, Country, NewCompaniesPackages, Packages};
 use repos::countries::{contains_country_code, get_country};
 use repos::ReposFactory;
 use services::types::ServiceFuture;
@@ -24,6 +24,12 @@ pub trait CompaniesPackagesService {
 
     /// Returns company package by id
     fn get(&self, id: CompanyPackageId) -> ServiceFuture<CompaniesPackages>;
+
+    /// Returns companies by package id
+    fn get_companies(&self, id: PackageId) -> ServiceFuture<Vec<Company>>;
+
+    /// Returns packages by company id
+    fn get_packages(&self, id: CompanyId) -> ServiceFuture<Vec<Packages>>;
 
     /// Delete a companies_packages
     fn delete(&self, id: CompanyPackageId) -> ServiceFuture<CompaniesPackages>;
@@ -102,6 +108,48 @@ impl<
                         })
                 })
                 .map_err(|e| e.context("Service CompaniesPackages, get endpoint error occured.").into()),
+        )
+    }
+
+    /// Returns companies by package id
+    fn get_companies(&self, id: PackageId) -> ServiceFuture<Vec<Company>> {
+        let db_pool = self.db_pool.clone();
+        let repo_factory = self.repo_factory.clone();
+        let user_id = self.user_id;
+
+        Box::new(
+            self.cpu_pool
+                .spawn_fn(move || {
+                    db_pool
+                        .get()
+                        .map_err(|e| e.context(Error::Connection).into())
+                        .and_then(move |conn| {
+                            let companies_packages_repo = repo_factory.create_companies_packages_repo(&*conn, user_id);
+                            companies_packages_repo.get_companies(id)
+                        })
+                })
+                .map_err(|e| e.context("Service CompaniesPackages, get_companies endpoint error occured.").into()),
+        )
+    }
+
+    /// Returns packages by company id
+    fn get_packages(&self, id: CompanyId) -> ServiceFuture<Vec<Packages>> {
+        let db_pool = self.db_pool.clone();
+        let repo_factory = self.repo_factory.clone();
+        let user_id = self.user_id;
+
+        Box::new(
+            self.cpu_pool
+                .spawn_fn(move || {
+                    db_pool
+                        .get()
+                        .map_err(|e| e.context(Error::Connection).into())
+                        .and_then(move |conn| {
+                            let companies_packages_repo = repo_factory.create_companies_packages_repo(&*conn, user_id);
+                            companies_packages_repo.get_packages(id)
+                        })
+                })
+                .map_err(|e| e.context("Service CompaniesPackages, get_packages endpoint error occured.").into()),
         )
     }
 

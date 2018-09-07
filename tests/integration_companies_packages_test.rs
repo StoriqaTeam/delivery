@@ -98,6 +98,14 @@ fn get_url_request_by_id(base_url: String, companies_packages_id: CompanyPackage
     format!("{}/{}/{}", base_url, MOCK_COMPANIES_PACKAGES_ENDPOINT, companies_packages_id)
 }
 
+fn get_url_request_by_company_id(base_url: String, company_id: CompanyId) -> String {
+    format!("{}/companies/{}/packages", base_url, company_id)
+}
+
+fn get_url_request_by_package_id(base_url: String, package_id: PackageId) -> String {
+    format!("{}/packages/{}/companies", base_url, package_id)
+}
+
 fn get_url_request(base_url: String) -> String {
     format!("{}/{}", base_url, MOCK_COMPANIES_PACKAGES_ENDPOINT)
 }
@@ -140,6 +148,28 @@ fn test_companies_packages_superuser_crud() {
         Some(user_id.to_string()),
     ));
     println!("{:?}", read_result);
+    assert!(read_result.is_ok());
+
+    // read companies
+    println!("run search companies by package id");
+    let read_result = core.run(http_client.request_with_auth_header::<Vec<Company>>(
+        Method::Get,
+        get_url_request_by_package_id(base_url.clone(), package_id),
+        None,
+        Some(user_id.to_string()),
+    ));
+    println!("companies by package id {:?}", read_result);
+    assert!(read_result.is_ok());
+
+    // read packages
+    println!("run search packages by company id");
+    let read_result = core.run(http_client.request_with_auth_header::<Vec<Packages>>(
+        Method::Get,
+        get_url_request_by_company_id(base_url.clone(), company_id),
+        None,
+        Some(user_id.to_string()),
+    ));
+    println!("packages by company id {:?}", read_result);
     assert!(read_result.is_ok());
 
     // delete
@@ -223,6 +253,28 @@ fn test_companies_packages_regular_user_crud() {
         Some(user_id.to_string()),
     ));
     println!("{:?}", read_result);
+    assert!(read_result.is_ok());
+
+    // read companies
+    println!("run search companies by package id");
+    let read_result = core.run(http_client.request_with_auth_header::<Vec<Company>>(
+        Method::Get,
+        get_url_request_by_package_id(base_url.clone(), package_id),
+        None,
+        Some(user_id.to_string()),
+    ));
+    println!("companies by package id {:?}", read_result);
+    assert!(read_result.is_ok());
+
+    // read packages
+    println!("run search packages by company id");
+    let read_result = core.run(http_client.request_with_auth_header::<Vec<Packages>>(
+        Method::Get,
+        get_url_request_by_company_id(base_url.clone(), company_id),
+        None,
+        Some(user_id.to_string()),
+    ));
+    println!("packages by company id {:?}", read_result);
     assert!(read_result.is_ok());
 
     // delete
@@ -312,6 +364,28 @@ fn test_companies_packages_unauthorized() {
     ));
     println!("{:?}", read_result);
     assert!(read_result.is_err());
+
+    // read companies
+    println!("run search companies by package id");
+    let read_result = core.run(http_client.request_with_auth_header::<Vec<Company>>(
+        Method::Get,
+        get_url_request_by_package_id(base_url.clone(), package_id),
+        None,
+        None,
+    ));
+    println!("companies by package id {:?}", read_result);
+    assert!(read_result.is_ok());
+
+    // read packages
+    println!("run search packages by company id");
+    let read_result = core.run(http_client.request_with_auth_header::<Vec<Packages>>(
+        Method::Get,
+        get_url_request_by_company_id(base_url.clone(), company_id),
+        None,
+        None,
+    ));
+    println!("packages by company id {:?}", read_result);
+    assert!(read_result.is_ok());
 
     // delete
     println!("run delete companies_packages ");

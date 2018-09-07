@@ -10,13 +10,13 @@ use diesel::Connection;
 use failure::Error as FailureError;
 use failure::Fail;
 
-use stq_types::{CompanyId, CompanyPackageId, UserId};
+use stq_types::{CompanyId, CompanyPackageId, PackageId, UserId};
 
 use models::authorization::*;
 use repos::legacy_acl::*;
 use repos::types::RepoResult;
 
-use models::{CompaniesPackages, CompanyRaw, InnerAvailablePackages, NewCompaniesPackages, PackagesRaw};
+use models::{CompaniesPackages, Company, CompanyRaw, InnerAvailablePackages, NewCompaniesPackages, Packages, PackagesRaw};
 use repos::*;
 use schema::companies::dsl as DslCompanies;
 use schema::companies_packages::dsl::*;
@@ -32,6 +32,12 @@ pub trait CompaniesPackagesRepo {
 
     /// Returns company package by id
     fn get(&self, id: CompanyPackageId) -> RepoResult<CompaniesPackages>;
+
+    /// Returns companies by package id
+    fn get_companies(&self, id: PackageId) -> RepoResult<Vec<Company>>;
+
+    /// Returns packages by company id
+    fn get_packages(&self, id: CompanyId) -> RepoResult<Vec<Packages>>;
 
     /// Delete a companies_packages
     fn delete(&self, id_arg: CompanyPackageId) -> RepoResult<CompaniesPackages>;
@@ -114,6 +120,50 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                     company_id_args, size, weight
                 )).into()
             })
+    }
+
+    /// Returns companies by package id
+    fn get_companies(&self, id_arg: PackageId) -> RepoResult<Vec<Company>> {
+        debug!("get companies_packages by package_id: {}.", id_arg);
+
+        let query = companies_packages.filter(package_id.eq(id_arg)).inner_join(DslCompanies::companies);
+
+        query
+            .get_results::<(CompaniesPackages, CompanyRaw)>(self.db_conn)
+            .map_err(From::from)
+            .and_then(|results| {
+                let mut data = vec![];
+                for result in results {
+                    let (_, company_raw) = result;
+                    let element = Company::from_raw(company_raw)?;
+                    data.push(element);
+                }
+
+                Ok(data)
+            })
+            .map_err(move |e: FailureError| e.context(format!("get companies_packages package_id: {}.", id_arg)).into())
+    }
+
+    /// Returns packages by company id
+    fn get_packages(&self, id_arg: CompanyId) -> RepoResult<Vec<Packages>> {
+        debug!("get companies_packages by company_id: {}.", id_arg);
+
+        let query = companies_packages.filter(company_id.eq(id_arg)).inner_join(DslPackages::packages);
+
+        query
+            .get_results::<(CompaniesPackages, PackagesRaw)>(self.db_conn)
+            .map_err(From::from)
+            .and_then(|results| {
+                let mut data = vec![];
+                for result in results {
+                    let (_, package_raw) = result;
+                    let element = package_raw.to_packages()?;
+                    data.push(element);
+                }
+
+                Ok(data)
+            })
+            .map_err(move |e: FailureError| e.context(format!("get companies_packages company_id: {}.", id_arg)).into())
     }
 
     fn delete(&self, id_arg: CompanyPackageId) -> RepoResult<CompaniesPackages> {
