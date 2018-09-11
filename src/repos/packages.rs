@@ -157,11 +157,11 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         debug!("delete packages_ id: {}.", id_arg);
 
         acl::check(&*self.acl, Resource::Packages, Action::Delete, self, None)?;
-        let filter = packages.filter(id.eq(id_arg));
-        let query = diesel::delete(filter);
+        let filtered = packages.filter(id.eq(id_arg));
+        let query = diesel::delete(filtered);
         query
             .get_result::<PackagesRaw>(self.db_conn)
-            .map_err(move |e| e.context(format!("delete packages_ id: {}.", id_arg)).into())
+            .map_err(move |e| e.context(format!("delete packages id: {}.", id_arg)).into())
             .and_then(|packages_: PackagesRaw| packages_.to_packages())
     }
 }

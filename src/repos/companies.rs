@@ -107,7 +107,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     fn find_deliveries_from(&self, country: Alpha3) -> RepoResult<Vec<Company>> {
         debug!("Find in companies with country {:?}.", country);
 
-        let query = companies.filter(sql(format!("deliveries_from ? {}", country).as_ref()));
+        let query = companies.filter(sql(format!("deliveries_from ? '{}'", country).as_ref()));
 
         query
             .get_results(self.db_conn)
