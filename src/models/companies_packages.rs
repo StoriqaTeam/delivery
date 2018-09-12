@@ -1,5 +1,5 @@
-use models::Country;
-use stq_types::{Alpha3, CompanyId, CompanyPackageId, PackageId};
+use models::{Country, Pickups};
+use stq_types::{Alpha3, CompanyId, CompanyPackageId, PackageId, ProductPrice};
 
 use schema::companies_packages;
 
@@ -33,4 +33,18 @@ pub struct AvailablePackages {
     pub logo: String,
     pub deliveries_to: Vec<Country>,
     pub local_available: bool,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct AvailablePackageForUser {
+    pub id: CompanyPackageId,
+    pub name: String,
+    pub logo: String,
+    pub price: Option<ProductPrice>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct AvailableShipppingForUser {
+    pub packages: Vec<AvailablePackageForUser>,
+    pub pickups: Option<Pickups>,
 }

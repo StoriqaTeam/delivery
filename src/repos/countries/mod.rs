@@ -139,15 +139,13 @@ fn create_tree(countries_: &[RawCountry], parent_arg: Option<Alpha3>) -> RepoRes
     Ok(branch)
 }
 
-pub fn remove_unused_countries(mut country: Country, used_countries_codes: &[Alpha3], stack_level: i32) -> Country {
+pub fn remove_unused_countries(mut country: Country, used_countries_codes: &[Alpha3]) -> Country {
     let mut children = vec![];
     for country_child in country.children {
-        if stack_level == 0 {
-            if used_countries_codes.iter().any(|used_code| country_child.alpha3 == *used_code) {
-                children.push(country_child);
-            }
+        if used_countries_codes.iter().any(|used_code| country_child.alpha3 == *used_code) {
+            children.push(country_child);
         } else {
-            let new_country = remove_unused_countries(country_child, used_countries_codes, stack_level - 1);
+            let new_country = remove_unused_countries(country_child, used_countries_codes);
             if !new_country.children.is_empty() {
                 children.push(new_country);
             }
@@ -280,42 +278,102 @@ mod tests {
     use models::*;
     use stq_types::{Alpha2, Alpha3};
 
-    fn create_mock_countries() -> Country {
-        let country_3 = Country {
-            label: "Russia".to_string().into(),
+    fn create_mock_countries_region1(parent_: Option<Alpha3>) -> Vec<Country> {
+        vec![
+            Country {
+                label: "Russia".to_string().into(),
+                children: vec![],
+                level: 2,
+                parent: parent_.clone(),
+                alpha2: Alpha2("RU".to_string()),
+                alpha3: Alpha3("RUS".to_string()),
+                numeric: 0,
+                is_selected: false,
+            },
+            Country {
+                label: "Austria".to_string().into(),
+                children: vec![],
+                level: 2,
+                parent: parent_.clone(),
+                alpha2: Alpha2("AT".to_string()),
+                alpha3: Alpha3("AUT".to_string()),
+                numeric: 0,
+                is_selected: false,
+            },
+        ]
+    }
+
+    fn create_mock_countries_region2(parent_: Option<Alpha3>) -> Vec<Country> {
+        vec![Country {
+            label: "Brazil".to_string().into(),
             children: vec![],
             level: 2,
-            parent: Some("XEU".to_string().into()),
-            alpha2: Alpha2("RU".to_string()),
-            alpha3: Alpha3("RUS".to_string()),
+            parent: parent_,
+            alpha2: Alpha2("BR".to_string()),
+            alpha3: Alpha3("BRA".to_string()),
             numeric: 0,
             is_selected: false,
-        };
-        let country_2 = Country {
-            label: "Europe".to_string().into(),
-            children: vec![country_3],
-            level: 1,
-            parent: Some("XAL".to_string().into()),
-            alpha2: Alpha2("".to_string()),
-            alpha3: Alpha3("XEU".to_string()),
-            numeric: 0,
-            is_selected: false,
-        };
+        }]
+    }
+
+    fn create_mock_region3(parent_: Option<Alpha3>) -> Country {
         Country {
-            label: "All".to_string().into(),
-            level: 0,
-            parent: None,
-            children: vec![country_2],
+            label: "North America".to_string().into(),
+            children: vec![],
+            level: 2,
+            parent: parent_,
             alpha2: Alpha2("".to_string()),
-            alpha3: Alpha3("XAL".to_string()),
+            alpha3: Alpha3("XNA".to_string()),
             numeric: 0,
             is_selected: false,
         }
     }
 
+    fn create_mock_countries() -> (Country, Alpha3) {
+        let root_code = Alpha3("XAL".to_string());
+
+        let region1_alpha3 = Alpha3("XEU".to_string());
+        let region_1 = Country {
+            label: "Europe".to_string().into(),
+            children: create_mock_countries_region1(Some(region1_alpha3.clone())),
+            level: 1,
+            parent: Some(root_code.clone()),
+            alpha2: Alpha2("".to_string()),
+            alpha3: region1_alpha3,
+            numeric: 0,
+            is_selected: false,
+        };
+
+        let region2_alpha3 = Alpha3("XSA".to_string());
+        let region_2 = Country {
+            label: "South America".to_string().into(),
+            children: create_mock_countries_region2(Some(region2_alpha3.clone())),
+            level: 1,
+            parent: Some(root_code.clone()),
+            alpha2: Alpha2("".to_string()),
+            alpha3: region2_alpha3,
+            numeric: 0,
+            is_selected: false,
+        };
+
+        (
+            Country {
+                label: "All".to_string().into(),
+                level: 0,
+                parent: None,
+                children: vec![region_1, region_2],
+                alpha2: Alpha2("".to_string()),
+                alpha3: root_code.clone(),
+                numeric: 0,
+                is_selected: false,
+            },
+            root_code,
+        )
+    }
+
     #[test]
     fn test_parent_countries() {
-        let country = create_mock_countries();
+        let (country, _) = create_mock_countries();
         let child_code = Alpha3("RUS".to_string());
         let new_country = country
             .children
@@ -327,9 +385,62 @@ mod tests {
 
     #[test]
     fn test_get_country() {
-        let country = create_mock_countries();
+        let (country, _) = create_mock_countries();
         let child_code = Alpha3("RUS".to_string());
         let new_country = get_country(&country, &child_code).unwrap();
         assert_eq!(new_country.alpha3, child_code.clone().into());
     }
+
+    #[test]
+    fn test_used_only_one_region() {
+        let (mut country, _) = create_mock_countries();
+        let region_alpha3 = Alpha3("XEU".to_string());
+        let used_codes: Vec<Alpha3> = vec![region_alpha3.clone()];
+
+        assert_eq!(country.children.len(), 2, "Mock countries not contains 2 regions");
+        country = remove_unused_countries(country, &used_codes);
+        assert_eq!(country.children.len(), 1);
+        assert_eq!(country.children[0].alpha3, region_alpha3);
+    }
+
+    #[test]
+    fn test_used_only_one_country_from_region() {
+        let (mut country, _) = create_mock_countries();
+        let region_code = Alpha3("XEU".to_string());
+        let country_code = Alpha3("RUS".to_string());
+        let used_codes = vec![country_code.clone()];
+
+        {
+            let region = country
+                .children
+                .iter()
+                .find(|c| c.alpha3 == region_code)
+                .expect(&format!("Not found region with code {:?} before run test", region_code));
+            assert_eq!(region.children.len(), 2, "Mock countries not contains 2 countries");
+        }
+
+        country = remove_unused_countries(country, &used_codes);
+        let region = country
+            .children
+            .iter()
+            .find(|c| c.alpha3 == region_code)
+            .expect(&format!("Not found region with code {:?} after test", region_code));
+        assert_eq!(region.children.len(), 1);
+        assert_eq!(region.children[0].alpha3, country_code);
+    }
+
+    #[test]
+    fn test_used_country_from_region_plus_region() {
+        let (mut country, root_code) = create_mock_countries();
+        country.children.push(create_mock_region3(Some(root_code)));
+
+        let country_code = Alpha3("RUS".to_string());
+        let region_code2 = Alpha3("XSA".to_string());
+        let used_codes = vec![country_code.clone(), region_code2.clone()];
+
+        assert_eq!(country.children.len(), 3, "Mock countries not contains 3 regions before run test");
+        country = remove_unused_countries(country, &used_codes);
+        assert_eq!(country.children.len(), 2, "Mock countries not contains 2 regions after run test");
+    }
+
 }
