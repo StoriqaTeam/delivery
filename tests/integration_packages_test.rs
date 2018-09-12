@@ -64,16 +64,23 @@ fn get_url_request(base_url: String) -> String {
     format!("{}/{}", base_url, MOCK_PACKAGES_ENDPOINT)
 }
 
-// test package by superuser
 #[test]
-fn test_package_superuser_crud() {
+fn test_package() {
     let (mut core, http_client) = common::make_utils();
     let base_url = common::setup();
+
+    test_package_superuser_crud(&mut core, &http_client, base_url.clone());
+    test_package_regular_user_crud(&mut core, &http_client, base_url.clone());
+    test_package_unauthorized(&mut core, &http_client, base_url.clone());
+}
+
+// test package by superuser
+fn test_package_superuser_crud(core: &mut tokio_core::reactor::Core, http_client: &HttpClientHandle, base_url: String) {
     let user_id = UserId(1);
     let name = "Avia".to_string();
     // create
     println!("run create new package ");
-    let create_result = create_package(name.clone(), &mut core, &http_client, base_url.clone(), Some(user_id));
+    let create_result = create_package(name.clone(), core, http_client, base_url.clone(), Some(user_id));
     println!("{:?}", create_result);
     assert!(create_result.is_ok());
 
@@ -114,26 +121,22 @@ fn test_package_superuser_crud() {
 }
 
 // test package by regular user
-#[test]
-fn test_package_regular_user_crud() {
-    let (mut core, http_client) = common::make_utils();
-    let base_url = common::setup();
-
+fn test_package_regular_user_crud(core: &mut tokio_core::reactor::Core, http_client: &HttpClientHandle, base_url: String) {
     // create user for test acl
     let user_id = UserId(1123);
-    let create_role_result = common::create_user_role(user_id.clone(), &mut core, &http_client, base_url.clone());
+    let create_role_result = common::create_user_role(user_id.clone(), core, http_client, base_url.clone());
     assert!(create_role_result.is_ok());
 
     let name = "Avia".to_string();
     // create
     println!("run create new package ");
-    let create_result = create_package(name.clone(), &mut core, &http_client, base_url.clone(), Some(user_id));
+    let create_result = create_package(name.clone(), core, http_client, base_url.clone(), Some(user_id));
     println!("{:?}", create_result);
     assert!(create_result.is_err());
 
     // create by super user
     println!("run create new package by super user");
-    let create_result = create_package(name.clone(), &mut core, &http_client, base_url.clone(), Some(UserId(1)));
+    let create_result = create_package(name.clone(), core, http_client, base_url.clone(), Some(UserId(1)));
     println!("{:?}", create_result);
     assert!(create_result.is_ok());
 
@@ -184,21 +187,18 @@ fn test_package_regular_user_crud() {
 }
 
 // test update package without authorization data
-#[test]
-fn test_package_unauthorized() {
-    let (mut core, http_client) = common::make_utils();
-    let base_url = common::setup();
+fn test_package_unauthorized(core: &mut tokio_core::reactor::Core, http_client: &HttpClientHandle, base_url: String) {
     let name = "Avia".to_string();
 
     // create
     println!("run create new package ");
-    let create_result = create_package(name.clone(), &mut core, &http_client, base_url.clone(), None);
+    let create_result = create_package(name.clone(), core, http_client, base_url.clone(), None);
     println!("{:?}", create_result);
     assert!(create_result.is_err());
 
     // create by super user
     println!("run create new package by super user");
-    let create_result = create_package(name.clone(), &mut core, &http_client, base_url.clone(), Some(UserId(1)));
+    let create_result = create_package(name.clone(), core, http_client, base_url.clone(), Some(UserId(1)));
     println!("{:?}", create_result);
     assert!(create_result.is_ok());
 

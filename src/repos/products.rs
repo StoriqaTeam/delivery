@@ -15,7 +15,7 @@ use stq_types::{BaseProductId, CompanyPackageId, UserId};
 
 use models::authorization::*;
 use models::{
-    AvailablePackageForUser, CompaniesPackages, CompanyRaw, InnerNewProducts, NewProductsRaw, PackagesRaw, Products, ProductsRaw,
+    AvailablePackageForUser, CompaniesPackages, CompanyRaw, NewProducts, NewProductsRaw, PackagesRaw, Products, ProductsRaw,
     UpdateProducts, UserRole,
 };
 use repos::legacy_acl::*;
@@ -32,10 +32,10 @@ pub struct ProductsWithAvailableCountries(pub Products, pub Vec<Alpha3>);
 /// Products repository for handling Products
 pub trait ProductsRepo {
     /// Create a new products
-    fn create(&self, payload: InnerNewProducts) -> RepoResult<Products>;
+    fn create(&self, payload: NewProducts) -> RepoResult<Products>;
 
     /// Create a new products
-    fn create_many(&self, payload: Vec<InnerNewProducts>) -> RepoResult<Vec<Products>>;
+    fn create_many(&self, payload: Vec<NewProducts>) -> RepoResult<Vec<Products>>;
 
     /// Get a products
     fn get_by_base_product_id(&self, base_product_id: BaseProductId) -> RepoResult<Vec<Products>>;
@@ -74,7 +74,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 }
 
 impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> ProductsRepo for ProductsRepoImpl<'a, T> {
-    fn create(&self, payload: InnerNewProducts) -> RepoResult<Products> {
+    fn create(&self, payload: NewProducts) -> RepoResult<Products> {
         debug!("create new products {:?}.", payload);
         let payload = payload.to_raw()?;
         let query = diesel::insert_into(DslProducts::products).values(&payload);
@@ -89,7 +89,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             .map_err(|e: FailureError| e.context(format!("create new products {:?}.", payload)).into())
     }
 
-    fn create_many(&self, payload: Vec<InnerNewProducts>) -> RepoResult<Vec<Products>> {
+    fn create_many(&self, payload: Vec<NewProducts>) -> RepoResult<Vec<Products>> {
         debug!("create many new products {:?}.", payload);
         let payload = payload
             .into_iter()

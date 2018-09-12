@@ -49,11 +49,21 @@ fn create_country(
     create_result
 }
 
-// test country by superuser
 #[test]
-fn test_country_superuser_crud() {
+fn test_country() {
     let (mut core, http_client) = common::make_utils();
     let base_url = common::setup();
+
+    test_country_superuser_crud(&mut core, &http_client, base_url.clone());
+    test_country_regular_user_crud(&mut core, &http_client, base_url.clone());
+    test_country_unauthorized(&mut core, &http_client, base_url.clone());
+    test_read_alpha2_country_unauthorized(&mut core, &http_client, base_url.clone());
+    test_read_alpha3_country_unauthorized(&mut core, &http_client, base_url.clone());
+    test_read_numeric_country_unauthorized(&mut core, &http_client, base_url.clone());
+}
+
+// test country by superuser
+fn test_country_superuser_crud(core: &mut tokio_core::reactor::Core, http_client: &HttpClientHandle, base_url: String) {
     let user_id = UserId(1);
     let mut rng = thread_rng();
     let label = CountryLabel(rng.sample_iter(&Alphanumeric).take(7).collect::<String>());
@@ -61,7 +71,7 @@ fn test_country_superuser_crud() {
 
     // create
     println!("run create new country for label {}", label);
-    let create_result = create_country(label.clone(), &mut core, &http_client, base_url.clone(), Some(user_id.to_string()));
+    let create_result = create_country(label.clone(), core, http_client, base_url.clone(), Some(user_id.to_string()));
     println!("{:?}", create_result);
     assert!(create_result.is_ok());
 
@@ -74,34 +84,25 @@ fn test_country_superuser_crud() {
 }
 
 // test country by regular user
-#[test]
-fn test_country_regular_user_crud() {
-    let (mut core, http_client) = common::make_utils();
-    let base_url = common::setup();
+fn test_country_regular_user_crud(core: &mut tokio_core::reactor::Core, http_client: &HttpClientHandle, base_url: String) {
     let mut rng = thread_rng();
     let label = CountryLabel(rng.sample_iter(&Alphanumeric).take(7).collect::<String>());
     let url_crud = format!("{}/{}", base_url, MOCK_COUNTRY_ENDPOINT.to_string());
 
     // create user for test acl
     let user_id = UserId(2);
-    let create_role_result = common::create_user_role(user_id.clone(), &mut core, &http_client, base_url.clone());
+    let create_role_result = common::create_user_role(user_id.clone(), core, http_client, base_url.clone());
     assert!(create_role_result.is_ok());
 
     // create
     println!("run create new country for label {} for regular user", label);
-    let create_result = create_country(label.clone(), &mut core, &http_client, base_url.clone(), Some(user_id.to_string()));
+    let create_result = create_country(label.clone(), core, http_client, base_url.clone(), Some(user_id.to_string()));
     println!("{:?}", create_result);
     assert!(create_result.is_err());
 
     // create by super user
     println!("run create new country for label {}", label);
-    let create_result = create_country(
-        label.clone(),
-        &mut core,
-        &http_client,
-        base_url.clone(),
-        Some(UserId(1).to_string()),
-    );
+    let create_result = create_country(label.clone(), core, http_client, base_url.clone(), Some(UserId(1).to_string()));
     println!("{:?}", create_result);
     assert!(create_result.is_ok());
 
@@ -113,34 +114,25 @@ fn test_country_regular_user_crud() {
     assert!(read_result.is_ok());
 
     // delete user role
-    let delete_result = common::delete_role(user_id.clone(), &mut core, &http_client, base_url.clone());
+    let delete_result = common::delete_role(user_id.clone(), core, http_client, base_url.clone());
     assert!(delete_result.is_ok());
 }
 
 // test update country without authorization data
-#[test]
-fn test_country_unauthorized() {
-    let (mut core, http_client) = common::make_utils();
-    let base_url = common::setup();
+fn test_country_unauthorized(core: &mut tokio_core::reactor::Core, http_client: &HttpClientHandle, base_url: String) {
     let mut rng = thread_rng();
     let label = CountryLabel(rng.sample_iter(&Alphanumeric).take(7).collect::<String>());
     let url_crud = format!("{}/{}", base_url, MOCK_COUNTRY_ENDPOINT.to_string());
 
     // create
     println!("run create new country for label {}", label);
-    let create_result = create_country(label.clone(), &mut core, &http_client, base_url.clone(), None);
+    let create_result = create_country(label.clone(), core, http_client, base_url.clone(), None);
     println!("{:?}", create_result);
     assert!(create_result.is_err());
 
     // create by super user
     println!("run create new country for label {}", label);
-    let create_result = create_country(
-        label.clone(),
-        &mut core,
-        &http_client,
-        base_url.clone(),
-        Some(UserId(1).to_string()),
-    );
+    let create_result = create_country(label.clone(), core, http_client, base_url.clone(), Some(UserId(1).to_string()));
     println!("{:?}", create_result);
     assert!(create_result.is_ok());
 
@@ -151,10 +143,7 @@ fn test_country_unauthorized() {
     assert!(read_result.is_ok());
 }
 
-#[test]
-fn test_read_alpha2_country_unauthorized() {
-    let (mut core, http_client) = common::make_utils();
-    let base_url = common::setup();
+fn test_read_alpha2_country_unauthorized(core: &mut tokio_core::reactor::Core, http_client: &HttpClientHandle, base_url: String) {
     let alpha2 = Alpha2("ru".to_string());
     // read
     println!("run read country by  alpha2: {:?}", alpha2);
@@ -168,10 +157,7 @@ fn test_read_alpha2_country_unauthorized() {
     assert!(read_result.is_ok());
 }
 
-#[test]
-fn test_read_alpha3_country_unauthorized() {
-    let (mut core, http_client) = common::make_utils();
-    let base_url = common::setup();
+fn test_read_alpha3_country_unauthorized(core: &mut tokio_core::reactor::Core, http_client: &HttpClientHandle, base_url: String) {
     let codes = vec![Alpha3("rus".to_string()), Alpha3("XEU".to_string())];
 
     for item in codes {
@@ -188,10 +174,7 @@ fn test_read_alpha3_country_unauthorized() {
     }
 }
 
-#[test]
-fn test_read_numeric_country_unauthorized() {
-    let (mut core, http_client) = common::make_utils();
-    let base_url = common::setup();
+fn test_read_numeric_country_unauthorized(core: &mut tokio_core::reactor::Core, http_client: &HttpClientHandle, base_url: String) {
     let numeric = 643;
     // read
     println!("run read country by  numeric: {}", numeric);

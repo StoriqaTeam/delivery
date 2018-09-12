@@ -76,15 +76,22 @@ fn get_url_request(base_url: String) -> String {
     format!("{}/{}", base_url, MOCK_USER_ADDRESSES_ENDPOINT)
 }
 
-// test address by superuser
 #[test]
-fn test_address_superuser_crud() {
+fn test_user_address() {
     let (mut core, http_client) = common::make_utils();
     let base_url = common::setup();
+
+    test_address_superuser_crud(&mut core, &http_client, base_url.clone());
+    test_address_regular_user_crud(&mut core, &http_client, base_url.clone());
+    test_address_unauthorized(&mut core, &http_client, base_url.clone());
+}
+
+// test address by superuser
+fn test_address_superuser_crud(core: &mut tokio_core::reactor::Core, http_client: &HttpClientHandle, base_url: String) {
     let user_id = UserId(1);
     // create
     println!("run create new address ");
-    let create_result = create_address(&mut core, &http_client, base_url.clone(), Some(user_id));
+    let create_result = create_address(core, http_client, base_url.clone(), Some(user_id));
     println!("{:?}", create_result);
     assert!(create_result.is_ok());
 
@@ -125,19 +132,15 @@ fn test_address_superuser_crud() {
 }
 
 // test address by regular user
-#[test]
-fn test_address_regular_user_crud() {
-    let (mut core, http_client) = common::make_utils();
-    let base_url = common::setup();
-
+fn test_address_regular_user_crud(core: &mut tokio_core::reactor::Core, http_client: &HttpClientHandle, base_url: String) {
     // create user for test acl
     let user_id = UserId(1123);
-    let create_role_result = common::create_user_role(user_id.clone(), &mut core, &http_client, base_url.clone());
+    let create_role_result = common::create_user_role(user_id.clone(), core, http_client, base_url.clone());
     assert!(create_role_result.is_ok());
 
     // create
     println!("run create new address ");
-    let create_result = create_address(&mut core, &http_client, base_url.clone(), Some(user_id));
+    let create_result = create_address(core, http_client, base_url.clone(), Some(user_id));
     println!("{:?}", create_result);
     assert!(create_result.is_ok());
 
@@ -178,20 +181,16 @@ fn test_address_regular_user_crud() {
 }
 
 // test update address without authorization data
-#[test]
-fn test_address_unauthorized() {
-    let (mut core, http_client) = common::make_utils();
-    let base_url = common::setup();
-
+fn test_address_unauthorized(core: &mut tokio_core::reactor::Core, http_client: &HttpClientHandle, base_url: String) {
     // create
     println!("run create new address ");
-    let create_result = create_address(&mut core, &http_client, base_url.clone(), None);
+    let create_result = create_address(core, http_client, base_url.clone(), None);
     println!("{:?}", create_result);
     assert!(create_result.is_err());
 
     // create by super user
     println!("run create new address by super user");
-    let create_result = create_address(&mut core, &http_client, base_url.clone(), Some(UserId(1)));
+    let create_result = create_address(core, http_client, base_url.clone(), Some(UserId(1)));
     println!("{:?}", create_result);
     assert!(create_result.is_ok());
 

@@ -212,7 +212,7 @@ pub mod tests {
 
     impl ProductsRepo for ProductsRepoMock {
         /// Create a new products
-        fn create(&self, payload: InnerNewProducts) -> RepoResult<Products> {
+        fn create(&self, payload: NewProducts) -> RepoResult<Products> {
             Ok(Products {
                 id: 1,
                 base_product_id: payload.base_product_id,
@@ -225,7 +225,7 @@ pub mod tests {
         }
 
         /// Create many a new products
-        fn create_many(&self, payloads: Vec<InnerNewProducts>) -> RepoResult<Vec<Products>> {
+        fn create_many(&self, payloads: Vec<NewProducts>) -> RepoResult<Vec<Products>> {
             let mut result = vec![];
             for item in payloads {
                 result.push(Products {
