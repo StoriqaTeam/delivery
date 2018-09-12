@@ -22,6 +22,7 @@ pub struct NewCompaniesPackages {
 pub struct InnerAvailablePackages {
     pub id: CompanyPackageId,
     pub name: String,
+    pub logo: String,
     pub deliveries_to: Vec<Alpha3>,
 }
 
@@ -29,6 +30,7 @@ pub struct InnerAvailablePackages {
 pub struct AvailablePackages {
     pub id: CompanyPackageId,
     pub name: String,
+    pub logo: String,
     pub deliveries_to: Vec<Country>,
     pub local_available: bool,
 }

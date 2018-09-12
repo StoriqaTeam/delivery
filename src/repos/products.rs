@@ -199,6 +199,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                     data.push(AvailablePackageForUser {
                         id: companies_package.id,
                         name: get_company_package_name(company_raw.label, package_raw.name),
+                        logo: company_raw.logo,
                         price: product_raw.price,
                     });
                 }
