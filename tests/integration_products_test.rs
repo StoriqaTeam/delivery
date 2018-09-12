@@ -20,7 +20,6 @@ static MOCK_COMPANIES_PACKAGES_ENDPOINT: &'static str = "companies_packages";
 static MOCK_COMPANIES_ENDPOINT: &'static str = "companies";
 static MOCK_PACKAGES_ENDPOINT: &'static str = "packages";
 static MOCK_PRODUCTS_ENDPOINT: &'static str = "products";
-static MOCK_COUNTRY_ENDPOINT: &'static str = "countries";
 
 fn create_companies_packages(
     company_id: CompanyId,
@@ -96,28 +95,12 @@ fn create_package(
     create_result
 }
 
-fn get_all_countries(
-    core: &mut tokio_core::reactor::Core,
-    http_client: &HttpClientHandle,
-    base_url: String,
-    user_id: Option<UserId>,
-) -> Result<Country, client::Error> {
-    let create_result = core.run(http_client.request_with_auth_header::<Country>(
-        Method::Get,
-        format!("{}/{}", base_url, MOCK_COUNTRY_ENDPOINT.to_string()),
-        None,
-        user_id.map(|u| u.to_string()),
-    ));
-
-    create_result
-}
-
 // super user
 fn create_shipping(
     base_product_id: BaseProductId,
     company_package_id: CompanyPackageId,
     store_id: StoreId,
-    deliveries_to: Vec<Country>,
+    deliveries_to: Vec<Alpha3>,
     core: &mut tokio_core::reactor::Core,
     http_client: &HttpClientHandle,
     base_url: String,
@@ -129,10 +112,6 @@ fn create_shipping(
         company_package_id,
         price: None,
         shipping: ShippingVariant::Local,
-    };
-
-    let shipping_products = NewShippingProducts {
-        product: new_product,
         deliveries_to,
     };
 
@@ -144,7 +123,7 @@ fn create_shipping(
     };
 
     let shipping = NewShipping {
-        items: vec![shipping_products],
+        items: vec![new_product],
         pickup: Some(new_pickup),
     };
 
@@ -164,21 +143,21 @@ fn create_delivery_objects(
 ) -> (PackageId, CompanyId, CompanyPackageId) {
     // create
     println!("run create new package ");
-    let create_result = create_package(package_name.clone(), core, &http_client, base_url.clone(), user_id);
+    let create_result = create_package(package_name.clone(), core, http_client, base_url.clone(), user_id);
     println!("{:?}", create_result);
     assert!(create_result.is_ok());
     let package_id = create_result.unwrap().id;
 
     // create
     println!("run create new company ");
-    let create_result = create_company(company_name.clone(), core, &http_client, base_url.clone(), user_id);
+    let create_result = create_company(company_name.clone(), core, http_client, base_url.clone(), user_id);
     println!("{:?}", create_result);
     assert!(create_result.is_ok());
     let company_id = create_result.unwrap().id;
 
     // create
     println!("run create new companies_packages ");
-    let create_result = create_companies_packages(company_id, package_id, core, &http_client, base_url.clone(), user_id);
+    let create_result = create_companies_packages(company_id, package_id, core, http_client, base_url.clone(), user_id);
     println!("{:?}", create_result);
     assert!(create_result.is_ok());
     let companies_package_id = create_result.unwrap().id;
@@ -233,11 +212,19 @@ fn get_url_request_by_base_product_id(base_url: String, base_product_id: BasePro
     format!("{}/{}/{}", base_url, MOCK_PRODUCTS_ENDPOINT, base_product_id)
 }
 
-// test products by superuser
 #[test]
-fn test_products_superuser_crud() {
+fn test_company() {
     let (mut core, http_client) = common::make_utils();
     let base_url = common::setup();
+
+    test_products_superuser_crud(&mut core, &http_client, base_url.clone());
+    test_products_regular_user_crud(&mut core, &http_client, base_url.clone());
+    test_products_unauthorized(&mut core, &http_client, base_url.clone());
+    test_products_store_manager(&mut core, &http_client, base_url.clone());
+}
+
+// test products by superuser
+fn test_products_superuser_crud(core: &mut tokio_core::reactor::Core, http_client: &HttpClientHandle, base_url: String) {
     let user_id = UserId(1);
     let base_product_id = BaseProductId(1);
     let store_id = StoreId(1);
@@ -246,16 +233,13 @@ fn test_products_superuser_crud() {
     let package_name = "Avia".to_string();
     let company_name = "US UPS".to_string();
 
-    println!("run get_all countries");
-    let countries_result = get_all_countries(&mut core, &http_client, base_url.clone(), Some(user_id));
-    assert!(countries_result.is_ok());
-    let countries = vec![countries_result.unwrap()];
+    let countries = vec!["RUS", "USA", "BRA"].into_iter().map(|v| Alpha3(v.to_string())).collect();
 
     let (package_id, company_id, companies_package_id) = create_delivery_objects(
         package_name.clone(),
         company_name.clone(),
-        &mut core,
-        &http_client,
+        core,
+        http_client,
         base_url.clone(),
         Some(user_id),
     );
@@ -267,8 +251,8 @@ fn test_products_superuser_crud() {
         companies_package_id.clone(),
         store_id,
         countries,
-        &mut core,
-        &http_client,
+        core,
+        http_client,
         url_crd.clone(),
         Some(user_id.to_string()),
     );
@@ -276,8 +260,8 @@ fn test_products_superuser_crud() {
     assert!(create_result.is_ok());
 
     delete_deliveries_objects(
-        &mut core,
-        &http_client,
+        core,
+        http_client,
         base_url.clone(),
         user_id,
         (package_id.clone(), company_id.clone(), companies_package_id.clone()),
@@ -285,15 +269,12 @@ fn test_products_superuser_crud() {
 
     // delete
     println!("run delete products for base_product {}", base_product_id);
-    let delete_result = delete_products(&mut core, &http_client, url_crd.clone());
+    let delete_result = delete_products(core, http_client, url_crd.clone());
     assert!(delete_result.is_ok());
 }
 
 // test products by regular user
-#[test]
-fn test_products_regular_user_crud() {
-    let (mut core, http_client) = common::make_utils();
-    let base_url = common::setup();
+fn test_products_regular_user_crud(core: &mut tokio_core::reactor::Core, http_client: &HttpClientHandle, base_url: String) {
     let base_product_id = BaseProductId(2);
     let store_id = StoreId(1);
     let package_name = "Avia".to_string();
@@ -304,19 +285,16 @@ fn test_products_regular_user_crud() {
 
     // create user for test acl
     let user_id = UserId(2);
-    let create_role_result = common::create_user_role(user_id.clone(), &mut core, &http_client, base_url.clone());
+    let create_role_result = common::create_user_role(user_id.clone(), core, http_client, base_url.clone());
     assert!(create_role_result.is_ok());
 
-    println!("run get_all countries");
-    let countries_result = get_all_countries(&mut core, &http_client, base_url.clone(), Some(user_id));
-    assert!(countries_result.is_ok());
-    let countries = vec![countries_result.unwrap()];
+    let countries = vec!["RUS", "USA", "BRA"].into_iter().map(|v| Alpha3(v.to_string())).collect();
 
     let (package_id, company_id, companies_package_id) = create_delivery_objects(
         package_name.clone(),
         company_name.clone(),
-        &mut core,
-        &http_client,
+        core,
+        http_client,
         base_url.clone(),
         Some(super_user_id),
     );
@@ -328,8 +306,8 @@ fn test_products_regular_user_crud() {
         companies_package_id.clone(),
         store_id,
         countries,
-        &mut core,
-        &http_client,
+        core,
+        http_client,
         url_crd.clone(),
         Some(user_id.to_string()),
     );
@@ -337,8 +315,8 @@ fn test_products_regular_user_crud() {
     assert!(create_result.is_err());
 
     delete_deliveries_objects(
-        &mut core,
-        &http_client,
+        core,
+        http_client,
         base_url.clone(),
         super_user_id.clone(),
         (package_id.clone(), company_id.clone(), companies_package_id.clone()),
@@ -346,19 +324,16 @@ fn test_products_regular_user_crud() {
 
     // delete
     println!("run delete products for base_product {}", base_product_id);
-    let delete_result = delete_products(&mut core, &http_client, url_crd.clone());
+    let delete_result = delete_products(core, http_client, url_crd.clone());
     assert!(delete_result.is_ok());
 
     // delete user role
-    let delete_result = common::delete_role(user_id.clone(), &mut core, &http_client, base_url.clone());
+    let delete_result = common::delete_role(user_id.clone(), core, http_client, base_url.clone());
     assert!(delete_result.is_ok());
 }
 
 // test update products without authorization data
-#[test]
-fn test_products_unauthorized() {
-    let (mut core, http_client) = common::make_utils();
-    let base_url = common::setup();
+fn test_products_unauthorized(core: &mut tokio_core::reactor::Core, http_client: &HttpClientHandle, base_url: String) {
     let base_product_id = BaseProductId(3);
     let store_id = StoreId(1);
     let package_name = "Avia".to_string();
@@ -367,16 +342,13 @@ fn test_products_unauthorized() {
 
     let url_crd = get_url_request_by_base_product_id(base_url.clone(), base_product_id);
 
-    println!("run get_all countries");
-    let countries_result = get_all_countries(&mut core, &http_client, base_url.clone(), Some(super_user_id));
-    assert!(countries_result.is_ok());
-    let countries = vec![countries_result.unwrap()];
+    let countries = vec!["RUS", "USA", "BRA"].into_iter().map(|v| Alpha3(v.to_string())).collect();
 
     let (package_id, company_id, companies_package_id) = create_delivery_objects(
         package_name.clone(),
         company_name.clone(),
-        &mut core,
-        &http_client,
+        core,
+        http_client,
         base_url.clone(),
         Some(super_user_id),
     );
@@ -388,8 +360,8 @@ fn test_products_unauthorized() {
         companies_package_id.clone(),
         store_id,
         countries,
-        &mut core,
-        &http_client,
+        core,
+        http_client,
         url_crd.clone(),
         None,
     );
@@ -397,8 +369,8 @@ fn test_products_unauthorized() {
     assert!(create_result.is_err());
 
     delete_deliveries_objects(
-        &mut core,
-        &http_client,
+        core,
+        http_client,
         base_url.clone(),
         super_user_id.clone(),
         (package_id.clone(), company_id.clone(), companies_package_id.clone()),
@@ -406,15 +378,12 @@ fn test_products_unauthorized() {
 
     // delete
     println!("run delete products for base_product {}", base_product_id);
-    let delete_result = delete_products(&mut core, &http_client, url_crd.clone());
+    let delete_result = delete_products(core, http_client, url_crd.clone());
     assert!(delete_result.is_ok());
 }
 
 // test products by store manager
-#[test]
-fn test_products_store_manager() {
-    let (mut core, http_client) = common::make_utils();
-    let base_url = common::setup();
+fn test_products_store_manager(core: &mut tokio_core::reactor::Core, http_client: &HttpClientHandle, base_url: String) {
     let base_product_id = BaseProductId(4);
     let store_id = StoreId(1);
     let package_name = "Avia".to_string();
@@ -424,21 +393,18 @@ fn test_products_store_manager() {
 
     // create store_manager for test acl
     let user_id = UserId(3);
-    let create_role_result = common::create_user_role(user_id.clone(), &mut core, &http_client, base_url.clone());
+    let create_role_result = common::create_user_role(user_id.clone(), core, http_client, base_url.clone());
     assert!(create_role_result.is_ok());
-    let create_role_result = common::create_user_store_role(user_id.clone(), store_id, &mut core, &http_client, base_url.clone());
+    let create_role_result = common::create_user_store_role(user_id.clone(), store_id, core, http_client, base_url.clone());
     assert!(create_role_result.is_ok());
 
-    println!("run get_all countries");
-    let countries_result = get_all_countries(&mut core, &http_client, base_url.clone(), Some(user_id));
-    assert!(countries_result.is_ok());
-    let countries = vec![countries_result.unwrap()];
+    let countries = vec!["RUS", "USA", "BRA"].into_iter().map(|v| Alpha3(v.to_string())).collect();
 
     let (package_id, company_id, companies_package_id) = create_delivery_objects(
         package_name.clone(),
         company_name.clone(),
-        &mut core,
-        &http_client,
+        core,
+        http_client,
         base_url.clone(),
         Some(super_user_id),
     );
@@ -450,8 +416,8 @@ fn test_products_store_manager() {
         companies_package_id.clone(),
         store_id,
         countries,
-        &mut core,
-        &http_client,
+        core,
+        http_client,
         url_crd.clone(),
         Some(user_id.to_string()),
     );
@@ -459,8 +425,8 @@ fn test_products_store_manager() {
     assert!(create_result.is_ok());
 
     delete_deliveries_objects(
-        &mut core,
-        &http_client,
+        core,
+        http_client,
         base_url.clone(),
         super_user_id.clone(),
         (package_id.clone(), company_id.clone(), companies_package_id.clone()),
@@ -468,10 +434,10 @@ fn test_products_store_manager() {
 
     // delete
     println!("run delete products for base_product {}", base_product_id);
-    let delete_result = delete_products(&mut core, &http_client, url_crd.clone());
+    let delete_result = delete_products(core, http_client, url_crd.clone());
     assert!(delete_result.is_ok());
 
     // delete user role
-    let delete_result = common::delete_role(user_id.clone(), &mut core, &http_client, base_url.clone());
+    let delete_result = common::delete_role(user_id.clone(), core, http_client, base_url.clone());
     assert!(delete_result.is_ok());
 }

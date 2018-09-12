@@ -122,7 +122,6 @@ fn test_companies_packages() {
     let (mut core, http_client) = common::make_utils();
     let base_url = common::setup();
 
-    // test companies_packages by superuser
     test_companies_packages_superuser_crud(&mut core, &http_client, base_url.clone());
     test_companies_packages_regular_user_crud(&mut core, &http_client, base_url.clone());
     test_companies_packages_unauthorized(&mut core, &http_client, base_url.clone());

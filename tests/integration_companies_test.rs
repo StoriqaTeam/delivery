@@ -62,16 +62,23 @@ fn get_url_request(base_url: String) -> String {
     format!("{}/{}", base_url, MOCK_COMPANIES_ENDPOINT)
 }
 
-// test company by superuser
 #[test]
-fn test_company_superuser_crud() {
+fn test_company() {
     let (mut core, http_client) = common::make_utils();
     let base_url = common::setup();
+
+    test_company_superuser_crud(&mut core, &http_client, base_url.clone());
+    test_company_regular_user_crud(&mut core, &http_client, base_url.clone());
+    test_company_unauthorized(&mut core, &http_client, base_url.clone());
+}
+
+// test company by superuser
+fn test_company_superuser_crud(core: &mut tokio_core::reactor::Core, http_client: &HttpClientHandle, base_url: String) {
     let user_id = UserId(1);
     let name = "US UPS".to_string();
     // create
     println!("run create new company ");
-    let create_result = create_company(name.clone(), &mut core, &http_client, base_url.clone(), Some(user_id));
+    let create_result = create_company(name.clone(), core, http_client, base_url.clone(), Some(user_id));
     println!("{:?}", create_result);
     assert!(create_result.is_ok());
 
@@ -112,26 +119,22 @@ fn test_company_superuser_crud() {
 }
 
 // test company by regular user
-#[test]
-fn test_company_regular_user_crud() {
-    let (mut core, http_client) = common::make_utils();
-    let base_url = common::setup();
-
+fn test_company_regular_user_crud(core: &mut tokio_core::reactor::Core, http_client: &HttpClientHandle, base_url: String) {
     // create user for test acl
     let user_id = UserId(1123);
-    let create_role_result = common::create_user_role(user_id.clone(), &mut core, &http_client, base_url.clone());
+    let create_role_result = common::create_user_role(user_id.clone(), core, http_client, base_url.clone());
     assert!(create_role_result.is_ok());
 
     let name = "US UPS".to_string();
     // create
     println!("run create new company ");
-    let create_result = create_company(name.clone(), &mut core, &http_client, base_url.clone(), Some(user_id));
+    let create_result = create_company(name.clone(), core, http_client, base_url.clone(), Some(user_id));
     println!("{:?}", create_result);
     assert!(create_result.is_err());
 
     // create by super user
     println!("run create new company by super user");
-    let create_result = create_company(name.clone(), &mut core, &http_client, base_url.clone(), Some(UserId(1)));
+    let create_result = create_company(name.clone(), core, http_client, base_url.clone(), Some(UserId(1)));
     println!("{:?}", create_result);
     assert!(create_result.is_ok());
 
@@ -182,21 +185,18 @@ fn test_company_regular_user_crud() {
 }
 
 // test update company without authorization data
-#[test]
-fn test_company_unauthorized() {
-    let (mut core, http_client) = common::make_utils();
-    let base_url = common::setup();
+fn test_company_unauthorized(core: &mut tokio_core::reactor::Core, http_client: &HttpClientHandle, base_url: String) {
     let name = "US UPS".to_string();
 
     // create
     println!("run create new company ");
-    let create_result = create_company(name.clone(), &mut core, &http_client, base_url.clone(), None);
+    let create_result = create_company(name.clone(), core, http_client, base_url.clone(), None);
     println!("{:?}", create_result);
     assert!(create_result.is_err());
 
     // create by super user
     println!("run create new company by super user");
-    let create_result = create_company(name.clone(), &mut core, &http_client, base_url.clone(), Some(UserId(1)));
+    let create_result = create_company(name.clone(), core, http_client, base_url.clone(), Some(UserId(1)));
     println!("{:?}", create_result);
     assert!(create_result.is_ok());
 
