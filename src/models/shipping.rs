@@ -30,6 +30,7 @@ pub struct NewShippingProducts {
 pub struct AvailablePackageForUser {
     pub id: CompanyPackageId,
     pub name: String,
+    pub logo: String,
     pub price: Option<ProductPrice>,
 }
 

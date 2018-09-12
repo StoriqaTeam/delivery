@@ -194,6 +194,7 @@ impl<
                                                 let element = AvailablePackages {
                                                     id: package.id,
                                                     name: package.name,
+                                                    logo: package.logo,
                                                     deliveries_to,
                                                     local_available,
                                                 };

@@ -274,6 +274,7 @@ pub mod tests {
             Ok(vec![AvailablePackageForUser {
                 id: CompanyPackageId(1),
                 name: "UPS-avia".to_string(),
+                logo: "logo".to_string(),
                 price: None,
             }])
         }
@@ -667,6 +668,7 @@ pub mod tests {
                 .map(|id| InnerAvailablePackages {
                     id: CompanyPackageId(id.0),
                     name: "name".to_string(),
+                    logo: "logo".to_string(),
                     deliveries_to: vec![],
                 })
                 .collect())
