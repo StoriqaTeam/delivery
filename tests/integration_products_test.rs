@@ -16,84 +16,7 @@ use stq_types::*;
 
 use lib::models::*;
 
-static MOCK_COMPANIES_PACKAGES_ENDPOINT: &'static str = "companies_packages";
-static MOCK_COMPANIES_ENDPOINT: &'static str = "companies";
-static MOCK_PACKAGES_ENDPOINT: &'static str = "packages";
 static MOCK_PRODUCTS_ENDPOINT: &'static str = "products";
-
-fn create_companies_packages(
-    company_id: CompanyId,
-    package_id: PackageId,
-    core: &mut tokio_core::reactor::Core,
-    http_client: &HttpClientHandle,
-    base_url: String,
-    user_id: Option<UserId>,
-) -> Result<CompaniesPackages, client::Error> {
-    let new_companies_packages = NewCompaniesPackages { company_id, package_id };
-
-    let body: String = serde_json::to_string(&new_companies_packages).unwrap().to_string();
-    let create_result = core.run(http_client.request_with_auth_header::<CompaniesPackages>(
-        Method::Post,
-        format!("{}/{}", base_url, MOCK_COMPANIES_PACKAGES_ENDPOINT),
-        Some(body),
-        user_id.map(|u| u.to_string()),
-    ));
-
-    create_result
-}
-
-fn create_company(
-    name: String,
-    core: &mut tokio_core::reactor::Core,
-    http_client: &HttpClientHandle,
-    base_url: String,
-    user_id: Option<UserId>,
-) -> Result<Company, client::Error> {
-    let new_company = NewCompany {
-        name,
-        label: "UPS".to_string(),
-        description: None,
-        deliveries_from: vec![Alpha3("RUS".to_string())],
-        logo: "".to_string(),
-    };
-
-    let body: String = serde_json::to_string(&new_company).unwrap().to_string();
-    let create_result = core.run(http_client.request_with_auth_header::<Company>(
-        Method::Post,
-        format!("{}/{}", base_url, MOCK_COMPANIES_ENDPOINT),
-        Some(body),
-        user_id.map(|u| u.to_string()),
-    ));
-
-    create_result
-}
-
-fn create_package(
-    name: String,
-    core: &mut tokio_core::reactor::Core,
-    http_client: &HttpClientHandle,
-    base_url: String,
-    user_id: Option<UserId>,
-) -> Result<Packages, client::Error> {
-    let new = NewPackages {
-        name,
-        max_size: 0f64,
-        min_size: 0f64,
-        max_weight: 0f64,
-        min_weight: 0f64,
-        deliveries_to: vec![],
-    };
-
-    let body: String = serde_json::to_string(&new).unwrap().to_string();
-    let create_result = core.run(http_client.request_with_auth_header::<Packages>(
-        Method::Post,
-        format!("{}/{}", base_url, MOCK_PACKAGES_ENDPOINT),
-        Some(body),
-        user_id.map(|u| u.to_string()),
-    ));
-
-    create_result
-}
 
 // super user
 fn create_shipping(
@@ -133,75 +56,6 @@ fn create_shipping(
     create_result
 }
 
-fn create_delivery_objects(
-    package_name: String,
-    company_name: String,
-    core: &mut tokio_core::reactor::Core,
-    http_client: &HttpClientHandle,
-    base_url: String,
-    user_id: Option<UserId>,
-) -> (PackageId, CompanyId, CompanyPackageId) {
-    // create
-    println!("run create new package ");
-    let create_result = create_package(package_name.clone(), core, http_client, base_url.clone(), user_id);
-    println!("{:?}", create_result);
-    assert!(create_result.is_ok());
-    let package_id = create_result.unwrap().id;
-
-    // create
-    println!("run create new company ");
-    let create_result = create_company(company_name.clone(), core, http_client, base_url.clone(), user_id);
-    println!("{:?}", create_result);
-    assert!(create_result.is_ok());
-    let company_id = create_result.unwrap().id;
-
-    // create
-    println!("run create new companies_packages ");
-    let create_result = create_companies_packages(company_id, package_id, core, http_client, base_url.clone(), user_id);
-    println!("{:?}", create_result);
-    assert!(create_result.is_ok());
-    let companies_package_id = create_result.unwrap().id;
-
-    (package_id, company_id, companies_package_id)
-}
-
-fn delete_deliveries_objects(
-    core: &mut tokio_core::reactor::Core,
-    http_client: &HttpClientHandle,
-    base_url: String,
-    user_id: UserId,
-    ids: (PackageId, CompanyId, CompanyPackageId),
-) {
-    let (package_id, company_id, companies_package_id) = ids;
-
-    println!("run delete companies_packages ");
-    let delete_result = core.run(http_client.request_with_auth_header::<CompaniesPackages>(
-        Method::Delete,
-        format!("{}/{}/{}", base_url, MOCK_COMPANIES_PACKAGES_ENDPOINT, companies_package_id),
-        None,
-        Some(user_id.to_string()),
-    ));
-    assert!(delete_result.is_ok());
-
-    println!("run delete company ");
-    let delete_result = core.run(http_client.request_with_auth_header::<Company>(
-        Method::Delete,
-        format!("{}/{}/{}", base_url, MOCK_COMPANIES_ENDPOINT, company_id),
-        None,
-        Some(user_id.to_string()),
-    ));
-    assert!(delete_result.is_ok());
-
-    println!("run delete package ");
-    let delete_result = core.run(http_client.request_with_auth_header::<Packages>(
-        Method::Delete,
-        format!("{}/{}/{}", base_url, MOCK_PACKAGES_ENDPOINT, package_id),
-        None,
-        Some(user_id.to_string()),
-    ));
-    assert!(delete_result.is_ok());
-}
-
 // super user
 fn delete_products(core: &mut tokio_core::reactor::Core, http_client: &HttpClientHandle, url: String) -> Result<(), client::Error> {
     let user_id = UserId(1);
@@ -223,6 +77,27 @@ fn test_company() {
     test_products_store_manager(&mut core, &http_client, base_url.clone());
 }
 
+fn create_company(name: String) -> NewCompany {
+    NewCompany {
+        name,
+        label: "UPS".to_string(),
+        description: None,
+        deliveries_from: vec![Alpha3("RUS".to_string())],
+        logo: "".to_string(),
+    }
+}
+
+fn create_package(name: String) -> NewPackages {
+    NewPackages {
+        name,
+        max_size: 0f64,
+        min_size: 0f64,
+        max_weight: 0f64,
+        min_weight: 0f64,
+        deliveries_to: vec![],
+    }
+}
+
 // test products by superuser
 fn test_products_superuser_crud(core: &mut tokio_core::reactor::Core, http_client: &HttpClientHandle, base_url: String) {
     let user_id = UserId(1);
@@ -235,14 +110,9 @@ fn test_products_superuser_crud(core: &mut tokio_core::reactor::Core, http_clien
 
     let countries = vec!["RUS", "USA", "BRA"].into_iter().map(|v| Alpha3(v.to_string())).collect();
 
-    let (package_id, company_id, companies_package_id) = create_delivery_objects(
-        package_name.clone(),
-        company_name.clone(),
-        core,
-        http_client,
-        base_url.clone(),
-        Some(user_id),
-    );
+    let payload = (create_company(company_name), create_package(package_name));
+    let (package_id, company_id, companies_package_id) =
+        common::create_delivery_objects(payload, core, http_client, base_url.clone(), Some(user_id));
 
     // upsert
     println!("run upsert products for base_product {}", base_product_id);
@@ -259,12 +129,12 @@ fn test_products_superuser_crud(core: &mut tokio_core::reactor::Core, http_clien
     println!("create shipping {:?}", create_result);
     assert!(create_result.is_ok());
 
-    delete_deliveries_objects(
+    common::delete_deliveries_objects(
+        (package_id.clone(), company_id.clone(), companies_package_id.clone()),
         core,
         http_client,
         base_url.clone(),
         user_id,
-        (package_id.clone(), company_id.clone(), companies_package_id.clone()),
     );
 
     // delete
@@ -290,14 +160,9 @@ fn test_products_regular_user_crud(core: &mut tokio_core::reactor::Core, http_cl
 
     let countries = vec!["RUS", "USA", "BRA"].into_iter().map(|v| Alpha3(v.to_string())).collect();
 
-    let (package_id, company_id, companies_package_id) = create_delivery_objects(
-        package_name.clone(),
-        company_name.clone(),
-        core,
-        http_client,
-        base_url.clone(),
-        Some(super_user_id),
-    );
+    let payload = (create_company(company_name), create_package(package_name));
+    let (package_id, company_id, companies_package_id) =
+        common::create_delivery_objects(payload, core, http_client, base_url.clone(), Some(super_user_id));
 
     // upsert
     println!("run upsert products for base_product {}", base_product_id);
@@ -314,12 +179,12 @@ fn test_products_regular_user_crud(core: &mut tokio_core::reactor::Core, http_cl
     println!("create shipping {:?}", create_result);
     assert!(create_result.is_err());
 
-    delete_deliveries_objects(
+    common::delete_deliveries_objects(
+        (package_id.clone(), company_id.clone(), companies_package_id.clone()),
         core,
         http_client,
         base_url.clone(),
         super_user_id.clone(),
-        (package_id.clone(), company_id.clone(), companies_package_id.clone()),
     );
 
     // delete
@@ -344,14 +209,9 @@ fn test_products_unauthorized(core: &mut tokio_core::reactor::Core, http_client:
 
     let countries = vec!["RUS", "USA", "BRA"].into_iter().map(|v| Alpha3(v.to_string())).collect();
 
-    let (package_id, company_id, companies_package_id) = create_delivery_objects(
-        package_name.clone(),
-        company_name.clone(),
-        core,
-        http_client,
-        base_url.clone(),
-        Some(super_user_id),
-    );
+    let payload = (create_company(company_name), create_package(package_name));
+    let (package_id, company_id, companies_package_id) =
+        common::create_delivery_objects(payload, core, http_client, base_url.clone(), Some(super_user_id.clone()));
 
     // upsert
     println!("run upsert products for base_product {}", base_product_id);
@@ -368,12 +228,12 @@ fn test_products_unauthorized(core: &mut tokio_core::reactor::Core, http_client:
     println!("create shipping {:?}", create_result);
     assert!(create_result.is_err());
 
-    delete_deliveries_objects(
+    common::delete_deliveries_objects(
+        (package_id.clone(), company_id.clone(), companies_package_id.clone()),
         core,
         http_client,
         base_url.clone(),
         super_user_id.clone(),
-        (package_id.clone(), company_id.clone(), companies_package_id.clone()),
     );
 
     // delete
@@ -396,18 +256,14 @@ fn test_products_store_manager(core: &mut tokio_core::reactor::Core, http_client
     let create_role_result = common::create_user_role(user_id.clone(), core, http_client, base_url.clone());
     assert!(create_role_result.is_ok());
     let create_role_result = common::create_user_store_role(user_id.clone(), store_id, core, http_client, base_url.clone());
+    println!("traceeee {:?}", create_role_result);
     assert!(create_role_result.is_ok());
 
     let countries = vec!["RUS", "USA", "BRA"].into_iter().map(|v| Alpha3(v.to_string())).collect();
 
-    let (package_id, company_id, companies_package_id) = create_delivery_objects(
-        package_name.clone(),
-        company_name.clone(),
-        core,
-        http_client,
-        base_url.clone(),
-        Some(super_user_id),
-    );
+    let payload = (create_company(company_name), create_package(package_name));
+    let (package_id, company_id, companies_package_id) =
+        common::create_delivery_objects(payload, core, http_client, base_url.clone(), Some(super_user_id));
 
     // upsert
     println!("run upsert products for base_product {}", base_product_id);
@@ -424,12 +280,12 @@ fn test_products_store_manager(core: &mut tokio_core::reactor::Core, http_client
     println!("create shipping {:?}", create_result);
     assert!(create_result.is_ok());
 
-    delete_deliveries_objects(
+    common::delete_deliveries_objects(
+        (package_id.clone(), company_id.clone(), companies_package_id.clone()),
         core,
         http_client,
         base_url.clone(),
         super_user_id.clone(),
-        (package_id.clone(), company_id.clone(), companies_package_id.clone()),
     );
 
     // delete

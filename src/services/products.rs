@@ -11,7 +11,7 @@ use r2d2::{ManageConnection, Pool};
 use stq_types::{Alpha3, BaseProductId, CompanyPackageId, UserId};
 
 use errors::Error;
-use models::{AvailableShipppingForUser, Country, NewProducts, NewShipping, Products, Shipping, ShippingProducts, UpdateProducts};
+use models::{AvailableShippingForUser, Country, NewProducts, NewShipping, Products, Shipping, ShippingProducts, UpdateProducts};
 use repos::countries::{get_country, set_selected};
 use repos::products::ProductsWithAvailableCountries;
 use repos::ReposFactory;
@@ -28,7 +28,7 @@ pub trait ProductsService {
     fn get_by_base_product_id(&self, base_product_id: BaseProductId) -> ServiceFuture<Shipping>;
 
     /// find available product delivery to users country
-    fn find_available_to(&self, base_product_id: BaseProductId, user_country: Alpha3) -> ServiceFuture<AvailableShipppingForUser>;
+    fn find_available_to(&self, base_product_id: BaseProductId, user_country: Alpha3) -> ServiceFuture<AvailableShippingForUser>;
 
     /// Update a product
     fn update(
@@ -214,7 +214,7 @@ impl<
     }
 
     /// find available product delivery to users country
-    fn find_available_to(&self, base_product_id: BaseProductId, user_country: Alpha3) -> ServiceFuture<AvailableShipppingForUser> {
+    fn find_available_to(&self, base_product_id: BaseProductId, user_country: Alpha3) -> ServiceFuture<AvailableShippingForUser> {
         let db_pool = self.db_pool.clone();
         let repo_factory = self.repo_factory.clone();
         let user_id = self.user_id;
@@ -231,7 +231,7 @@ impl<
                             products_repo.find_available_to(base_product_id, user_country).and_then(|packages| {
                                 pickups_repo
                                     .get(base_product_id)
-                                    .map(|pickups| AvailableShipppingForUser { packages, pickups })
+                                    .map(|pickups| AvailableShippingForUser { packages, pickups })
                             })
                         })
                 })
