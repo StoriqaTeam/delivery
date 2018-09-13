@@ -115,3 +115,123 @@ pub fn delete_role(
         Some(super_user_id.to_string()),
     ))
 }
+
+static MOCK_COMPANIES_PACKAGES_ENDPOINT: &'static str = "companies_packages";
+static MOCK_COMPANIES_ENDPOINT: &'static str = "companies";
+static MOCK_PACKAGES_ENDPOINT: &'static str = "packages";
+
+fn create_companies_packages(
+    payload: NewCompaniesPackages,
+    core: &mut tokio_core::reactor::Core,
+    http_client: &HttpClientHandle,
+    base_url: String,
+    user_id: Option<UserId>,
+) -> Result<CompaniesPackages, client::Error> {
+    let body: String = serde_json::to_string(&payload).unwrap().to_string();
+    let create_result = core.run(http_client.request_with_auth_header::<CompaniesPackages>(
+        Method::Post,
+        format!("{}/{}", base_url, MOCK_COMPANIES_PACKAGES_ENDPOINT),
+        Some(body),
+        user_id.map(|u| u.to_string()),
+    ));
+
+    create_result
+}
+
+fn create_company(
+    payload: NewCompany,
+    core: &mut tokio_core::reactor::Core,
+    http_client: &HttpClientHandle,
+    base_url: String,
+    user_id: Option<UserId>,
+) -> Result<Company, client::Error> {
+    let body: String = serde_json::to_string(&payload).unwrap().to_string();
+    let create_result = core.run(http_client.request_with_auth_header::<Company>(
+        Method::Post,
+        format!("{}/{}", base_url, MOCK_COMPANIES_ENDPOINT),
+        Some(body),
+        user_id.map(|u| u.to_string()),
+    ));
+
+    create_result
+}
+
+fn create_package(
+    payload: NewPackages,
+    core: &mut tokio_core::reactor::Core,
+    http_client: &HttpClientHandle,
+    base_url: String,
+    user_id: Option<UserId>,
+) -> Result<Packages, client::Error> {
+    let body: String = serde_json::to_string(&payload).unwrap().to_string();
+    let create_result = core.run(http_client.request_with_auth_header::<Packages>(
+        Method::Post,
+        format!("{}/{}", base_url, MOCK_PACKAGES_ENDPOINT),
+        Some(body),
+        user_id.map(|u| u.to_string()),
+    ));
+
+    create_result
+}
+
+pub fn create_delivery_objects(
+    payload: (NewCompany, NewPackages),
+    core: &mut tokio_core::reactor::Core,
+    http_client: &HttpClientHandle,
+    base_url: String,
+    user_id: Option<UserId>,
+) -> (PackageId, CompanyId, CompanyPackageId) {
+    let (new_company, new_package) = payload;
+    let create_result = create_package(new_package, core, http_client, base_url.clone(), user_id);
+    assert!(create_result.is_ok(), "Can not create package");
+    let package_id = create_result.unwrap().id;
+
+    let create_result = create_company(new_company, core, http_client, base_url.clone(), user_id);
+    assert!(create_result.is_ok(), "Can not create company");
+    let company_id = create_result.unwrap().id;
+
+    let new_company_package = NewCompaniesPackages {
+        company_id: company_id.clone(),
+        package_id: package_id.clone(),
+    };
+
+    let create_result = create_companies_packages(new_company_package, core, http_client, base_url.clone(), user_id);
+    assert!(create_result.is_ok(), "Can not create company_package");
+    let companies_package_id = create_result.unwrap().id;
+
+    (package_id, company_id, companies_package_id)
+}
+
+pub fn delete_deliveries_objects(
+    ids: (PackageId, CompanyId, CompanyPackageId),
+    core: &mut tokio_core::reactor::Core,
+    http_client: &HttpClientHandle,
+    base_url: String,
+    user_id: UserId,
+) {
+    let (package_id, company_id, companies_package_id) = ids;
+
+    let delete_result = core.run(http_client.request_with_auth_header::<CompaniesPackages>(
+        Method::Delete,
+        format!("{}/{}/{}", base_url, MOCK_COMPANIES_PACKAGES_ENDPOINT, companies_package_id),
+        None,
+        Some(user_id.to_string()),
+    ));
+    assert!(delete_result.is_ok(), "Can not delete company_package");
+
+    let delete_result = core.run(http_client.request_with_auth_header::<Company>(
+        Method::Delete,
+        format!("{}/{}/{}", base_url, MOCK_COMPANIES_ENDPOINT, company_id),
+        None,
+        Some(user_id.to_string()),
+    ));
+    assert!(delete_result.is_ok(), "Can not delete company");
+
+    let delete_result = core.run(http_client.request_with_auth_header::<Packages>(
+        Method::Delete,
+        format!("{}/{}/{}", base_url, MOCK_PACKAGES_ENDPOINT, package_id),
+        None,
+        Some(user_id.to_string()),
+    ));
+    assert!(delete_result.is_ok(), "Can not delete package");
+}
