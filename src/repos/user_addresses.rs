@@ -20,7 +20,7 @@ use models::authorization::*;
 use models::{NewUserAddress, UpdateUserAddress, UserAddress};
 use schema::user_addresses::dsl::*;
 
-/// UserAddresss repository for handling UserAddresss
+/// UserAddress repository for handling UserAddress
 pub trait UserAddressesRepo {
     /// Returns list of user_address for a specific user
     fn list_for_user(&self, user_id: UserId) -> RepoResult<Vec<UserAddress>>;
@@ -35,7 +35,7 @@ pub trait UserAddressesRepo {
     fn delete(&self, id: i32) -> RepoResult<UserAddress>;
 }
 
-/// Implementation of UserAddresss trait
+/// Implementation of UserAddress trait
 pub struct UserAddressesRepoImpl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> {
     pub db_conn: &'a T,
     pub acl: Box<Acl<Resource, Action, Scope, FailureError, UserAddress>>,
@@ -57,8 +57,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             .get_results::<UserAddress>(self.db_conn)
             .map_err(From::from)
             .and_then(|addresses: Vec<UserAddress>| {
-                for addres in &addresses {
-                    acl::check(&*self.acl, Resource::UserAddresses, Action::Read, self, Some(&addres))?;
+                for item in &addresses {
+                    acl::check(&*self.acl, Resource::UserAddresses, Action::Read, self, Some(&item))?;
                 }
                 Ok(addresses)
             })
