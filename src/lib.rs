@@ -28,6 +28,8 @@ extern crate uuid;
 extern crate validator;
 #[macro_use]
 extern crate validator_derive;
+#[macro_use]
+extern crate sentry;
 
 #[macro_use]
 extern crate stq_http;
@@ -44,6 +46,7 @@ pub mod errors;
 pub mod models;
 pub mod repos;
 pub mod schema;
+pub mod sentry_integration;
 pub mod services;
 
 use std::process;
