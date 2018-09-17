@@ -66,8 +66,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             .map_err(From::from)
             .and_then(|record| {
                 acl::check(&*self.acl, Resource::CompaniesPackages, Action::Create, self, Some(&record)).and_then(|_| Ok(record))
-            })
-            .map_err(|e: FailureError| e.context(format!("create new companies_packages {:?}.", payload)).into())
+            }).map_err(|e: FailureError| e.context(format!("create new companies_packages {:?}.", payload)).into())
     }
 
     fn get(&self, id_arg: CompanyPackageId) -> RepoResult<CompaniesPackages> {
@@ -114,8 +113,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 }
 
                 Ok(data)
-            })
-            .map_err(|e: FailureError| {
+            }).map_err(|e: FailureError| {
                 e.context(format!(
                     "Find in packages with  companies: {:?}, size: {}, weight: {} error occured",
                     company_id_args, size, weight
@@ -141,8 +139,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 }
 
                 Ok(data)
-            })
-            .map_err(move |e: FailureError| e.context(format!("get companies_packages package_id: {}.", id_arg)).into())
+            }).map_err(move |e: FailureError| e.context(format!("get companies_packages package_id: {}.", id_arg)).into())
     }
 
     /// Returns packages by company id
@@ -163,8 +160,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 }
 
                 Ok(data)
-            })
-            .map_err(move |e: FailureError| e.context(format!("get companies_packages company_id: {}.", id_arg)).into())
+            }).map_err(move |e: FailureError| e.context(format!("get companies_packages company_id: {}.", id_arg)).into())
     }
 
     fn delete(&self, id_arg: CompanyPackageId) -> RepoResult<CompaniesPackages> {

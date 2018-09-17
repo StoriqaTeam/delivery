@@ -90,8 +90,7 @@ impl<
                             let products_repo = repo_factory.create_products_repo(&*conn, user_id);
                             products_repo.create(payload)
                         })
-                })
-                .map_err(|e| e.context("Service Products, create endpoint error occured.").into()),
+                }).map_err(|e| e.context("Service Products, create endpoint error occured.").into()),
         )
     }
 
@@ -133,14 +132,11 @@ impl<
                                                                 set_selected(&mut country, &product.deliveries_to);
                                                                 country
                                                             })
-                                                        })
-                                                        .collect::<Vec<Country>>();
+                                                        }).collect::<Vec<Country>>();
                                                     ShippingProducts { product, deliveries_to }
-                                                })
-                                                .collect::<Vec<ShippingProducts>>()
+                                                }).collect::<Vec<ShippingProducts>>()
                                         })
-                                    })
-                                    .and_then(|products| {
+                                    }).and_then(|products| {
                                         if let Some(pickup) = pickup {
                                             pickups_repo
                                                 .delete(base_product_id)
@@ -155,8 +151,7 @@ impl<
                                     })
                             })
                         })
-                })
-                .map_err(|e: FailureError| e.context("Service Products, upsert endpoint error occured.").into()),
+                }).map_err(|e: FailureError| e.context("Service Products, upsert endpoint error occured.").into()),
         )
     }
 
@@ -194,22 +189,18 @@ impl<
                                                             set_selected(&mut country, &product.deliveries_to);
                                                             country
                                                         })
-                                                    })
-                                                    .collect::<Vec<Country>>();
+                                                    }).collect::<Vec<Country>>();
                                                 ShippingProducts { product, deliveries_to }
-                                            })
-                                            .collect::<Vec<ShippingProducts>>()
+                                            }).collect::<Vec<ShippingProducts>>()
                                     })
-                                })
-                                .and_then(|products| {
+                                }).and_then(|products| {
                                     pickups_repo.get(base_product_id).map(|pickups| Shipping {
                                         items: products,
                                         pickup: pickups,
                                     })
                                 })
                         })
-                })
-                .map_err(|e| e.context("Service Products, get_by_base_product_id endpoint error occured.").into()),
+                }).map_err(|e| e.context("Service Products, get_by_base_product_id endpoint error occured.").into()),
         )
     }
 
@@ -234,8 +225,7 @@ impl<
                                     .map(|pickups| AvailableShippingForUser { packages, pickups })
                             })
                         })
-                })
-                .map_err(|e| e.context("Service Products, find_available_to endpoint error occured.").into()),
+                }).map_err(|e| e.context("Service Products, find_available_to endpoint error occured.").into()),
         )
     }
 
@@ -259,8 +249,7 @@ impl<
                             let products_repo = repo_factory.create_products_repo(&*conn, user_id);
                             products_repo.update(base_product_id_arg, company_package_id, payload)
                         })
-                })
-                .map_err(|e| e.context("Service Products, update endpoint error occured.").into()),
+                }).map_err(|e| e.context("Service Products, update endpoint error occured.").into()),
         )
     }
 
@@ -284,8 +273,7 @@ impl<
                                     .and_then(|_| pickups_repo.delete(base_product_id_arg).and_then(|_| Ok(())))
                             })
                         })
-                })
-                .map_err(|e| e.context("Service Products, delete endpoint error occured.").into()),
+                }).map_err(|e| e.context("Service Products, delete endpoint error occured.").into()),
         )
     }
 }

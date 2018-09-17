@@ -77,8 +77,7 @@ impl<
                             let users_addresses_repo = repo_factory.create_users_addresses_repo(&*conn, curent_user_id);
                             users_addresses_repo.list_for_user(user_id)
                         })
-                })
-                .map_err(|e| e.context("Service UserAddress, get_addresses endpoint error occured.").into()),
+                }).map_err(|e| e.context("Service UserAddress, get_addresses endpoint error occured.").into()),
         )
     }
 
@@ -98,8 +97,7 @@ impl<
                             let users_addresses_repo = repo_factory.create_users_addresses_repo(&*conn, user_id);
                             users_addresses_repo.delete(id)
                         })
-                })
-                .map_err(|e| e.context("Service UserAddress, delete endpoint error occured.").into()),
+                }).map_err(|e| e.context("Service UserAddress, delete endpoint error occured.").into()),
         )
     }
 
@@ -119,8 +117,7 @@ impl<
                             let users_addresses_repo = repo_factory.create_users_addresses_repo(&*conn, user_id);
                             users_addresses_repo.create(payload)
                         })
-                })
-                .map_err(|e| e.context("Service UserAddress, create endpoint error occured.").into()),
+                }).map_err(|e| e.context("Service UserAddress, create endpoint error occured.").into()),
         )
     }
 
@@ -140,8 +137,7 @@ impl<
                             let users_addresses_repo = repo_factory.create_users_addresses_repo(&*conn, user_id);
                             users_addresses_repo.update(id, payload)
                         })
-                })
-                .map_err(|e| e.context("Service UserAddress, update endpoint error occured.").into()),
+                }).map_err(|e| e.context("Service UserAddress, update endpoint error occured.").into()),
         )
     }
 }

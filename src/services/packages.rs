@@ -85,8 +85,7 @@ impl<
                             let packages_repo = repo_factory.create_packages_repo(&*conn, user_id);
                             packages_repo.create(payload)
                         })
-                })
-                .map_err(|e| e.context("Service Packages, create endpoint error occured.").into()),
+                }).map_err(|e| e.context("Service Packages, create endpoint error occured.").into()),
         )
     }
 
@@ -110,8 +109,7 @@ impl<
                                 packages_repo.find_deliveries_to(countries_list)
                             })
                         })
-                })
-                .map_err(|e| e.context("Service Packages, find_deliveries_to endpoint error occured.").into()),
+                }).map_err(|e| e.context("Service Packages, find_deliveries_to endpoint error occured.").into()),
         )
     }
 
@@ -131,8 +129,7 @@ impl<
                             let packages_repo = repo_factory.create_packages_repo(&*conn, user_id);
                             packages_repo.list()
                         })
-                })
-                .map_err(|e| e.context("Service Packages, list endpoint error occured.").into()),
+                }).map_err(|e| e.context("Service Packages, list endpoint error occured.").into()),
         )
     }
 
@@ -151,8 +148,7 @@ impl<
                             let packages_repo = repo_factory.create_packages_repo(&*conn, user_id);
                             packages_repo.find(id_arg)
                         })
-                })
-                .map_err(|e| e.context("Service Packages, find endpoint error occured.").into()),
+                }).map_err(|e| e.context("Service Packages, find endpoint error occured.").into()),
         )
     }
 
@@ -171,8 +167,7 @@ impl<
                             let packages_repo = repo_factory.create_packages_repo(&*conn, user_id);
                             packages_repo.update(id, payload)
                         })
-                })
-                .map_err(|e| e.context("Service Packages, update endpoint error occured.").into()),
+                }).map_err(|e| e.context("Service Packages, update endpoint error occured.").into()),
         )
     }
 
@@ -191,8 +186,7 @@ impl<
                             let packages_repo = repo_factory.create_packages_repo(&*conn, user_id);
                             packages_repo.delete(id)
                         })
-                })
-                .map_err(|e| e.context("Service Packages, delete endpoint error occured.").into()),
+                }).map_err(|e| e.context("Service Packages, delete endpoint error occured.").into()),
         )
     }
 }

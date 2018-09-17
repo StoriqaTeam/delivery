@@ -87,8 +87,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                     Ok(Some(country))
                 }
                 None => Ok(None),
-            })
-            .map_err(|e: FailureError| e.context(format!("Get countries by search: {:?}.", search)).into())
+            }).map_err(|e: FailureError| e.context(format!("Get countries by search: {:?}.", search)).into())
     }
 
     /// Creates new country
@@ -120,8 +119,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                         .ok_or_else(|| format_err!("Could not create countries tree"))?;
                     self.cache.set(root.clone());
                     Ok(root)
-                })
-                .map_err(|e: FailureError| e.context("Get all countries error occured").into())
+                }).map_err(|e: FailureError| e.context("Get all countries error occured").into())
         }
     }
 }

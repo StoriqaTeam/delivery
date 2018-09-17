@@ -85,8 +85,7 @@ impl<
                             let companies_packages_repo = repo_factory.create_companies_packages_repo(&*conn, user_id);
                             companies_packages_repo.create(payload)
                         })
-                })
-                .map_err(|e| e.context("Service CompaniesPackages, create endpoint error occured.").into()),
+                }).map_err(|e| e.context("Service CompaniesPackages, create endpoint error occured.").into()),
         )
     }
 
@@ -106,8 +105,7 @@ impl<
                             let companies_packages_repo = repo_factory.create_companies_packages_repo(&*conn, user_id);
                             companies_packages_repo.get(id)
                         })
-                })
-                .map_err(|e| e.context("Service CompaniesPackages, get endpoint error occured.").into()),
+                }).map_err(|e| e.context("Service CompaniesPackages, get endpoint error occured.").into()),
         )
     }
 
@@ -127,8 +125,7 @@ impl<
                             let companies_packages_repo = repo_factory.create_companies_packages_repo(&*conn, user_id);
                             companies_packages_repo.get_companies(id)
                         })
-                })
-                .map_err(|e| e.context("Service CompaniesPackages, get_companies endpoint error occured.").into()),
+                }).map_err(|e| e.context("Service CompaniesPackages, get_companies endpoint error occured.").into()),
         )
     }
 
@@ -148,8 +145,7 @@ impl<
                             let companies_packages_repo = repo_factory.create_companies_packages_repo(&*conn, user_id);
                             companies_packages_repo.get_packages(id)
                         })
-                })
-                .map_err(|e| e.context("Service CompaniesPackages, get_packages endpoint error occured.").into()),
+                }).map_err(|e| e.context("Service CompaniesPackages, get_packages endpoint error occured.").into()),
         )
     }
 
@@ -222,8 +218,7 @@ impl<
                                     }
                                 })
                         })
-                })
-                .map_err(|e| {
+                }).map_err(|e| {
                     e.context("Service CompaniesPackages, find_deliveries_from endpoint error occured.")
                         .into()
                 }),
@@ -246,8 +241,7 @@ impl<
                             let companies_packages_repo = repo_factory.create_companies_packages_repo(&*conn, user_id);
                             companies_packages_repo.delete(companies_packages_id)
                         })
-                })
-                .map_err(|e| e.context("Service CompaniesPackages, delete endpoint error occured.").into()),
+                }).map_err(|e| e.context("Service CompaniesPackages, delete endpoint error occured.").into()),
         )
     }
 }

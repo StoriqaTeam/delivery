@@ -28,6 +28,8 @@ extern crate uuid;
 extern crate validator;
 #[macro_use]
 extern crate validator_derive;
+#[macro_use]
+extern crate sentry;
 
 #[macro_use]
 extern crate stq_http;
@@ -44,6 +46,7 @@ pub mod errors;
 pub mod models;
 pub mod repos;
 pub mod schema;
+pub mod sentry_integration;
 pub mod services;
 
 use std::process;
@@ -117,8 +120,7 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: Option<
 
                 Ok(app)
             }
-        })
-        .unwrap_or_else(|reason| {
+        }).unwrap_or_else(|reason| {
             eprintln!("Http Server Initialization Error: {}", reason);
             process::exit(1);
         });
@@ -131,8 +133,7 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: Option<
                     handle.spawn(conn.map(|_| ()).map_err(|why| eprintln!("Server Error: {:?}", why)));
                     Ok(())
                 }
-            })
-            .map_err(|_| ()),
+            }).map_err(|_| ()),
     );
 
     info!("Listening on http://{}, threads: {}", address, thread_count);
