@@ -73,8 +73,8 @@ impl NewCompany {
             logo,
         } = self;
 
-        let deliveries_from =
-            serde_json::to_value(deliveries_from).map_err(|e| e.context("Can not parse deliveries_from from value").context(Error::Parse))?;
+        let deliveries_from = serde_json::to_value(deliveries_from)
+            .map_err(|e| e.context("Can not parse deliveries_from from value").context(Error::Parse))?;
 
         Ok(NewCompanyRaw {
             name,

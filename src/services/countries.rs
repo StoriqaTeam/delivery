@@ -78,8 +78,7 @@ impl<
                             let countries_repo = repo_factory.create_countries_repo(&*conn, user_id);
                             countries_repo.find(code)
                         })
-                })
-                .map_err(|e| e.context("Service Countries, get endpoint error occured.").into()),
+                }).map_err(|e| e.context("Service Countries, get endpoint error occured.").into()),
         )
     }
 
@@ -99,8 +98,7 @@ impl<
                             let countries_repo = repo_factory.create_countries_repo(&*conn, user_id);
                             countries_repo.find_by(search)
                         })
-                })
-                .map_err(|e| e.context("Service Countries, find_by endpoint error occured.").into()),
+                }).map_err(|e| e.context("Service Countries, find_by endpoint error occured.").into()),
         )
     }
 
@@ -120,8 +118,7 @@ impl<
                             let countries_repo = repo_factory.create_countries_repo(&*conn, user_id);
                             conn.transaction::<(Country), FailureError, _>(move || countries_repo.create(new_country))
                         })
-                })
-                .map_err(|e| e.context("Service Countries, create endpoint error occured.").into()),
+                }).map_err(|e| e.context("Service Countries, create endpoint error occured.").into()),
         )
     }
 
@@ -141,8 +138,7 @@ impl<
                             let countries_repo = repo_factory.create_countries_repo(&*conn, user_id);
                             countries_repo.get_all()
                         })
-                })
-                .map_err(|e| e.context("Service Countries, get_all endpoint error occured.").into()),
+                }).map_err(|e| e.context("Service Countries, get_all endpoint error occured.").into()),
         )
     }
 }

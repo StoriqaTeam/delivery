@@ -154,8 +154,7 @@ impl<
                             e.context("Parsing body // POST /products in NewShipping failed!")
                                 .context(Error::Parse)
                                 .into()
-                        })
-                        .and_then(move |new_shipping| products_service.upsert(base_product_id, new_shipping)),
+                        }).and_then(move |new_shipping| products_service.upsert(base_product_id, new_shipping)),
                 )
             }
 
@@ -193,9 +192,8 @@ impl<
                                 "Parsing body // PUT /products/{}/company_package/{} in UpdateProducts failed!",
                                 base_product_id, company_package_id
                             )).context(Error::Parse)
-                                .into()
-                        })
-                        .and_then(move |update_products| products_service.update(base_product_id, company_package_id, update_products)),
+                            .into()
+                        }).and_then(move |update_products| products_service.update(base_product_id, company_package_id, update_products)),
                 )
             }
 
@@ -208,8 +206,7 @@ impl<
                             e.context("Parsing body // POST /companies in NewCompanies failed!")
                                 .context(Error::Parse)
                                 .into()
-                        })
-                        .and_then(move |new_company| companies_service.create(new_company)),
+                        }).and_then(move |new_company| companies_service.create(new_company)),
                 )
             }
 
@@ -228,8 +225,7 @@ impl<
                             e.context(format!("Parsing body // PUT /companies/{} in UpdateCompany failed!", company_id))
                                 .context(Error::Parse)
                                 .into()
-                        })
-                        .and_then(move |update_company| companies_service.update(company_id, update_company)),
+                        }).and_then(move |update_company| companies_service.update(company_id, update_company)),
                 )
             }
 
@@ -248,8 +244,7 @@ impl<
                             e.context("Parsing body // POST /companies in NewCompaniesPackages failed!")
                                 .context(Error::Parse)
                                 .into()
-                        })
-                        .and_then(move |new_companies_packages| companies_packages_service.create(new_companies_packages)),
+                        }).and_then(move |new_companies_packages| companies_packages_service.create(new_companies_packages)),
                 )
             }
 
@@ -283,7 +278,7 @@ impl<
                             "Parsing query parameters // GET /available_packages_for_user/{} failed!",
                             base_product_id
                         ).context(Error::Parse)
-                            .into(),
+                        .into(),
                     ))
                 }
             }
@@ -363,8 +358,7 @@ impl<
                             e.context("Parsing body // POST /countries in NewCountry failed!")
                                 .context(Error::Parse)
                                 .into()
-                        })
-                        .and_then(move |new_country| {
+                        }).and_then(move |new_country| {
                             new_country
                                 .validate()
                                 .map_err(|e| format_err!("Validation of NewCountry failed!").context(Error::Validate(e)).into())
@@ -383,8 +377,7 @@ impl<
                             e.context("Parsing body // POST /packages in NewPackages failed!")
                                 .context(Error::Parse)
                                 .into()
-                        })
-                        .and_then(move |new_package| packages_service.create(new_package)),
+                        }).and_then(move |new_package| packages_service.create(new_package)),
                 )
             }
 
@@ -409,8 +402,7 @@ impl<
                             e.context(format!("Parsing body // PUT /packages/{} in UpdatePackages failed!", package_id))
                                 .context(Error::Parse)
                                 .into()
-                        })
-                        .and_then(move |update_package| packages_service.update(package_id, update_package)),
+                        }).and_then(move |update_package| packages_service.update(package_id, update_package)),
                 )
             }
 
@@ -435,16 +427,14 @@ impl<
                             e.context("Parsing body // POST /users/addresses in NewUserAddress failed!")
                                 .context(Error::Parse)
                                 .into()
-                        })
-                        .and_then(move |new_address| {
+                        }).and_then(move |new_address| {
                             new_address
                                 .validate()
                                 .map_err(|e| {
                                     format_err!("Validation of NewUserAddress failed!")
                                         .context(Error::Validate(e))
                                         .into()
-                                })
-                                .into_future()
+                                }).into_future()
                                 .and_then(move |_| user_address_service.create(new_address))
                         }),
                 )
@@ -460,17 +450,15 @@ impl<
                                 "Parsing body PUT /users/addresses/{} in UpdateUserAddress failed!",
                                 user_address_id
                             )).context(Error::Parse)
-                                .into()
-                        })
-                        .and_then(move |new_address| {
+                            .into()
+                        }).and_then(move |new_address| {
                             new_address
                                 .validate()
                                 .map_err(|e| {
                                     format_err!("Validation of UpdateUserAddress failed!")
                                         .context(Error::Validate(e))
                                         .into()
-                                })
-                                .into_future()
+                                }).into_future()
                                 .and_then(move |_| user_address_service.update(user_address_id, new_address))
                         }),
                 )

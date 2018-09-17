@@ -32,8 +32,8 @@ pub struct Packages {
 
 impl PackagesRaw {
     pub fn to_packages(self) -> Result<Packages, FailureError> {
-        let deliveries_to =
-            serde_json::from_value(self.deliveries_to).map_err(|e| e.context("Can not parse deliveries_to from db").context(Error::Parse))?;
+        let deliveries_to = serde_json::from_value(self.deliveries_to)
+            .map_err(|e| e.context("Can not parse deliveries_to from db").context(Error::Parse))?;
 
         Ok(Packages {
             id: self.id,

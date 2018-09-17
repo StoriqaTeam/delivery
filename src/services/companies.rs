@@ -84,8 +84,7 @@ impl<
                             let company_repo = repo_factory.create_companies_repo(&*conn, user_id);
                             company_repo.create(payload)
                         })
-                })
-                .map_err(|e| e.context("Service Companies, create endpoint error occured.").into()),
+                }).map_err(|e| e.context("Service Companies, create endpoint error occured.").into()),
         )
     }
 
@@ -105,8 +104,7 @@ impl<
                             let company_repo = repo_factory.create_companies_repo(&*conn, user_id);
                             company_repo.list()
                         })
-                })
-                .map_err(|e| e.context("Service Companies, list endpoint error occured.").into()),
+                }).map_err(|e| e.context("Service Companies, list endpoint error occured.").into()),
         )
     }
 
@@ -126,8 +124,7 @@ impl<
                             let company_repo = repo_factory.create_companies_repo(&*conn, user_id);
                             company_repo.find(company_id)
                         })
-                })
-                .map_err(|e| e.context("Service Companies, find endpoint error occured.").into()),
+                }).map_err(|e| e.context("Service Companies, find endpoint error occured.").into()),
         )
     }
 
@@ -147,8 +144,7 @@ impl<
                             let company_repo = repo_factory.create_companies_repo(&*conn, user_id);
                             company_repo.find_deliveries_from(country)
                         })
-                })
-                .map_err(|e| e.context("Service Companies, find_deliveries_from endpoint error occured.").into()),
+                }).map_err(|e| e.context("Service Companies, find_deliveries_from endpoint error occured.").into()),
         )
     }
 
@@ -168,8 +164,7 @@ impl<
                             let company_repo = repo_factory.create_companies_repo(&*conn, user_id);
                             company_repo.update(id, payload)
                         })
-                })
-                .map_err(|e| e.context("Service Companies, update endpoint error occured.").into()),
+                }).map_err(|e| e.context("Service Companies, update endpoint error occured.").into()),
         )
     }
 
@@ -189,8 +184,7 @@ impl<
                             let company_repo = repo_factory.create_companies_repo(&*conn, user_id);
                             company_repo.delete(company_id)
                         })
-                })
-                .map_err(|e| e.context("Service Companies, delete endpoint error occured.").into()),
+                }).map_err(|e| e.context("Service Companies, delete endpoint error occured.").into()),
         )
     }
 }

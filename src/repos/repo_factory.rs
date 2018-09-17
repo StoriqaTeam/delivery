@@ -670,8 +670,7 @@ pub mod tests {
                     name: "name".to_string(),
                     logo: "logo".to_string(),
                     deliveries_to: vec![],
-                })
-                .collect())
+                }).collect())
         }
 
         fn get(&self, id_arg: CompanyPackageId) -> RepoResult<CompaniesPackages> {
