@@ -8,6 +8,8 @@ use stq_types::{Alpha2, Alpha3, CountryLabel};
 use models::validation_rules::*;
 use schema::countries;
 
+pub static ALL_COUNTRIES_ALPHA3: &'static str = "XAL";
+
 /// RawCountry is an object stored in PG, used only for Country tree creation,
 #[derive(Debug, Serialize, Deserialize, Associations, Queryable, Clone)]
 #[table_name = "countries"]
@@ -76,3 +78,4 @@ impl<'a> From<&'a RawCountry> for Country {
         }
     }
 }
+

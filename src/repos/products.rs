@@ -235,7 +235,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 
     fn delete(&self, base_product_id_arg: BaseProductId) -> RepoResult<Vec<Products>> {
         debug!("delete products {:?}.", base_product_id_arg);
-        let query = DslProducts::products.filter(DslProducts::base_product_id.eq(base_product_id_arg));
+        let filter = DslProducts::products.filter(DslProducts::base_product_id.eq(base_product_id_arg));
+        let query = diesel::delete(filtered);
 
         query
             .get_results(self.db_conn)
