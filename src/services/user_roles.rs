@@ -107,11 +107,9 @@ impl<
                             let user_roles_repo = repo_factory.create_user_roles_repo(&*conn);
                             user_roles_repo.delete_by_user_id(user_id_arg.clone())
                         })
-                })
-                .inspect(move |_| {
+                }).inspect(move |_| {
                     cached_roles.remove(user_id_arg);
-                })
-                .map_err(|e: FailureError| e.context("Service user_roles, delete_by_user_id endpoint error occured.").into()),
+                }).map_err(|e: FailureError| e.context("Service user_roles, delete_by_user_id endpoint error occured.").into()),
         )
     }
 
@@ -132,11 +130,9 @@ impl<
                             let user_roles_repo = repo_factory.create_user_roles_repo(&*conn);
                             user_roles_repo.create(new_user_role)
                         })
-                })
-                .inspect(move |_| {
+                }).inspect(move |_| {
                     cached_roles.remove(user_id);
-                })
-                .map_err(|e: FailureError| e.context("Service user_roles, create endpoint error occured.").into()),
+                }).map_err(|e: FailureError| e.context("Service user_roles, create endpoint error occured.").into()),
         )
     }
 
@@ -156,11 +152,9 @@ impl<
                             let user_roles_repo = repo_factory.create_user_roles_repo(&*conn);
                             user_roles_repo.delete_by_id(id_arg)
                         })
-                })
-                .inspect(move |_| {
+                }).inspect(move |_| {
                     cached_roles.clear();
-                })
-                .map_err(|e: FailureError| e.context("Service user_roles, delete_by_id endpoint error occured.").into()),
+                }).map_err(|e: FailureError| e.context("Service user_roles, delete_by_id endpoint error occured.").into()),
         )
     }
 }
