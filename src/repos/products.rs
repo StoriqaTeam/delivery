@@ -235,21 +235,17 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 
     fn delete(&self, base_product_id_arg: BaseProductId) -> RepoResult<Vec<Products>> {
         debug!("delete products {:?}.", base_product_id_arg);
-        let filter = DslProducts::products.filter(DslProducts::base_product_id.eq(base_product_id_arg));
+
+        acl::check(&*self.acl, Resource::Products, Action::Delete, self, None)?;
+
+        let filtered = DslProducts::products.filter(DslProducts::base_product_id.eq(base_product_id_arg));
         let query = diesel::delete(filtered);
 
         query
             .get_results(self.db_conn)
             .map_err(From::from)
-            .and_then(|products_: Vec<ProductsRaw>| {
-                let mut delete_products = vec![];
-                for product in products_ {
-                    let product = product.to_products()?;
-                    acl::check(&*self.acl, Resource::Products, Action::Delete, self, Some(&product))?;
-                    delete_products.push(product);
-                }
-                Ok(delete_products)
-            }).map_err(|e: FailureError| {
+            .and_then(|products_: Vec<ProductsRaw>| products_.into_iter().map(|v| v.to_products()).collect())
+            .map_err(|e: FailureError| {
                 e.context(format!("Delete products with base product id {:?} failed.", base_product_id_arg))
                     .into()
             })

@@ -10,8 +10,8 @@ use r2d2::{ManageConnection, Pool};
 use stq_types::{Alpha3, CompanyId, CompanyPackageId, PackageId, UserId};
 
 use errors::Error;
-use models::{AvailablePackages, CompaniesPackages, Company, Country, NewCompaniesPackages, Packages};
-use repos::countries::{contains_country_code, get_country, remove_unused_countries, ALL_COUNTRIES_ALPHA3};
+use models::{AvailablePackages, CompaniesPackages, Company, NewCompaniesPackages, Packages};
+use repos::countries::{contains_country_code, create_tree_used_countries, get_country};
 use repos::ReposFactory;
 use services::types::ServiceFuture;
 
@@ -175,33 +175,13 @@ impl<
                                         countries_repo.get_all().map(|countries| {
                                             let mut data = vec![];
                                             for package in packages {
-                                                let mut local_available = false;
-                                                let mut contains_all_countries = false;
-
-                                                for country_code in &package.deliveries_to {
-                                                    if country_code == ALL_COUNTRIES_ALPHA3 {
-                                                        contains_all_countries = true;
-                                                        local_available = true;
-                                                        break;
-                                                    }
-
-                                                    if get_country(&countries, country_code)
+                                                let local_available = package.deliveries_to.iter().any(|country_code| {
+                                                    get_country(&countries, country_code)
                                                         .map(|c| contains_country_code(&c, &deliveries_from))
                                                         .unwrap_or_default()
-                                                    {
-                                                        local_available = true;
-                                                    }
-                                                }
+                                                });
 
-                                                let mut deliveries_to = vec![];
-                                                if contains_all_countries {
-                                                    deliveries_to.push(countries.clone());
-                                                } else {
-                                                    let mut countries_tree = countries.clone();
-                                                    countries_tree = remove_unused_countries(countries_tree, &package.deliveries_to);
-
-                                                    deliveries_to.push(countries_tree);
-                                                }
+                                                let deliveries_to = create_tree_used_countries(&countries, &package.deliveries_to);
 
                                                 let element = AvailablePackages {
                                                     id: package.id,

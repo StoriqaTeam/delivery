@@ -137,6 +137,28 @@ fn create_tree(countries_: &[RawCountry], parent_arg: Option<Alpha3>) -> RepoRes
     Ok(branch)
 }
 
+pub fn create_tree_used_countries(countries_arg: &Country, used_countries_codes: &[Alpha3]) -> Vec<Country> {
+    let available_countries = used_countries_codes
+        .iter()
+        .filter_map(|country_code| get_country(&countries_arg, country_code))
+        .collect::<Vec<Country>>();
+
+    let contains_all_countries = available_countries.iter().any(|country_| country_.parent == None);
+
+    let mut result = vec![];
+    if contains_all_countries {
+        result.push(countries_arg.clone());
+    } else {
+        let mut countries_tree = countries_arg.clone();
+        let used_codes: Vec<Alpha3> = available_countries.iter().map(|c| c.alpha3.clone()).collect();
+        countries_tree = remove_unused_countries(countries_tree, &used_codes);
+
+        result.push(countries_tree);
+    }
+
+    result
+}
+
 pub fn remove_unused_countries(mut country: Country, used_countries_codes: &[Alpha3]) -> Country {
     let mut children = vec![];
     for country_child in country.children {
