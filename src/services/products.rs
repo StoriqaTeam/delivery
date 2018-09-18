@@ -123,7 +123,7 @@ impl<
                                                 .into_iter()
                                                 .map(|product_with_countries| {
                                                     // getting product with chosen package deliveries to
-                                                    let ProductsWithAvailableCountries(product, package_countries) = product_with_countries;
+                                                    let ProductsWithAvailableCountries(product, _) = product_with_countries;
                                                     let deliveries_to = create_tree_used_countries(&countries, &product.deliveries_to);
 
                                                     ShippingProducts { product, deliveries_to }

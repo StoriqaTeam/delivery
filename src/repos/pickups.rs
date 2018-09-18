@@ -119,16 +119,25 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 
     fn delete(&self, base_product_id_arg: BaseProductId) -> RepoResult<Option<Pickups>> {
         debug!("delete pickups by base_product_id: {}.", base_product_id_arg);
-        acl::check(&*self.acl, Resource::Pickups, Action::Delete, self, None)?;
-
-        let filtered = pickups.filter(base_product_id.eq(base_product_id_arg));
-        let query = diesel::delete(filtered);
+        let query = pickups.filter(base_product_id.eq(base_product_id_arg)).order(id);
 
         query
             .get_result(self.db_conn)
             .optional()
             .map_err(From::from)
-            .map_err(|e: FailureError| {
+            .and_then(|pickup_: Option<Pickups>| {
+                if let Some(ref pickup_) = pickup_ {
+                    acl::check(&*self.acl, Resource::Pickups, Action::Delete, self, Some(pickup_))?;
+                }
+                Ok(pickup_)
+            }).and_then(|_| {
+                let filtered = pickups.filter(base_product_id.eq(base_product_id_arg));
+                let query = diesel::delete(filtered);
+                query.get_result(self.db_conn).optional().map_err(move |e| {
+                    e.context(format!("delete pickups by base_product_id: {}", base_product_id_arg))
+                        .into()
+                })
+            }).map_err(|e: FailureError| {
                 e.context(format!("delete pickups by base_product_id: {} failed", base_product_id_arg))
                     .into()
             })
