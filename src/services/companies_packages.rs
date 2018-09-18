@@ -10,8 +10,8 @@ use r2d2::{ManageConnection, Pool};
 use stq_types::{Alpha3, CompanyId, CompanyPackageId, PackageId, UserId};
 
 use errors::Error;
-use models::{AvailablePackages, CompaniesPackages, Company, Country, NewCompaniesPackages, Packages};
-use repos::countries::{contains_country_code, get_country, remove_unused_countries};
+use models::{AvailablePackages, CompaniesPackages, Company, NewCompaniesPackages, Packages};
+use repos::countries::{contains_country_code, create_tree_used_countries, get_country};
 use repos::ReposFactory;
 use services::types::ServiceFuture;
 
@@ -181,27 +181,7 @@ impl<
                                                         .unwrap_or_default()
                                                 });
 
-                                                let countries_deliveries_to = package
-                                                    .deliveries_to
-                                                    .iter()
-                                                    .filter_map(|country_code| get_country(&countries, country_code))
-                                                    .collect::<Vec<Country>>();
-
-                                                let contains_all_countries =
-                                                    countries_deliveries_to.iter().any(|country_| country_.level == 0);
-
-                                                let mut deliveries_to = vec![];
-                                                if contains_all_countries {
-                                                    // check level 0
-                                                    deliveries_to.push(countries.clone());
-                                                } else {
-                                                    let mut countries_tree = countries.clone();
-                                                    let used_codes: Vec<Alpha3> =
-                                                        countries_deliveries_to.iter().map(|c| c.alpha3.clone()).collect();
-                                                    countries_tree = remove_unused_countries(countries_tree, &used_codes);
-
-                                                    deliveries_to.push(countries_tree);
-                                                }
+                                                let deliveries_to = create_tree_used_countries(&countries, &package.deliveries_to);
 
                                                 let element = AvailablePackages {
                                                     id: package.id,

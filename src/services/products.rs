@@ -12,6 +12,7 @@ use stq_types::{Alpha3, BaseProductId, CompanyPackageId, UserId};
 
 use errors::Error;
 use models::{AvailableShippingForUser, Country, NewProducts, NewShipping, Products, Shipping, ShippingProducts, UpdateProducts};
+use repos::countries::create_tree_used_countries;
 use repos::countries::{get_country, set_selected};
 use repos::products::ProductsWithAvailableCountries;
 use repos::ReposFactory;
@@ -122,17 +123,9 @@ impl<
                                                 .into_iter()
                                                 .map(|product_with_countries| {
                                                     // getting product with chosen package deliveries to
-                                                    let ProductsWithAvailableCountries(product, package_countries) = product_with_countries;
-                                                    // at first - take all package deliveries to country labels and make Vec of Country
-                                                    let deliveries_to = package_countries
-                                                        .into_iter()
-                                                        .filter_map(|label| {
-                                                            get_country(&countries, &label).map(|mut country| {
-                                                                // now select only countries that in products deliveries to
-                                                                set_selected(&mut country, &product.deliveries_to);
-                                                                country
-                                                            })
-                                                        }).collect::<Vec<Country>>();
+                                                    let ProductsWithAvailableCountries(product, _) = product_with_countries;
+                                                    let deliveries_to = create_tree_used_countries(&countries, &product.deliveries_to);
+
                                                     ShippingProducts { product, deliveries_to }
                                                 }).collect::<Vec<ShippingProducts>>()
                                         })

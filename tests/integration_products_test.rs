@@ -256,7 +256,6 @@ fn test_products_store_manager(core: &mut tokio_core::reactor::Core, http_client
     let create_role_result = common::create_user_role(user_id.clone(), core, http_client, base_url.clone());
     assert!(create_role_result.is_ok());
     let create_role_result = common::create_user_store_role(user_id.clone(), store_id, core, http_client, base_url.clone());
-    println!("traceeee {:?}", create_role_result);
     assert!(create_role_result.is_ok());
 
     let countries = vec!["RUS", "USA", "BRA"].into_iter().map(|v| Alpha3(v.to_string())).collect();
