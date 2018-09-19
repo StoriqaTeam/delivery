@@ -115,7 +115,9 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 
     fn get_by_base_product_id(&self, base_product_id_arg: BaseProductId) -> RepoResult<Vec<Products>> {
         debug!("get products by base_product_id {:?}.", base_product_id_arg);
-        let query = DslProducts::products.filter(DslProducts::base_product_id.eq(base_product_id_arg));
+        let query = DslProducts::products
+            .filter(DslProducts::base_product_id.eq(base_product_id_arg))
+            .order(DslProducts::id);
 
         query
             .get_results(self.db_conn)
