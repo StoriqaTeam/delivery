@@ -10,7 +10,6 @@ use repos::legacy_acl::{Acl, SystemACL};
 use repos::*;
 
 pub trait ReposFactory<C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static>: Clone + Send + 'static {
-    fn create_user_roles_repo<'a>(&self, db_conn: &'a C) -> Box<UserRolesRepo + 'a>;
     fn create_companies_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<CompaniesRepo + 'a>;
     fn create_companies_packages_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<CompaniesPackagesRepo + 'a>;
     fn create_countries_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<CountriesRepo + 'a>;
@@ -18,6 +17,8 @@ pub trait ReposFactory<C: Connection<Backend = Pg, TransactionManager = AnsiTran
     fn create_packages_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<PackagesRepo + 'a>;
     fn create_pickups_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<PickupsRepo + 'a>;
     fn create_users_addresses_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<UserAddressesRepo + 'a>;
+    fn create_user_roles_repo_with_sys_acl<'a>(&self, db_conn: &'a C) -> Box<UserRolesRepo + 'a>;
+    fn create_user_roles_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<UserRolesRepo + 'a>;
 }
 
 #[derive(Clone)]
@@ -38,8 +39,11 @@ impl ReposFactoryImpl {
         &self,
         id: UserId,
         db_conn: &'a C,
-    ) -> Vec<StoresRole> {
-        self.create_user_roles_repo(db_conn).list_for_user(id).ok().unwrap_or_default()
+    ) -> Vec<DeliveryRole> {
+        self.create_user_roles_repo_with_sys_acl(db_conn)
+            .list_for_user(id)
+            .ok()
+            .unwrap_or_default()
     }
 
     fn get_acl<'a, T, C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static>(
@@ -58,14 +62,6 @@ impl ReposFactoryImpl {
 }
 
 impl<C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> ReposFactory<C> for ReposFactoryImpl {
-    fn create_user_roles_repo<'a>(&self, db_conn: &'a C) -> Box<UserRolesRepo + 'a> {
-        Box::new(UserRolesRepoImpl::new(
-            db_conn,
-            Box::new(SystemACL::default()) as Box<Acl<Resource, Action, Scope, FailureError, UserRole>>,
-            self.roles_cache.clone(),
-        )) as Box<UserRolesRepo>
-    }
-
     fn create_companies_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<CompaniesRepo + 'a> {
         let acl = self.get_acl(db_conn, user_id);
         Box::new(CompaniesRepoImpl::new(db_conn, acl)) as Box<CompaniesRepo>
@@ -99,6 +95,18 @@ impl<C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 
     fn create_users_addresses_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<UserAddressesRepo + 'a> {
         let acl = self.get_acl(db_conn, user_id);
         Box::new(UserAddressesRepoImpl::new(db_conn, acl)) as Box<UserAddressesRepo>
+    }
+
+    fn create_user_roles_repo_with_sys_acl<'a>(&self, db_conn: &'a C) -> Box<UserRolesRepo + 'a> {
+        Box::new(UserRolesRepoImpl::new(
+            db_conn,
+            Box::new(SystemACL::default()) as Box<Acl<Resource, Action, Scope, FailureError, UserRole>>,
+            self.roles_cache.clone(),
+        )) as Box<UserRolesRepo>
+    }
+    fn create_user_roles_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<UserRolesRepo + 'a> {
+        let acl = self.get_acl(db_conn, user_id);
+        Box::new(UserRolesRepoImpl::new(db_conn, acl, self.roles_cache.clone())) as Box<UserRolesRepo>
     }
 }
 
@@ -135,10 +143,6 @@ pub mod tests {
     pub struct ReposFactoryMock;
 
     impl<C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> ReposFactory<C> for ReposFactoryMock {
-        fn create_user_roles_repo<'a>(&self, _db_conn: &'a C) -> Box<UserRolesRepo + 'a> {
-            Box::new(UserRolesRepoMock::default()) as Box<UserRolesRepo>
-        }
-
         fn create_companies_repo<'a>(&self, _db_conn: &'a C, _user_id: Option<UserId>) -> Box<CompaniesRepo + 'a> {
             Box::new(CompaniesRepoMock::default()) as Box<CompaniesRepo>
         }
@@ -166,16 +170,23 @@ pub mod tests {
         fn create_users_addresses_repo<'a>(&self, _db_conn: &'a C, _user_id: Option<UserId>) -> Box<UserAddressesRepo + 'a> {
             Box::new(UserAddressesRepoMock::default()) as Box<UserAddressesRepo>
         }
+
+        fn create_user_roles_repo<'a>(&self, _db_conn: &'a C, _user_id: Option<UserId>) -> Box<UserRolesRepo + 'a> {
+            Box::new(UserRolesRepoMock::default()) as Box<UserRolesRepo>
+        }
+        fn create_user_roles_repo_with_sys_acl<'a>(&self, _db_conn: &'a C) -> Box<UserRolesRepo + 'a> {
+            Box::new(UserRolesRepoMock::default()) as Box<UserRolesRepo>
+        }
     }
 
     #[derive(Clone, Default)]
     pub struct UserRolesRepoMock;
 
     impl UserRolesRepo for UserRolesRepoMock {
-        fn list_for_user(&self, user_id_value: UserId) -> RepoResult<Vec<StoresRole>> {
+        fn list_for_user(&self, user_id_value: UserId) -> RepoResult<Vec<DeliveryRole>> {
             Ok(match user_id_value.0 {
-                1 => vec![StoresRole::Superuser],
-                _ => vec![StoresRole::User],
+                1 => vec![DeliveryRole::Superuser],
+                _ => vec![DeliveryRole::User],
             })
         }
 
@@ -192,7 +203,7 @@ pub mod tests {
             Ok(vec![UserRole {
                 id: RoleId::new(),
                 user_id: user_id_arg,
-                name: StoresRole::User,
+                name: DeliveryRole::User,
                 data: None,
             }])
         }
@@ -201,7 +212,7 @@ pub mod tests {
             Ok(UserRole {
                 id,
                 user_id: UserId(1),
-                name: StoresRole::User,
+                name: DeliveryRole::User,
                 data: None,
             })
         }

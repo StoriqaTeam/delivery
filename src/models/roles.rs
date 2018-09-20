@@ -2,7 +2,7 @@
 
 use serde_json;
 
-use stq_types::{RoleId, StoresRole, UserId};
+use stq_types::{DeliveryRole, RoleId, UserId};
 
 use schema::roles;
 
@@ -11,7 +11,7 @@ use schema::roles;
 pub struct UserRole {
     pub id: RoleId,
     pub user_id: UserId,
-    pub name: StoresRole,
+    pub name: DeliveryRole,
     pub data: Option<serde_json::Value>,
 }
 
@@ -20,13 +20,6 @@ pub struct UserRole {
 pub struct NewUserRole {
     pub id: RoleId,
     pub user_id: UserId,
-    pub name: StoresRole,
+    pub name: DeliveryRole,
     pub data: Option<serde_json::Value>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize, Insertable)]
-#[table_name = "roles"]
-pub struct OldUserRole {
-    pub user_id: UserId,
-    pub name: StoresRole,
 }

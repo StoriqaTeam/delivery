@@ -60,7 +60,7 @@ pub fn create_user_role(
 ) -> Result<UserRole, client::Error> {
     let new_role = NewUserRole {
         user_id,
-        name: StoresRole::User,
+        name: DeliveryRole::User,
         id: RoleId::new(),
         data: None,
     };
@@ -85,7 +85,7 @@ pub fn create_user_store_role(
 ) -> Result<UserRole, client::Error> {
     let new_role = NewUserRole {
         user_id,
-        name: StoresRole::StoreManager,
+        name: DeliveryRole::StoreManager,
         id: RoleId::new(),
         data: Some(serde_json::to_value(store_id.0).unwrap()),
     };

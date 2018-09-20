@@ -14,7 +14,7 @@ use std::rc::Rc;
 use errors::Error;
 use failure::Error as FailureError;
 
-use stq_types::{StoresRole, UserId};
+use stq_types::{DeliveryRole, UserId};
 
 use self::legacy_acl::{Acl, CheckScope};
 
@@ -41,17 +41,17 @@ pub fn check<T>(
 /// ApplicationAcl contains main logic for manipulation with resources
 #[derive(Clone)]
 pub struct ApplicationAcl {
-    acls: Rc<HashMap<StoresRole, Vec<Permission>>>,
-    roles: Vec<StoresRole>,
+    acls: Rc<HashMap<DeliveryRole, Vec<Permission>>>,
+    roles: Vec<DeliveryRole>,
     user_id: UserId,
 }
 
 impl ApplicationAcl {
-    pub fn new(roles: Vec<StoresRole>, user_id: UserId) -> Self {
+    pub fn new(roles: Vec<DeliveryRole>, user_id: UserId) -> Self {
         let mut hash = ::std::collections::HashMap::new();
 
         hash.insert(
-            StoresRole::Superuser,
+            DeliveryRole::Superuser,
             vec![
                 permission!(Resource::Companies),
                 permission!(Resource::CompaniesPackages),
@@ -65,7 +65,7 @@ impl ApplicationAcl {
         );
 
         hash.insert(
-            StoresRole::User,
+            DeliveryRole::User,
             vec![
                 permission!(Resource::Companies, Action::Read),
                 permission!(Resource::CompaniesPackages, Action::Read),
@@ -79,7 +79,7 @@ impl ApplicationAcl {
         );
 
         hash.insert(
-            StoresRole::StoreManager,
+            DeliveryRole::StoreManager,
             vec![
                 permission!(Resource::Pickups, Action::All, Scope::Owned),
                 permission!(Resource::Products, Action::All, Scope::Owned),
