@@ -103,8 +103,7 @@ impl<
 
         let cached_roles = self.roles_cache.clone();
 
-        let user_roles_service =
-            UserRolesServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), cached_roles, self.repo_factory.clone());
+        let user_roles_service = UserRolesServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), user_id, self.repo_factory.clone());
 
         let countries_service = CountriesServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), user_id, self.repo_factory.clone());
 
