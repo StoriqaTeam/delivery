@@ -11,9 +11,8 @@ use r2d2::{ManageConnection, Pool};
 use stq_types::{Alpha3, BaseProductId, CompanyPackageId, UserId};
 
 use errors::Error;
-use models::{AvailableShippingForUser, Country, NewProducts, NewShipping, Products, Shipping, ShippingProducts, UpdateProducts};
+use models::{AvailableShippingForUser, NewProducts, NewShipping, Products, Shipping, ShippingProducts, UpdateProducts};
 use repos::countries::create_tree_used_countries;
-use repos::countries::{get_country, set_selected};
 use repos::products::ProductsWithAvailableCountries;
 use repos::ReposFactory;
 use services::types::ServiceFuture;

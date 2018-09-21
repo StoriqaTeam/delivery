@@ -5,6 +5,8 @@ use serde_json;
 use stq_types::{Alpha3, CompanyId};
 
 use errors::Error;
+use models::Country;
+use repos::countries::create_tree_used_countries;
 use schema::companies;
 
 #[derive(Serialize, Deserialize, Associations, Queryable, Debug, QueryableByName)]
@@ -24,14 +26,15 @@ pub struct Company {
     pub name: String,
     pub label: String,
     pub description: Option<String>,
-    pub deliveries_from: Vec<Alpha3>,
+    pub deliveries_from: Vec<Country>,
     pub logo: String,
 }
 
 impl Company {
-    pub fn from_raw(from: CompanyRaw) -> Result<Self, FailureError> {
-        let deliveries_from = serde_json::from_value(from.deliveries_from)
+    pub fn from_raw(from: CompanyRaw, countries_arg: &Country) -> Result<Self, FailureError> {
+        let used_codes: Vec<Alpha3> = serde_json::from_value(from.deliveries_from)
             .map_err(|e| e.context("Can not parse deliveries_from from db").context(Error::Parse))?;
+        let deliveries_from = create_tree_used_countries(countries_arg, &used_codes);
 
         Ok(Self {
             id: from.id,

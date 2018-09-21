@@ -5,6 +5,8 @@ use serde_json;
 use stq_types::{Alpha3, PackageId};
 
 use errors::Error;
+use models::Country;
+use repos::countries::create_tree_used_countries;
 use schema::packages;
 
 #[derive(Serialize, Deserialize, Associations, Queryable, Debug, QueryableByName)]
@@ -27,13 +29,14 @@ pub struct Packages {
     pub min_size: f64,
     pub max_weight: f64,
     pub min_weight: f64,
-    pub deliveries_to: Vec<Alpha3>,
+    pub deliveries_to: Vec<Country>,
 }
 
 impl PackagesRaw {
-    pub fn to_packages(self) -> Result<Packages, FailureError> {
-        let deliveries_to = serde_json::from_value(self.deliveries_to)
+    pub fn to_packages(self, countries_arg: &Country) -> Result<Packages, FailureError> {
+        let used_codes: Vec<Alpha3> = serde_json::from_value(self.deliveries_to)
             .map_err(|e| e.context("Can not parse deliveries_to from db").context(Error::Parse))?;
+        let deliveries_to = create_tree_used_countries(countries_arg, &used_codes);
 
         Ok(Packages {
             id: self.id,
@@ -44,6 +47,13 @@ impl PackagesRaw {
             min_weight: self.min_weight,
             deliveries_to,
         })
+    }
+
+    pub fn get_deliveries_to(&self) -> Result<Vec<Alpha3>, FailureError> {
+        let used_codes = serde_json::from_value(self.deliveries_to.clone())
+            .map_err(|e| e.context("Can not parse deliveries_to from db").context(Error::Parse))?;
+
+        Ok(used_codes)
     }
 }
 

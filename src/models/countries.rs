@@ -35,7 +35,7 @@ pub struct NewCountry {
     pub parent: Option<Alpha3>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Default, Debug, Serialize, Deserialize, Clone)]
 pub struct Country {
     pub label: CountryLabel,
     pub level: i32,
