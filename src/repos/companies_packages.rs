@@ -16,7 +16,7 @@ use models::authorization::*;
 use repos::legacy_acl::*;
 use repos::types::RepoResult;
 
-use models::{CompaniesPackages, Company, CompanyRaw, InnerAvailablePackages, NewCompaniesPackages, Packages, PackagesRaw};
+use models::{AvailablePackages, CompaniesPackages, Company, CompanyRaw, Country, NewCompaniesPackages, Packages, PackagesRaw};
 use repos::*;
 use schema::companies::dsl as DslCompanies;
 use schema::companies_packages::dsl::*;
@@ -28,7 +28,13 @@ pub trait CompaniesPackagesRepo {
     fn create(&self, payload: NewCompaniesPackages) -> RepoResult<CompaniesPackages>;
 
     /// Getting available packages satisfying the constraints
-    fn get_available_packages(&self, company_id_args: Vec<CompanyId>, size: f64, weight: f64) -> RepoResult<Vec<InnerAvailablePackages>>;
+    fn get_available_packages(
+        &self,
+        company_id_args: Vec<CompanyId>,
+        size: f64,
+        weight: f64,
+        deliveries_from: Alpha3,
+    ) -> RepoResult<Vec<AvailablePackages>>;
 
     /// Returns company package by id
     fn get(&self, id: CompanyPackageId) -> RepoResult<CompaniesPackages>;
@@ -47,11 +53,12 @@ pub trait CompaniesPackagesRepo {
 pub struct CompaniesPackagesRepoImpl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> {
     pub db_conn: &'a T,
     pub acl: Box<Acl<Resource, Action, Scope, FailureError, CompaniesPackages>>,
+    pub countries: Country,
 }
 
 impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> CompaniesPackagesRepoImpl<'a, T> {
-    pub fn new(db_conn: &'a T, acl: Box<Acl<Resource, Action, Scope, FailureError, CompaniesPackages>>) -> Self {
-        Self { db_conn, acl }
+    pub fn new(db_conn: &'a T, acl: Box<Acl<Resource, Action, Scope, FailureError, CompaniesPackages>>, countries: Country) -> Self {
+        Self { db_conn, acl, countries }
     }
 }
 
@@ -80,7 +87,13 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     }
 
     /// Getting available packages satisfying the constraints
-    fn get_available_packages(&self, company_id_args: Vec<CompanyId>, size: f64, weight: f64) -> RepoResult<Vec<InnerAvailablePackages>> {
+    fn get_available_packages(
+        &self,
+        company_id_args: Vec<CompanyId>,
+        size: f64,
+        weight: f64,
+        deliveries_from: Alpha3,
+    ) -> RepoResult<Vec<AvailablePackages>> {
         debug!(
             "Find in packages with companies: {:?}, size: {}, weight: {}.",
             company_id_args, size, weight
@@ -101,14 +114,25 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             .map_err(From::from)
             .and_then(|results| {
                 let mut data = vec![];
+
                 for result in results {
                     let (companies_package, company_raw, package_raw) = result;
-                    let package = package_raw.to_packages()?;
-                    data.push(InnerAvailablePackages {
+                    let used_codes = package_raw.get_deliveries_to()?;
+
+                    let local_available = used_codes.iter().any(|country_code| {
+                        get_country(&self.countries, country_code)
+                            .map(|c| contains_country_code(&c, &deliveries_from))
+                            .unwrap_or_default()
+                    });
+
+                    let package = package_raw.to_packages(&self.countries)?;
+
+                    data.push(AvailablePackages {
                         id: companies_package.id,
                         name: get_company_package_name(company_raw.label, package.name),
                         logo: company_raw.logo,
                         deliveries_to: package.deliveries_to,
+                        local_available,
                     });
                 }
 
@@ -134,7 +158,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 let mut data = vec![];
                 for result in results {
                     let (_, company_raw) = result;
-                    let element = Company::from_raw(company_raw)?;
+                    let element = Company::from_raw(company_raw, &self.countries)?;
                     data.push(element);
                 }
 
@@ -155,7 +179,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 let mut data = vec![];
                 for result in results {
                     let (_, package_raw) = result;
-                    let element = package_raw.to_packages()?;
+                    let element = package_raw.to_packages(&self.countries)?;
                     data.push(element);
                 }
 

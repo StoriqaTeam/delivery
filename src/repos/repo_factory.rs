@@ -68,12 +68,14 @@ impl<C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 
 
     fn create_companies_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<CompaniesRepo + 'a> {
         let acl = self.get_acl(db_conn, user_id);
-        Box::new(CompaniesRepoImpl::new(db_conn, acl)) as Box<CompaniesRepo>
+        let all_countries = self.create_countries_repo(db_conn, user_id).get_all().ok().unwrap_or_default();
+        Box::new(CompaniesRepoImpl::new(db_conn, acl, all_countries)) as Box<CompaniesRepo>
     }
 
     fn create_companies_packages_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<CompaniesPackagesRepo + 'a> {
         let acl = self.get_acl(db_conn, user_id);
-        Box::new(CompaniesPackagesRepoImpl::new(db_conn, acl)) as Box<CompaniesPackagesRepo>
+        let all_countries = self.create_countries_repo(db_conn, user_id).get_all().ok().unwrap_or_default();
+        Box::new(CompaniesPackagesRepoImpl::new(db_conn, acl, all_countries)) as Box<CompaniesPackagesRepo>
     }
 
     fn create_countries_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<CountriesRepo + 'a> {
@@ -83,12 +85,14 @@ impl<C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 
 
     fn create_products_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<ProductsRepo + 'a> {
         let acl = self.get_acl(db_conn, user_id);
-        Box::new(ProductsRepoImpl::new(db_conn, acl)) as Box<ProductsRepo>
+        let all_countries = self.create_countries_repo(db_conn, user_id).get_all().ok().unwrap_or_default();
+        Box::new(ProductsRepoImpl::new(db_conn, acl, all_countries)) as Box<ProductsRepo>
     }
 
     fn create_packages_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<PackagesRepo + 'a> {
         let acl = self.get_acl(db_conn, user_id);
-        Box::new(PackagesRepoImpl::new(db_conn, acl)) as Box<PackagesRepo>
+        let all_countries = self.create_countries_repo(db_conn, user_id).get_all().ok().unwrap_or_default();
+        Box::new(PackagesRepoImpl::new(db_conn, acl, all_countries)) as Box<PackagesRepo>
     }
 
     fn create_pickups_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<PickupsRepo + 'a> {
@@ -432,14 +436,20 @@ pub mod tests {
 
     impl CompaniesRepo for CompaniesRepoMock {
         fn create(&self, payload: NewCompany) -> RepoResult<Company> {
-            Ok(Company {
+            let payload = payload.to_raw()?;
+
+            let raw = CompanyRaw {
                 id: CompanyId(1),
                 name: payload.name,
                 label: payload.label,
                 description: payload.description,
                 deliveries_from: payload.deliveries_from,
                 logo: payload.logo,
-            })
+            };
+
+            let countries_arg = create_mock_countries();
+
+            Ok(Company::from_raw(raw, &countries_arg)?)
         }
 
         fn list(&self) -> RepoResult<Vec<Company>> {
@@ -467,14 +477,14 @@ pub mod tests {
             Ok(None)
         }
 
-        fn find_deliveries_from(&self, country: Alpha3) -> RepoResult<Vec<Company>> {
+        fn find_deliveries_from(&self, _country: Alpha3) -> RepoResult<Vec<Company>> {
             Ok(vec![
                 Company {
                     id: CompanyId(1),
                     name: "UPS Russia".to_string(),
                     label: "UPS".to_string(),
                     description: None,
-                    deliveries_from: vec![country.clone()],
+                    deliveries_from: vec![],
                     logo: "".to_string(),
                 },
                 Company {
@@ -482,7 +492,7 @@ pub mod tests {
                     name: "UPS USA".to_string(),
                     label: "UPS".to_string(),
                     description: None,
-                    deliveries_from: vec![country.clone()],
+                    deliveries_from: vec![],
                     logo: "".to_string(),
                 },
             ])
@@ -494,7 +504,7 @@ pub mod tests {
                 name: payload.name.unwrap(),
                 label: payload.label.unwrap(),
                 description: payload.description,
-                deliveries_from: payload.deliveries_from.unwrap(),
+                deliveries_from: vec![],
                 logo: payload.logo.unwrap(),
             })
         }
@@ -571,7 +581,9 @@ pub mod tests {
 
     impl PackagesRepo for PackagesRepoMock {
         fn create(&self, payload: NewPackages) -> RepoResult<Packages> {
-            Ok(Packages {
+            let payload = payload.to_raw()?;
+
+            let raw = PackagesRaw {
                 id: PackageId(1),
                 name: payload.name,
                 max_size: payload.max_size,
@@ -579,10 +591,14 @@ pub mod tests {
                 max_weight: payload.max_weight,
                 min_weight: payload.min_weight,
                 deliveries_to: payload.deliveries_to,
-            })
+            };
+
+            let countries_arg = create_mock_countries();
+
+            Ok(raw.to_packages(&countries_arg)?)
         }
 
-        fn find_deliveries_to(&self, countries: Vec<Alpha3>) -> RepoResult<Vec<Packages>> {
+        fn find_deliveries_to(&self, _countries: Vec<Alpha3>) -> RepoResult<Vec<Packages>> {
             Ok(vec![Packages {
                 id: PackageId(1),
                 name: "package1".to_string(),
@@ -590,7 +606,7 @@ pub mod tests {
                 min_size: 0f64,
                 max_weight: 0f64,
                 min_weight: 0f64,
-                deliveries_to: countries,
+                deliveries_to: vec![],
             }])
         }
 
@@ -626,7 +642,7 @@ pub mod tests {
                 min_size: payload.min_size.unwrap(),
                 max_weight: payload.max_weight.unwrap(),
                 min_weight: payload.min_weight.unwrap(),
-                deliveries_to: payload.deliveries_to.unwrap(),
+                deliveries_to: vec![],
             })
         }
 
@@ -638,7 +654,7 @@ pub mod tests {
                 min_size: 0f64,
                 max_weight: 0f64,
                 min_weight: 0f64,
-                deliveries_to: vec![Alpha3("RUS".to_string())],
+                deliveries_to: vec![],
             })
         }
     }
@@ -662,14 +678,16 @@ pub mod tests {
             company_id_args: Vec<CompanyId>,
             _size: f64,
             _weight: f64,
-        ) -> RepoResult<Vec<InnerAvailablePackages>> {
+            _deliveries_from: Alpha3,
+        ) -> RepoResult<Vec<AvailablePackages>> {
             Ok(company_id_args
                 .into_iter()
-                .map(|id| InnerAvailablePackages {
+                .map(|id| AvailablePackages {
                     id: CompanyPackageId(id.0),
                     name: "name".to_string(),
                     logo: "logo".to_string(),
                     deliveries_to: vec![],
+                    local_available: false,
                 }).collect())
         }
 

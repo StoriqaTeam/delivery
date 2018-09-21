@@ -14,10 +14,12 @@ use failure::Error as FailureError;
 use stq_types::{BaseProductId, CompanyPackageId, UserId};
 
 use models::authorization::*;
+use models::countries::Country;
 use models::{
     AvailablePackageForUser, CompaniesPackages, CompanyRaw, NewProducts, NewProductsRaw, PackagesRaw, Products, ProductsRaw,
     UpdateProducts, UserRole,
 };
+
 use repos::legacy_acl::*;
 use repos::types::RepoResult;
 use repos::*;
@@ -61,11 +63,12 @@ pub trait ProductsRepo {
 pub struct ProductsRepoImpl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> {
     pub db_conn: &'a T,
     pub acl: Box<Acl<Resource, Action, Scope, FailureError, Products>>,
+    pub countries: Country,
 }
 
 impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> ProductsRepoImpl<'a, T> {
-    pub fn new(db_conn: &'a T, acl: Box<Acl<Resource, Action, Scope, FailureError, Products>>) -> Self {
-        Self { db_conn, acl }
+    pub fn new(db_conn: &'a T, acl: Box<Acl<Resource, Action, Scope, FailureError, Products>>, countries: Country) -> Self {
+        Self { db_conn, acl, countries }
     }
 
     fn execute_query<Ty: Send + 'static, U: LoadQuery<T, Ty> + Send + 'static>(&self, query: U) -> RepoResult<Ty> {
@@ -155,7 +158,13 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 let mut data = vec![];
                 for result in results {
                     let (product_raw, (_, package_raw)) = result;
-                    let element = ProductsWithAvailableCountries(product_raw.to_products()?, package_raw.to_packages()?.deliveries_to);
+                    let countries_codes = package_raw
+                        .to_packages(&self.countries)?
+                        .deliveries_to
+                        .into_iter()
+                        .map(|c| c.alpha3)
+                        .collect();
+                    let element = ProductsWithAvailableCountries(product_raw.to_products()?, countries_codes);
 
                     data.push(element);
                 }

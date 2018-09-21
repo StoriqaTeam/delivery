@@ -10,11 +10,11 @@ use diesel::query_dsl::RunQueryDsl;
 use diesel::Connection;
 
 use failure::Error as FailureError;
-use failure::Fail;
 
 use stq_types::{Alpha3, PackageId, UserId};
 
 use models::authorization::*;
+use models::countries::Country;
 use models::packages::{NewPackages, Packages, PackagesRaw, UpdatePackages};
 use repos::legacy_acl::*;
 use repos::types::RepoResult;
@@ -47,11 +47,12 @@ pub trait PackagesRepo {
 pub struct PackagesRepoImpl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> {
     pub db_conn: &'a T,
     pub acl: Box<Acl<Resource, Action, Scope, FailureError, Packages>>,
+    pub countries: Country,
 }
 
 impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> PackagesRepoImpl<'a, T> {
-    pub fn new(db_conn: &'a T, acl: Box<Acl<Resource, Action, Scope, FailureError, Packages>>) -> Self {
-        Self { db_conn, acl }
+    pub fn new(db_conn: &'a T, acl: Box<Acl<Resource, Action, Scope, FailureError, Packages>>, countries: Country) -> Self {
+        Self { db_conn, acl, countries }
     }
 
     fn execute_query<Ty: Send + 'static, U: LoadQuery<T, Ty> + Send + 'static>(&self, query: U) -> RepoResult<Ty> {
@@ -63,11 +64,12 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     fn create(&self, payload: NewPackages) -> RepoResult<Packages> {
         debug!("create new packages_ {:?}.", payload);
         let payload = payload.to_raw()?;
+
         let query = diesel::insert_into(packages).values(&payload);
         query
             .get_result::<PackagesRaw>(self.db_conn)
             .map_err(From::from)
-            .and_then(|packages_| packages_.to_packages())
+            .and_then(|p| p.to_packages(&self.countries))
             .and_then(|packages_| {
                 acl::check(&*self.acl, Resource::Packages, Action::Create, self, Some(&packages_)).and_then(|_| Ok(packages_))
             }).map_err(|e: FailureError| e.context(format!("create new packages_ {:?}.", payload)).into())
@@ -84,8 +86,12 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         query
             .get_results(self.db_conn)
             .map_err(From::from)
-            .and_then(|packages_raw: Vec<PackagesRaw>| packages_raw.into_iter().map(|packages_raw| packages_raw.to_packages()).collect())
-            .and_then(|packages_res: Vec<Packages>| {
+            .and_then(|packages_raw: Vec<PackagesRaw>| {
+                packages_raw
+                    .into_iter()
+                    .map(|packages_raw| packages_raw.to_packages(&self.countries))
+                    .collect()
+            }).and_then(|packages_res: Vec<Packages>| {
                 for packages_ in &packages_res {
                     acl::check(&*self.acl, Resource::Packages, Action::Read, self, Some(&packages_))?;
                 }
@@ -99,12 +105,13 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     /// Returns list of packages
     fn list(&self) -> RepoResult<Vec<Packages>> {
         debug!("List packages");
+
         let query = packages.order(id);
 
         query
             .get_results(self.db_conn)
             .map_err(From::from)
-            .and_then(|raws: Vec<PackagesRaw>| raws.into_iter().map(|raw| raw.to_packages()).collect())
+            .and_then(|raws: Vec<PackagesRaw>| raws.into_iter().map(|raw| raw.to_packages(&self.countries)).collect())
             .and_then(|results: Vec<Packages>| {
                 for package in &results {
                     acl::check(&*self.acl, Resource::Packages, Action::Read, self, Some(&package))?;
@@ -116,6 +123,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     /// Find specific package by ID
     fn find(&self, id_arg: PackageId) -> RepoResult<Option<Packages>> {
         debug!("Find in package with id {}.", id_arg);
+
         let query = packages.find(id_arg);
         query
             .get_result::<PackagesRaw>(self.db_conn)
@@ -123,7 +131,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             .map_err(From::from)
             .and_then(|raw: Option<PackagesRaw>| match raw {
                 Some(value) => {
-                    let package = value.to_packages()?;
+                    let package = value.to_packages(&self.countries)?;
                     acl::check(&*self.acl, Resource::Packages, Action::Read, self, Some(&package))?;
                     Ok(Some(package))
                 }
@@ -134,8 +142,9 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     fn update(&self, id_arg: PackageId, payload: UpdatePackages) -> RepoResult<Packages> {
         debug!("Updating packages_ payload {:?}.", payload);
         let payload = payload.to_raw()?;
+
         self.execute_query(packages.filter(id.eq(id_arg)))
-            .and_then(|packages_: PackagesRaw| packages_.to_packages())
+            .and_then(|packages_: PackagesRaw| packages_.to_packages(&self.countries))
             .and_then(|packages_: Packages| acl::check(&*self.acl, Resource::Packages, Action::Update, self, Some(&packages_)))
             .and_then(|_| {
                 let filtered = packages.filter(id.eq(id_arg));
@@ -144,7 +153,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 query
                     .get_result::<PackagesRaw>(self.db_conn)
                     .map_err(From::from)
-                    .and_then(|packages_: PackagesRaw| packages_.to_packages())
+                    .and_then(|packages_: PackagesRaw| packages_.to_packages(&self.countries))
             }).map_err(|e: FailureError| e.context(format!("Updating packages payload {:?} failed.", payload)).into())
     }
 
@@ -152,12 +161,14 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         debug!("delete packages_ id: {}.", id_arg);
 
         acl::check(&*self.acl, Resource::Packages, Action::Delete, self, None)?;
+
         let filtered = packages.filter(id.eq(id_arg));
         let query = diesel::delete(filtered);
         query
             .get_result::<PackagesRaw>(self.db_conn)
+            .map_err(From::from)
+            .and_then(|packages_: PackagesRaw| packages_.to_packages(&self.countries))
             .map_err(move |e| e.context(format!("delete packages id: {}.", id_arg)).into())
-            .and_then(|packages_: PackagesRaw| packages_.to_packages())
     }
 }
 

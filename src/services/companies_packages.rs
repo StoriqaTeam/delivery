@@ -11,7 +11,6 @@ use stq_types::{Alpha3, CompanyId, CompanyPackageId, PackageId, UserId};
 
 use errors::Error;
 use models::{AvailablePackages, CompaniesPackages, Company, NewCompaniesPackages, Packages};
-use repos::countries::{contains_country_code, create_tree_used_countries, get_country};
 use repos::ReposFactory;
 use services::types::ServiceFuture;
 
@@ -164,38 +163,11 @@ impl<
                         .and_then(move |conn| {
                             let companies_repo = repo_factory.create_companies_repo(&*conn, user_id);
                             let companies_packages_repo = repo_factory.create_companies_packages_repo(&*conn, user_id);
-                            let countries_repo = repo_factory.create_countries_repo(&*conn, user_id);
                             companies_repo
                                 .find_deliveries_from(deliveries_from.clone())
                                 .map(|companies| companies.into_iter().map(|company| company.id).collect())
-                                .and_then(|companies_ids| companies_packages_repo.get_available_packages(companies_ids, size, weight))
-                                .and_then({
-                                    let deliveries_from = deliveries_from.clone();
-                                    move |packages| {
-                                        countries_repo.get_all().map(|countries| {
-                                            let mut data = vec![];
-                                            for package in packages {
-                                                let local_available = package.deliveries_to.iter().any(|country_code| {
-                                                    get_country(&countries, country_code)
-                                                        .map(|c| contains_country_code(&c, &deliveries_from))
-                                                        .unwrap_or_default()
-                                                });
-
-                                                let deliveries_to = create_tree_used_countries(&countries, &package.deliveries_to);
-
-                                                let element = AvailablePackages {
-                                                    id: package.id,
-                                                    name: package.name,
-                                                    logo: package.logo,
-                                                    deliveries_to,
-                                                    local_available,
-                                                };
-
-                                                data.push(element);
-                                            }
-                                            data
-                                        })
-                                    }
+                                .and_then(|companies_ids| {
+                                    companies_packages_repo.get_available_packages(companies_ids, size, weight, deliveries_from.clone())
                                 })
                         })
                 }).map_err(|e| {
