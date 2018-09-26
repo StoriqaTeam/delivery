@@ -117,8 +117,12 @@ impl<C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 
 #[cfg(test)]
 pub mod tests {
 
+    extern crate r2d2;
+    extern crate stq_http;
+
     use std::error::Error;
     use std::fmt;
+    use std::sync::Arc;
     use std::time::SystemTime;
 
     use diesel::connection::AnsiTransactionManager;
@@ -133,12 +137,17 @@ pub mod tests {
     use diesel::ConnectionResult;
     use diesel::QueryResult;
     use diesel::Queryable;
+    use futures_cpupool::CpuPool;
     use r2d2::ManageConnection;
+    use tokio_core::reactor::Handle;
 
     use stq_types::*;
 
+    use config::Config;
+    use controller::context::{DynamicContext, StaticContext};
     use models::*;
     use repos::*;
+    use services::*;
 
     pub const MOCK_REPO_FACTORY: ReposFactoryMock = ReposFactoryMock {};
     pub static MOCK_USER_ID: UserId = UserId(1);
@@ -181,6 +190,23 @@ pub mod tests {
         fn create_user_roles_repo_with_sys_acl<'a>(&self, _db_conn: &'a C) -> Box<UserRolesRepo + 'a> {
             Box::new(UserRolesRepoMock::default()) as Box<UserRolesRepo>
         }
+    }
+
+    pub fn create_service(
+        user_id: Option<UserId>,
+        handle: Arc<Handle>,
+    ) -> Service<MockConnection, MockConnectionManager, ReposFactoryMock> {
+        let manager = MockConnectionManager::default();
+        let db_pool = r2d2::Pool::builder().build(manager).expect("Failed to create connection pool");
+        let cpu_pool = CpuPool::new(1);
+
+        let config = Config::new().unwrap();
+        let client = stq_http::client::Client::new(&config.to_http_config(), &handle);
+        let client_handle = client.handle();
+        let static_context = StaticContext::new(db_pool, cpu_pool, client_handle, Arc::new(config), MOCK_REPO_FACTORY);
+        let dynamic_context = DynamicContext::new(user_id);
+
+        Service::new(static_context, dynamic_context)
     }
 
     #[derive(Clone, Default)]
@@ -702,12 +728,12 @@ pub mod tests {
                 }).collect())
         }
 
-        fn get(&self, id_arg: CompanyPackageId) -> RepoResult<CompaniesPackages> {
-            Ok(CompaniesPackages {
+        fn get(&self, id_arg: CompanyPackageId) -> RepoResult<Option<CompaniesPackages>> {
+            Ok(Some(CompaniesPackages {
                 id: id_arg,
                 company_id: CompanyId(1),
                 package_id: PackageId(1),
-            })
+            }))
         }
 
         /// Returns companies by package id

@@ -37,8 +37,7 @@ pub trait CompaniesPackagesRepo {
     ) -> RepoResult<Vec<AvailablePackages>>;
 
     /// Returns company package by id
-    fn get(&self, id: CompanyPackageId) -> RepoResult<CompaniesPackages>;
-
+    fn get(&self, id: CompanyPackageId) -> RepoResult<Option<CompaniesPackages>>;
     /// Returns companies by package id
     fn get_companies(&self, id: PackageId) -> RepoResult<Vec<Company>>;
 
@@ -76,13 +75,14 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             }).map_err(|e: FailureError| e.context(format!("create new companies_packages {:?}.", payload)).into())
     }
 
-    fn get(&self, id_arg: CompanyPackageId) -> RepoResult<CompaniesPackages> {
+    fn get(&self, id_arg: CompanyPackageId) -> RepoResult<Option<CompaniesPackages>> {
         debug!("get companies_packages by id: {}.", id_arg);
 
         acl::check(&*self.acl, Resource::CompaniesPackages, Action::Read, self, None)?;
         let query = companies_packages.filter(id.eq(id_arg));
         query
             .get_result(self.db_conn)
+            .optional()
             .map_err(move |e| e.context(format!("get companies_packages id: {}.", id_arg)).into())
     }
 
