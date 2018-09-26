@@ -13,7 +13,6 @@ extern crate jsonwebtoken;
 #[macro_use]
 extern crate log;
 extern crate r2d2;
-extern crate r2d2_diesel;
 extern crate rand;
 extern crate regex;
 extern crate serde;
@@ -53,15 +52,16 @@ use std::process;
 use std::sync::Arc;
 
 use diesel::pg::PgConnection;
+use diesel::r2d2::ConnectionManager;
 use futures::future;
 use futures::prelude::*;
 use futures_cpupool::CpuPool;
 use hyper::server::Http;
-use r2d2_diesel::ConnectionManager;
 use tokio_core::reactor::Core;
 
 use stq_http::controller::Application;
 
+use controller::context::StaticContext;
 use repos::acl::RolesCacheImpl;
 use repos::countries::CountryCacheImpl;
 use repos::repo_factory::ReposFactoryImpl;
@@ -70,6 +70,7 @@ use repos::repo_factory::ReposFactoryImpl;
 pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: Option<i32>, callback: F) {
     let thread_count = config.server.thread_count;
     let cpu_pool = CpuPool::new(thread_count);
+
     // Prepare reactor
     let mut core = Core::new().expect("Unexpected error creating event loop core");
     let handle = Arc::new(core.handle());
@@ -77,7 +78,7 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: Option<
     // Prepare database pool
     let database_url: String = config.server.database.parse().expect("Database URL must be set in configuration");
     let manager = ConnectionManager::<PgConnection>::new(database_url);
-    let r2d2_pool = r2d2::Pool::builder().build(manager).expect("Failed to create connection pool");
+    let db_pool = r2d2::Pool::builder().build(manager).expect("Failed to create connection pool");
 
     // Prepare server
     let address = {
@@ -93,33 +94,20 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: Option<
     // Repo factory
     let repo_factory = ReposFactoryImpl::new(roles_cache.clone(), countries_cache.clone());
 
-    let http_config = stq_http::client::Config {
-        http_client_retries: config.client.http_client_retries,
-        http_client_buffer_size: config.client.http_client_buffer_size,
-        timeout_duration_ms: config.client.http_timeout_ms,
-    };
-    let client = stq_http::client::Client::new(&http_config, &handle);
+    let client = stq_http::client::Client::new(&config.to_http_config(), &handle);
     let client_handle = client.handle();
     let client_stream = client.stream();
     handle.spawn(client_stream.for_each(|_| Ok(())));
 
+    let context = StaticContext::new(db_pool, cpu_pool, client_handle, Arc::new(config), repo_factory);
+
     let serve = Http::new()
-        .serve_addr_handle(&address, &*handle, {
-            move || {
-                let controller = controller::ControllerImpl::new(
-                    r2d2_pool.clone(),
-                    config.clone(),
-                    cpu_pool.clone(),
-                    client_handle.clone(),
-                    roles_cache.clone(),
-                    repo_factory.clone(),
-                );
+        .serve_addr_handle(&address, &*handle, move || {
+            // Prepare application
+            let controller = controller::ControllerImpl::new(context.clone());
+            let app = Application::<errors::Error>::new(controller);
 
-                // Prepare application
-                let app = Application::<errors::Error>::new(controller);
-
-                Ok(app)
-            }
+            Ok(app)
         }).unwrap_or_else(|reason| {
             eprintln!("Http Server Initialization Error: {}", reason);
             process::exit(1);

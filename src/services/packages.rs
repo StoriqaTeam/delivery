@@ -3,218 +3,129 @@
 use diesel::connection::AnsiTransactionManager;
 use diesel::pg::Pg;
 use diesel::Connection;
-use failure::Fail;
-use futures::future::*;
-use futures_cpupool::CpuPool;
-use r2d2::{ManageConnection, Pool};
+use r2d2::ManageConnection;
 
-use stq_types::{Alpha3, PackageId, UserId};
+use stq_types::{Alpha3, PackageId};
 
-use errors::Error;
-
-use super::types::ServiceFuture;
+use super::types::{Service, ServiceFuture};
 use models::packages::{NewPackages, Packages, UpdatePackages};
 use repos::countries::get_all_parent_codes;
 use repos::ReposFactory;
 
 pub trait PackagesService {
     /// Create a new packages
-    fn create(&self, payload: NewPackages) -> ServiceFuture<Packages>;
+    fn create_package(&self, payload: NewPackages) -> ServiceFuture<Packages>;
 
     /// Returns list of packages supported by the country
-    fn find_deliveries_to(&self, country: Alpha3) -> ServiceFuture<Vec<Packages>>;
+    fn find_packages_by_country(&self, country: Alpha3) -> ServiceFuture<Vec<Packages>>;
 
     /// Returns list of packages
-    fn list(&self) -> ServiceFuture<Vec<Packages>>;
+    fn list_packages(&self) -> ServiceFuture<Vec<Packages>>;
 
-    fn find(&self, id_arg: PackageId) -> ServiceFuture<Option<Packages>>;
+    fn find_packages(&self, id_arg: PackageId) -> ServiceFuture<Option<Packages>>;
 
     /// Update a packages
-    fn update(&self, id: PackageId, payload: UpdatePackages) -> ServiceFuture<Packages>;
+    fn update_package(&self, id: PackageId, payload: UpdatePackages) -> ServiceFuture<Packages>;
 
     /// Delete a packages
-    fn delete(&self, id: PackageId) -> ServiceFuture<Packages>;
-}
-
-/// Packages services, responsible for Packages-related CRUD operations
-pub struct PackagesServiceImpl<
-    T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static,
-    M: ManageConnection<Connection = T>,
-    F: ReposFactory<T>,
-> {
-    pub db_pool: Pool<M>,
-    pub cpu_pool: CpuPool,
-    pub user_id: Option<UserId>,
-    pub repo_factory: F,
+    fn delete_package(&self, id: PackageId) -> ServiceFuture<Packages>;
 }
 
 impl<
         T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static,
         M: ManageConnection<Connection = T>,
         F: ReposFactory<T>,
-    > PackagesServiceImpl<T, M, F>
+    > PackagesService for Service<T, M, F>
 {
-    pub fn new(db_pool: Pool<M>, cpu_pool: CpuPool, user_id: Option<UserId>, repo_factory: F) -> Self {
-        Self {
-            db_pool,
-            cpu_pool,
-            user_id,
-            repo_factory,
-        }
-    }
-}
+    fn create_package(&self, payload: NewPackages) -> ServiceFuture<Packages> {
+        let repo_factory = self.static_context.repo_factory.clone();
+        let user_id = self.dynamic_context.user_id;
 
-impl<
-        T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static,
-        M: ManageConnection<Connection = T>,
-        F: ReposFactory<T>,
-    > PackagesService for PackagesServiceImpl<T, M, F>
-{
-    fn create(&self, payload: NewPackages) -> ServiceFuture<Packages> {
-        let db_pool = self.db_pool.clone();
-        let repo_factory = self.repo_factory.clone();
-        let user_id = self.user_id;
-
-        Box::new(
-            self.cpu_pool
-                .spawn_fn(move || {
-                    db_pool
-                        .get()
-                        .map_err(|e| e.context(Error::Connection).into())
-                        .and_then(move |conn| {
-                            let packages_repo = repo_factory.create_packages_repo(&*conn, user_id);
-                            packages_repo.create(payload)
-                        })
-                }).map_err(|e| e.context("Service Packages, create endpoint error occured.").into()),
-        )
+        self.spawn_on_pool(move |conn| {
+            let packages_repo = repo_factory.create_packages_repo(&*conn, user_id);
+            packages_repo
+                .create(payload)
+                .map_err(|e| e.context("Service Packages, create endpoint error occured.").into())
+        })
     }
 
-    fn find_deliveries_to(&self, country: Alpha3) -> ServiceFuture<Vec<Packages>> {
-        let db_pool = self.db_pool.clone();
-        let repo_factory = self.repo_factory.clone();
-        let user_id = self.user_id;
+    fn find_packages_by_country(&self, country: Alpha3) -> ServiceFuture<Vec<Packages>> {
+        let repo_factory = self.static_context.repo_factory.clone();
+        let user_id = self.dynamic_context.user_id;
 
-        Box::new(
-            self.cpu_pool
-                .spawn_fn(move || {
-                    db_pool
-                        .get()
-                        .map_err(|e| e.context(Error::Connection).into())
-                        .and_then(move |conn| {
-                            let packages_repo = repo_factory.create_packages_repo(&*conn, user_id);
-                            let countries_repo = repo_factory.create_countries_repo(&*conn, user_id);
-                            countries_repo.get_all().and_then(|countries| {
-                                let mut countries_list = vec![];
-                                get_all_parent_codes(&countries, &country, &mut countries_list);
-                                packages_repo.find_deliveries_to(countries_list)
-                            })
-                        })
-                }).map_err(|e| e.context("Service Packages, find_deliveries_to endpoint error occured.").into()),
-        )
+        self.spawn_on_pool(move |conn| {
+            let packages_repo = repo_factory.create_packages_repo(&*conn, user_id);
+            let countries_repo = repo_factory.create_countries_repo(&*conn, user_id);
+            countries_repo
+                .get_all()
+                .and_then(|countries| {
+                    let mut countries_list = vec![];
+                    get_all_parent_codes(&countries, &country, &mut countries_list);
+                    packages_repo.find_deliveries_to(countries_list)
+                }).map_err(|e| e.context("Service Packages, find_deliveries_to endpoint error occured.").into())
+        })
     }
 
     /// Returns list of packages
-    fn list(&self) -> ServiceFuture<Vec<Packages>> {
-        let db_pool = self.db_pool.clone();
-        let repo_factory = self.repo_factory.clone();
-        let user_id = self.user_id;
+    fn list_packages(&self) -> ServiceFuture<Vec<Packages>> {
+        let repo_factory = self.static_context.repo_factory.clone();
+        let user_id = self.dynamic_context.user_id;
 
-        Box::new(
-            self.cpu_pool
-                .spawn_fn(move || {
-                    db_pool
-                        .get()
-                        .map_err(|e| e.context(Error::Connection).into())
-                        .and_then(move |conn| {
-                            let packages_repo = repo_factory.create_packages_repo(&*conn, user_id);
-                            packages_repo.list()
-                        })
-                }).map_err(|e| e.context("Service Packages, list endpoint error occured.").into()),
-        )
+        self.spawn_on_pool(move |conn| {
+            let packages_repo = repo_factory.create_packages_repo(&*conn, user_id);
+            packages_repo
+                .list()
+                .map_err(|e| e.context("Service Packages, list endpoint error occured.").into())
+        })
     }
 
-    fn find(&self, id_arg: PackageId) -> ServiceFuture<Option<Packages>> {
-        let db_pool = self.db_pool.clone();
-        let user_id = self.user_id;
-        let repo_factory = self.repo_factory.clone();
+    fn find_packages(&self, id_arg: PackageId) -> ServiceFuture<Option<Packages>> {
+        let repo_factory = self.static_context.repo_factory.clone();
+        let user_id = self.dynamic_context.user_id;
 
-        Box::new(
-            self.cpu_pool
-                .spawn_fn(move || {
-                    db_pool
-                        .get()
-                        .map_err(|e| e.context(Error::Connection).into())
-                        .and_then(move |conn| {
-                            let packages_repo = repo_factory.create_packages_repo(&*conn, user_id);
-                            packages_repo.find(id_arg)
-                        })
-                }).map_err(|e| e.context("Service Packages, find endpoint error occured.").into()),
-        )
+        self.spawn_on_pool(move |conn| {
+            let packages_repo = repo_factory.create_packages_repo(&*conn, user_id);
+            packages_repo
+                .find(id_arg)
+                .map_err(|e| e.context("Service Packages, find endpoint error occured.").into())
+        })
     }
 
-    fn update(&self, id: PackageId, payload: UpdatePackages) -> ServiceFuture<Packages> {
-        let db_pool = self.db_pool.clone();
-        let repo_factory = self.repo_factory.clone();
-        let user_id = self.user_id;
+    fn update_package(&self, id: PackageId, payload: UpdatePackages) -> ServiceFuture<Packages> {
+        let repo_factory = self.static_context.repo_factory.clone();
+        let user_id = self.dynamic_context.user_id;
 
-        Box::new(
-            self.cpu_pool
-                .spawn_fn(move || {
-                    db_pool
-                        .get()
-                        .map_err(|e| e.context(Error::Connection).into())
-                        .and_then(move |conn| {
-                            let packages_repo = repo_factory.create_packages_repo(&*conn, user_id);
-                            packages_repo.update(id, payload)
-                        })
-                }).map_err(|e| e.context("Service Packages, update endpoint error occured.").into()),
-        )
+        self.spawn_on_pool(move |conn| {
+            let packages_repo = repo_factory.create_packages_repo(&*conn, user_id);
+            packages_repo
+                .update(id, payload)
+                .map_err(|e| e.context("Service Packages, update endpoint error occured.").into())
+        })
     }
 
-    fn delete(&self, id: PackageId) -> ServiceFuture<Packages> {
-        let db_pool = self.db_pool.clone();
-        let repo_factory = self.repo_factory.clone();
-        let user_id = self.user_id;
+    fn delete_package(&self, id: PackageId) -> ServiceFuture<Packages> {
+        let repo_factory = self.static_context.repo_factory.clone();
+        let user_id = self.dynamic_context.user_id;
 
-        Box::new(
-            self.cpu_pool
-                .spawn_fn(move || {
-                    db_pool
-                        .get()
-                        .map_err(|e| e.context(Error::Connection).into())
-                        .and_then(move |conn| {
-                            let packages_repo = repo_factory.create_packages_repo(&*conn, user_id);
-                            packages_repo.delete(id)
-                        })
-                }).map_err(|e| e.context("Service Packages, delete endpoint error occured.").into()),
-        )
+        self.spawn_on_pool(move |conn| {
+            let packages_repo = repo_factory.create_packages_repo(&*conn, user_id);
+            packages_repo
+                .delete(id)
+                .map_err(|e| e.context("Service Packages, delete endpoint error occured.").into())
+        })
     }
 }
 
 #[cfg(test)]
 pub mod tests {
-    use futures_cpupool::CpuPool;
-    use r2d2;
+    use std::sync::Arc;
     use tokio_core::reactor::Core;
 
     use stq_types::*;
 
-    use super::*;
     use models::*;
     use repos::repo_factory::tests::*;
-
-    fn create_packages_service(user_id: Option<UserId>) -> PackagesServiceImpl<MockConnection, MockConnectionManager, ReposFactoryMock> {
-        let manager = MockConnectionManager::default();
-        let db_pool = r2d2::Pool::builder().build(manager).expect("Failed to create connection pool");
-        let cpu_pool = CpuPool::new(1);
-
-        PackagesServiceImpl {
-            db_pool,
-            cpu_pool,
-            user_id,
-            repo_factory: MOCK_REPO_FACTORY,
-        }
-    }
+    use services::packages::PackagesService;
 
     pub fn create_new_packages(name: String) -> NewPackages {
         NewPackages {
@@ -230,8 +141,9 @@ pub mod tests {
     #[test]
     fn test_get_packages() {
         let mut core = Core::new().unwrap();
-        let service = create_packages_service(Some(MOCK_USER_ID));
-        let work = service.find(PackageId(1));
+        let handle = Arc::new(core.handle());
+        let service = create_service(Some(MOCK_USER_ID), handle);
+        let work = service.find_packages(PackageId(1));
         let result = core.run(work).unwrap();
         assert_eq!(result.unwrap().id, PackageId(1));
     }
@@ -239,9 +151,10 @@ pub mod tests {
     #[test]
     fn test_create_packages() {
         let mut core = Core::new().unwrap();
-        let service = create_packages_service(Some(MOCK_USER_ID));
+        let handle = Arc::new(core.handle());
+        let service = create_service(Some(MOCK_USER_ID), handle);
         let new_packages = create_new_packages("package1".to_string());
-        let work = service.create(new_packages);
+        let work = service.create_package(new_packages);
         let result = core.run(work).unwrap();
         assert_eq!(result.name, "package1".to_string());
     }
