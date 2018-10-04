@@ -792,6 +792,7 @@ pub mod tests {
                 address: None,
                 created_at: SystemTime::now(),
                 updated_at: SystemTime::now(),
+                country_code: None,
             }])
         }
 
@@ -812,6 +813,7 @@ pub mod tests {
                 address: None,
                 created_at: SystemTime::now(),
                 updated_at: SystemTime::now(),
+                country_code: payload.country_code,
             })
         }
 
@@ -832,6 +834,7 @@ pub mod tests {
                 address: None,
                 created_at: SystemTime::now(),
                 updated_at: SystemTime::now(),
+                country_code: payload.country_code,
             })
         }
 
@@ -852,6 +855,7 @@ pub mod tests {
                 address: None,
                 created_at: SystemTime::now(),
                 updated_at: SystemTime::now(),
+                country_code: None,
             })
         }
     }

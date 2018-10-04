@@ -24,6 +24,7 @@ pub struct UserAddress {
     pub is_priority: bool,
     pub created_at: SystemTime,
     pub updated_at: SystemTime,
+    pub country_code: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Insertable, Validate)]
@@ -42,6 +43,8 @@ pub struct NewUserAddress {
     pub street_number: Option<String>,
     pub address: Option<String>,
     pub is_priority: bool,
+    #[validate(length(min = "1", message = "Country code must not be empty"))]
+    pub country_code: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Insertable, AsChangeset, Validate)]
@@ -59,4 +62,6 @@ pub struct UpdateUserAddress {
     pub street_number: Option<String>,
     pub address: Option<String>,
     pub is_priority: Option<bool>,
+    #[validate(length(min = "1", message = "Country code must not be empty"))]
+    pub country_code: Option<String>,
 }

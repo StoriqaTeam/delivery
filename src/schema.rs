@@ -87,6 +87,7 @@ table! {
         is_priority -> Bool,
         created_at -> Timestamp,
         updated_at -> Timestamp,
+        country_code -> Nullable<Varchar>,
     }
 }
 
