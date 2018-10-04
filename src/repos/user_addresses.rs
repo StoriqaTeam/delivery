@@ -110,6 +110,11 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         } else {
             exist_query = exist_query.filter(address.is_null())
         };
+        if let Some(country_code_arg) = payload.country_code.clone() {
+            exist_query = exist_query.filter(country_code.eq(country_code_arg));
+        } else {
+            exist_query = exist_query.filter(country_code.is_null());
+        };
 
         exist_query
             .get_result::<UserAddress>(self.db_conn)
@@ -124,9 +129,9 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                     query
                         .get_result(self.db_conn)
                         .map_err(From::from)
-                        .and_then(|addres| {
-                            acl::check(&*self.acl, Resource::UserAddresses, Action::Create, self, Some(&addres))?;
-                            Ok(addres)
+                        .and_then(|address_| {
+                            acl::check(&*self.acl, Resource::UserAddresses, Action::Create, self, Some(&address_))?;
+                            Ok(address_)
                         }).and_then(|new_address| {
                             if new_address.is_priority {
                                 // set all other addresses priority to false
@@ -150,7 +155,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         query
             .get_result(self.db_conn)
             .map_err(From::from)
-            .and_then(|addres: UserAddress| acl::check(&*self.acl, Resource::UserAddresses, Action::Update, self, Some(&addres)))
+            .and_then(|address_: UserAddress| acl::check(&*self.acl, Resource::UserAddresses, Action::Update, self, Some(&address_)))
             .and_then(|_| {
                 let filter = user_addresses.filter(id.eq(id_arg));
 
@@ -179,7 +184,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         query
             .get_result(self.db_conn)
             .map_err(From::from)
-            .and_then(|addres: UserAddress| acl::check(&*self.acl, Resource::UserAddresses, Action::Delete, self, Some(&addres)))
+            .and_then(|address_: UserAddress| acl::check(&*self.acl, Resource::UserAddresses, Action::Delete, self, Some(&address_)))
             .and_then(|_| {
                 let filtered = user_addresses.filter(id.eq(id_arg));
                 let query = diesel::delete(filtered);
