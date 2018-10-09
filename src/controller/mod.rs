@@ -17,6 +17,7 @@ use validator::Validate;
 
 use stq_http::controller::Controller;
 use stq_http::controller::ControllerFuture;
+use stq_http::errors::ErrorMessageWrapper;
 use stq_http::request_util::parse_body;
 use stq_http::request_util::serialize_future;
 use stq_types::*;
@@ -27,6 +28,7 @@ use errors::Error;
 use models::*;
 use repos::repo_factory::*;
 use repos::CountrySearch;
+use sentry_integration::log_and_capture_error;
 use services::companies::CompaniesService;
 use services::companies_packages::CompaniesPackagesService;
 use services::countries::CountriesService;
@@ -80,7 +82,7 @@ impl<
 
         let path = req.path().to_string();
 
-        match (&req.method().clone(), self.static_context.route_parser.test(req.path())) {
+        let fut = match (&req.method().clone(), self.static_context.route_parser.test(req.path())) {
             (Get, Some(Route::RolesByUserId { user_id })) => {
                 debug!("Received request to get roles by user id {}", user_id);
                 serialize_future({ service.get_roles(user_id) })
@@ -434,6 +436,14 @@ impl<
                     .context(Error::NotFound)
                     .into(),
             )),
-        }
+        }.map_err(|err| {
+            let wrapper = ErrorMessageWrapper::<Error>::from(&err);
+            if wrapper.inner.code == 500 {
+                log_and_capture_error(&err);
+            }
+            err
+        });
+
+        Box::new(fut)
     }
 }
