@@ -26,7 +26,7 @@ impl CountryCacheImpl {
         false
     }
 
-    pub fn set(&self, cat: Country) {
+    pub fn set(&self, _cat: Country) {
         //let mut country = self.inner.lock().unwrap();
         //*country = Some(cat);
     }
