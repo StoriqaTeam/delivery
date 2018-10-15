@@ -84,7 +84,7 @@ pub fn create_route_parser() -> RouteParser<Route> {
         params
             .get(0)
             .map(|param| param.to_string().to_uppercase())
-            .map(|string_id| Alpha2(string_id))
+            .map(Alpha2)
             .map(|alpha2| Route::CountryByAlpha2 { alpha2 })
     });
 
@@ -92,7 +92,7 @@ pub fn create_route_parser() -> RouteParser<Route> {
         params
             .get(0)
             .map(|param| param.to_string().to_uppercase())
-            .map(|string_id| Alpha3(string_id))
+            .map(Alpha3)
             .map(|alpha3| Route::CountryByAlpha3 { alpha3 })
     });
 
