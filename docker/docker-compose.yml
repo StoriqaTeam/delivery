@@ -14,13 +14,17 @@ services:
     environment:
       - "DATABASE_URL=postgresql://delivery:delivery@delivery-pg/delivery"
       - "RUST_LOG=delivery=debug"
+    ports:
+      - "8000"
     expose:
-      - 8005
+      - 8000
     stdin_open: true
     depends_on:
       - delivery-pg
+      - delivery-redis
     links:
       - delivery-pg
+      - delivery-redis
 
   delivery-pg:
     image: postgres:10
@@ -31,12 +35,25 @@ services:
       - POSTGRES_USER=delivery
       - POSTGRES_DB=delivery
       - POSTGRES_PASSWORD=delivery
+    ports:
+      - "5432"
     expose:
       - 5432
+
+  delivery-redis:
+    image: redis:4.0-alpine
+    container_name: delivery-redis
+    volumes:
+      - stq_delivery_redis_data:/data
+    ports:
+      - "6379"
+    expose:
+      - 6379
 
 volumes:
   stq_cargo_cache:
   stq_delivery_postgres_data:
+  stq_delivery_redis_data:
 
 networks:
   default:

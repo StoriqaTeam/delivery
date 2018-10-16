@@ -51,7 +51,11 @@ pub trait CountriesRepo {
 }
 
 impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> CountriesRepoImpl<'a, T> {
-    pub fn new(db_conn: &'a T, acl: Box<Acl<Resource, Action, Scope, FailureError, Country>>, cache: CountryCacheImpl) -> Self {
+    pub fn new(
+        db_conn: &'a T,
+        acl: Box<Acl<Resource, Action, Scope, FailureError, Country>>,
+        cache: CountryCacheImpl,
+    ) -> Self {
         Self { db_conn, acl, cache }
     }
 }
@@ -93,7 +97,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     /// Creates new country
     fn create(&self, payload: NewCountry) -> RepoResult<Country> {
         debug!("Create new country {:?}.", payload);
-        self.cache.clear();
+        self.cache.remove();
         let query = diesel::insert_into(countries).values(&payload);
         query
             .get_result::<RawCountry>(self.db_conn)
@@ -117,7 +121,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                         .into_iter()
                         .nth(0)
                         .ok_or_else(|| format_err!("Could not create countries tree"))?;
-                    self.cache.set(root.clone());
+                    self.cache.set(&root);
                     Ok(root)
                 }).map_err(|e: FailureError| e.context("Get all countries error occured").into())
         }

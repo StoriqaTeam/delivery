@@ -2,6 +2,7 @@
 host = "0.0.0.0"
 port = 8000
 database = "postgresql://delivery:delivery@delivery-pg/delivery"
+redis = "redis://delivery-redis"
 thread_count = 20
 
 [client]

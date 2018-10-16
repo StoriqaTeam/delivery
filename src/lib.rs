@@ -14,6 +14,7 @@ extern crate jsonwebtoken;
 #[macro_use]
 extern crate log;
 extern crate r2d2;
+extern crate r2d2_redis;
 extern crate rand;
 extern crate regex;
 extern crate serde;
@@ -31,6 +32,7 @@ extern crate validator_derive;
 #[macro_use]
 extern crate sentry;
 
+extern crate stq_cache;
 #[macro_use]
 extern crate stq_http;
 extern crate stq_logging;
@@ -58,6 +60,7 @@ use futures::future;
 use futures::prelude::*;
 use futures_cpupool::CpuPool;
 use hyper::server::Http;
+use r2d2_redis::RedisConnectionManager;
 use tokio_core::reactor::Core;
 
 use stq_http::controller::Application;
@@ -78,8 +81,15 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: Option<
 
     // Prepare database pool
     let database_url: String = config.server.database.parse().expect("Database URL must be set in configuration");
-    let manager = ConnectionManager::<PgConnection>::new(database_url);
-    let db_pool = r2d2::Pool::builder().build(manager).expect("Failed to create connection pool");
+    let db_manager = ConnectionManager::<PgConnection>::new(database_url);
+    let db_pool = r2d2::Pool::builder().build(db_manager).expect("Failed to create DB connection pool");
+
+    // Prepare Redis pool
+    let redis_url: String = config.server.redis.parse()
+        .expect("Redis URL must be set in configuration");
+    let redis_manager = RedisConnectionManager::new(redis_url.as_ref())
+        .expect("Failed to create Redis connection manager");
+    let redis_pool = r2d2::Pool::builder().build(redis_manager).expect("Failed to create Redis connection pool");
 
     // Prepare server
     let address = {
@@ -87,13 +97,11 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: Option<
         format!("{}:{}", config.server.host, port).parse().expect("Could not parse address")
     };
 
-    // Roles cache
-    let roles_cache = RolesCacheImpl::default();
-    // Countries cache
-    let countries_cache = CountryCacheImpl::default();
+    let countries_cache = CountryCacheImpl::new(redis_pool.clone());
+    let roles_cache = RolesCacheImpl::new(redis_pool.clone());
 
     // Repo factory
-    let repo_factory = ReposFactoryImpl::new(roles_cache.clone(), countries_cache.clone());
+    let repo_factory = ReposFactoryImpl::new(roles_cache, countries_cache);
 
     let client = stq_http::client::Client::new(&config.to_http_config(), &handle);
     let client_handle = client.handle();
