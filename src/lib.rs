@@ -100,11 +100,13 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: Option<
         format!("{}:{}", config.server.host, port).parse().expect("Could not parse address")
     };
 
+    let ttl = Duration::from_secs(config.server.cache_ttl_sec);
+
     let country_cache_backend: CachedSingle<_, _, _> =
-        TypedCache::new(RedisCache::new(redis_pool.clone(), "country".to_string()).with_ttl(Duration::from_secs(600))).into();
+        TypedCache::new(RedisCache::new(redis_pool.clone(), "country".to_string()).with_ttl(ttl)).into();
     let country_cache = CountryCacheImpl::new(country_cache_backend);
 
-    let roles_cache_backend = TypedCache::new(RedisCache::new(redis_pool.clone(), "roles".to_string()).with_ttl(Duration::from_secs(600)));
+    let roles_cache_backend = TypedCache::new(RedisCache::new(redis_pool.clone(), "roles".to_string()).with_ttl(ttl));
     let roles_cache = RolesCacheImpl::new(roles_cache_backend);
 
     // Repo factory

@@ -4,6 +4,7 @@ port = 8000
 database = "postgresql://delivery:delivery@delivery-pg/delivery"
 redis = "redis://delivery-redis"
 thread_count = 20
+cache_ttl_sec = 600
 
 [client]
 http_client_buffer_size=3
