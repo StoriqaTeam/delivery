@@ -33,6 +33,6 @@ pub fn get_pg_str_json_array(countries: Vec<Alpha3>) -> String {
     format!("array[{}]", res)
 }
 
-pub fn get_company_package_name(company_name: String, package_name: String) -> String {
+pub fn get_company_package_name(company_name: &str, package_name: &str) -> String {
     format!("{}-{}", company_name, package_name)
 }

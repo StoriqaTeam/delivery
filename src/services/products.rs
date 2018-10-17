@@ -71,9 +71,9 @@ impl<
                 let countries_repo = repo_factory.create_countries_repo(&*conn, user_id);
                 let pickup = payload.pickup.clone();
                 products_repo
-                    .delete(base_product_id.clone())
+                    .delete(base_product_id)
                     .and_then(|_| products_repo.create_many(payload.items))
-                    .and_then(|_| products_repo.get_products_countries(base_product_id.clone()))
+                    .and_then(|_| products_repo.get_products_countries(base_product_id))
                     .and_then(|products_with_countries| {
                         countries_repo.get_all().map(|countries| {
                             // getting all countries
@@ -184,7 +184,7 @@ impl<
                 let products_repo = repo_factory.create_products_repo(&*conn, user_id);
                 let pickups_repo = repo_factory.create_pickups_repo(&*conn, user_id);
                 products_repo
-                    .delete(base_product_id_arg.clone())
+                    .delete(base_product_id_arg)
                     .and_then(|_| pickups_repo.delete(base_product_id_arg).and_then(|_| Ok(())))
             }).map_err(|e| e.context("Service Products, delete endpoint error occured.").into())
         })
