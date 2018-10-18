@@ -170,6 +170,12 @@ impl<
                 )
             }
 
+            // GET /companies
+            (&Get, Some(Route::Companies)) => {
+                debug!("User with id = '{:?}' is requesting  // GET /companies", user_id);
+                serialize_future(service.list_companies())
+            }
+
             // GET /companies/<company_id>
             (&Get, Some(Route::CompanyById { company_id })) => {
                 debug!("User with id = '{:?}' is requesting  // GET /companies/{}", user_id, company_id);
