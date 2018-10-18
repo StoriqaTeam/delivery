@@ -26,7 +26,7 @@ fn create_update_company(name: &str) -> UpdateCompany {
         description: None,
         deliveries_from: None,
         logo: None,
-        currency: Currency::STQ,
+        currency: None,
     }
 }
 

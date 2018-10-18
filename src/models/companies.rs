@@ -105,7 +105,7 @@ pub struct UpdateCompanyRaw {
     pub description: Option<String>,
     pub deliveries_from: Option<serde_json::Value>,
     pub logo: Option<String>,
-    pub currency: Currency,
+    pub currency: Option<Currency>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -115,7 +115,7 @@ pub struct UpdateCompany {
     pub description: Option<String>,
     pub deliveries_from: Option<Vec<Alpha3>>,
     pub logo: Option<String>,
-    pub currency: Currency,
+    pub currency: Option<Currency>,
 }
 
 impl UpdateCompany {
