@@ -12,6 +12,7 @@ pub mod common;
 use hyper::Method;
 
 use stq_http::client::{self, ClientHandle as HttpClientHandle};
+use stq_static_resources::Currency;
 use stq_types::*;
 
 use lib::models::*;
@@ -84,6 +85,7 @@ fn create_company(name: String) -> NewCompany {
         description: None,
         deliveries_from: vec![Alpha3("RUS".to_string())],
         logo: "".to_string(),
+        currency: Currency::STQ,
     }
 }
 

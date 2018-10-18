@@ -12,6 +12,7 @@ pub mod common;
 use hyper::Method;
 
 use lib::models::*;
+use stq_static_resources::Currency;
 use stq_types::*;
 
 use stq_http::client::{self, ClientHandle as HttpClientHandle};
@@ -25,6 +26,7 @@ fn create_update_company(name: &str) -> UpdateCompany {
         description: None,
         deliveries_from: None,
         logo: None,
+        currency: Currency::STQ,
     }
 }
 
@@ -41,6 +43,7 @@ fn create_company(
         description: None,
         deliveries_from: vec![Alpha3("RUS".to_string())],
         logo: "".to_string(),
+        currency: Currency::STQ,
     };
 
     let body: String = serde_json::to_string(&new_company).unwrap().to_string();
