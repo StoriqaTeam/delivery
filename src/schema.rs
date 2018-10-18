@@ -6,6 +6,7 @@ table! {
         description -> Nullable<Varchar>,
         deliveries_from -> Jsonb,
         logo -> Varchar,
+        currency -> Varchar,
     }
 }
 
