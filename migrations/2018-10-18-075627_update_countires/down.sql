@@ -1,2 +1,1 @@
-ALTER TABLE companies
-DROP COLUMN IF EXISTS currency;
+ALTER TABLE companies DROP COLUMN IF EXISTS currency;
