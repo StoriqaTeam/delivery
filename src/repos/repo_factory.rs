@@ -141,6 +141,7 @@ pub mod tests {
     use r2d2::ManageConnection;
     use tokio_core::reactor::Handle;
 
+    use stq_static_resources::Currency;
     use stq_types::*;
 
     use config::Config;
@@ -482,6 +483,7 @@ pub mod tests {
                 description: payload.description,
                 deliveries_from: payload.deliveries_from,
                 logo: payload.logo,
+                currency: payload.currency,
             };
 
             let countries_arg = create_mock_countries();
@@ -498,6 +500,7 @@ pub mod tests {
                     description: None,
                     deliveries_from: vec![],
                     logo: "".to_string(),
+                    currency: Currency::STQ,
                 },
                 Company {
                     id: CompanyId(2),
@@ -506,6 +509,7 @@ pub mod tests {
                     description: None,
                     deliveries_from: vec![],
                     logo: "".to_string(),
+                    currency: Currency::USD,
                 },
             ])
         }
@@ -523,6 +527,7 @@ pub mod tests {
                     description: None,
                     deliveries_from: vec![],
                     logo: "".to_string(),
+                    currency: Currency::STQ,
                 },
                 Company {
                     id: CompanyId(2),
@@ -531,6 +536,7 @@ pub mod tests {
                     description: None,
                     deliveries_from: vec![],
                     logo: "".to_string(),
+                    currency: Currency::USD,
                 },
             ])
         }
@@ -543,6 +549,7 @@ pub mod tests {
                 description: payload.description,
                 deliveries_from: vec![],
                 logo: payload.logo.unwrap(),
+                currency: payload.currency,
             })
         }
 
@@ -554,6 +561,7 @@ pub mod tests {
                 description: None,
                 deliveries_from: vec![],
                 logo: "".to_string(),
+                currency: Currency::STQ,
             })
         }
     }
@@ -744,6 +752,7 @@ pub mod tests {
                 label: "UPS".to_string(),
                 description: None,
                 deliveries_from: vec![],
+                currency: Currency::STQ,
                 logo: "".to_string(),
             }])
         }

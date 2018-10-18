@@ -2,6 +2,7 @@ use failure::Error as FailureError;
 use failure::Fail;
 use serde_json;
 
+use stq_static_resources::Currency;
 use stq_types::{Alpha3, CompanyId};
 
 use errors::Error;
@@ -18,6 +19,7 @@ pub struct CompanyRaw {
     pub description: Option<String>,
     pub deliveries_from: serde_json::Value,
     pub logo: String,
+    pub currency: Currency,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -28,6 +30,7 @@ pub struct Company {
     pub description: Option<String>,
     pub deliveries_from: Vec<Country>,
     pub logo: String,
+    pub currency: Currency,
 }
 
 impl Company {
@@ -42,6 +45,7 @@ impl Company {
             label: from.label,
             description: from.description,
             deliveries_from,
+            currency: from.currency,
             logo: from.logo,
         })
     }
@@ -55,6 +59,7 @@ pub struct NewCompanyRaw {
     pub description: Option<String>,
     pub deliveries_from: serde_json::Value,
     pub logo: String,
+    pub currency: Currency,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -64,6 +69,7 @@ pub struct NewCompany {
     pub description: Option<String>,
     pub deliveries_from: Vec<Alpha3>,
     pub logo: String,
+    pub currency: Currency,
 }
 
 impl NewCompany {
@@ -73,6 +79,7 @@ impl NewCompany {
             label,
             deliveries_from,
             description,
+            currency,
             logo,
         } = self;
 
@@ -84,6 +91,7 @@ impl NewCompany {
             label,
             description,
             deliveries_from,
+            currency,
             logo,
         })
     }
@@ -97,6 +105,7 @@ pub struct UpdateCompanyRaw {
     pub description: Option<String>,
     pub deliveries_from: Option<serde_json::Value>,
     pub logo: Option<String>,
+    pub currency: Currency,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -106,6 +115,7 @@ pub struct UpdateCompany {
     pub description: Option<String>,
     pub deliveries_from: Option<Vec<Alpha3>>,
     pub logo: Option<String>,
+    pub currency: Currency,
 }
 
 impl UpdateCompany {
@@ -115,6 +125,7 @@ impl UpdateCompany {
             label,
             deliveries_from,
             description,
+            currency,
             logo,
         } = self;
 
@@ -130,6 +141,7 @@ impl UpdateCompany {
             label,
             description,
             deliveries_from,
+            currency,
             logo,
         })
     }
