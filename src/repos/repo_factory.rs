@@ -549,7 +549,7 @@ pub mod tests {
                 description: payload.description,
                 deliveries_from: vec![],
                 logo: payload.logo.unwrap(),
-                currency: payload.currency,
+                currency: payload.currency.unwrap(),
             })
         }
 
