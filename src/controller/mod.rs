@@ -291,6 +291,12 @@ impl<
                 serialize_future(service.get_all())
             }
 
+            // GET /countries/flatten
+            (&Get, Some(Route::CountriesFlatten)) => {
+                debug!("User with id = '{:?}' is requesting  // GET /countries/flatten", user_id);
+                serialize_future(service.get_all_flatten())
+            }
+
             // Get /countries/alpha2/<alpha2>
             (&Get, Some(Route::CountryByAlpha2 { alpha2 })) => {
                 debug!("User with id = '{:?}' is requesting  // GET /countries/alpha2/{}", user_id, alpha2);

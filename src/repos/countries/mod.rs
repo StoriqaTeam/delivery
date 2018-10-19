@@ -48,6 +48,9 @@ pub trait CountriesRepo {
 
     /// Returns all countries as a tree
     fn get_all(&self) -> RepoResult<Country>;
+
+    /// Returns all countries as a vec
+    fn get_all_flatten(&self) -> RepoResult<Vec<Country>>;
 }
 
 impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> CountriesRepoImpl<'a, T> {
@@ -121,6 +124,17 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                     Ok(root)
                 }).map_err(|e: FailureError| e.context("Get all countries error occured").into())
         }
+    }
+
+    /// Returns all countries as a vec
+    fn get_all_flatten(&self) -> RepoResult<Vec<Country>> {
+        debug!("Get all countries as vec from db request.");
+        acl::check(&*self.acl, Resource::Countries, Action::Read, self, None)
+            .and_then(|_| {
+                let countries_ = countries.load::<RawCountry>(self.db_conn)?;
+                let all_countries = countries_.into_iter().map(Country::from).collect();
+                Ok(all_countries)
+            }).map_err(|e: FailureError| e.context("Get all flatten countries error occured").into())
     }
 }
 
@@ -216,15 +230,18 @@ pub fn get_country(country: &Country, country_id: &Alpha3) -> Option<Country> {
 }
 
 pub fn get_all_children_till_the_end(country: Country) -> Vec<Country> {
+    let mut childless_entries = Vec::new();
+    add_all_children_till_the_end(country, &mut childless_entries);
+    childless_entries
+}
+
+fn add_all_children_till_the_end(country: Country, accumulator: &mut Vec<Country>) {
     if country.children.is_empty() {
-        vec![country]
+        accumulator.push(country);
     } else {
-        let mut klabels = vec![];
-        for country_child in country.children {
-            let mut children_klabels = get_all_children_till_the_end(country_child);
-            klabels.append(&mut children_klabels);
+        for child in country.children {
+            add_all_children_till_the_end(child, accumulator);
         }
-        klabels
     }
 }
 

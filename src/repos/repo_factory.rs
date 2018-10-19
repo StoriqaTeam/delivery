@@ -434,6 +434,11 @@ pub mod tests {
         fn get_all(&self) -> RepoResult<Country> {
             Ok(create_mock_countries())
         }
+
+        /// Returns all countries as a flatten vec
+        fn get_all_flatten(&self) -> RepoResult<Vec<Country>> {
+            Ok(create_mock_countries_flatten())
+        }
     }
 
     fn create_mock_countries() -> Country {
@@ -467,6 +472,19 @@ pub mod tests {
             numeric: 0,
             is_selected: false,
         }
+    }
+
+    fn create_mock_countries_flatten() -> Vec<Country> {
+        vec![Country {
+            label: "RUS".to_string().into(),
+            children: vec![],
+            level: 2,
+            parent: Some("XEU".to_string().into()),
+            alpha2: Alpha2("RU".to_string()),
+            alpha3: Alpha3("RUS".to_string()),
+            numeric: 0,
+            is_selected: false,
+        }]
     }
 
     #[derive(Clone, Default)]
