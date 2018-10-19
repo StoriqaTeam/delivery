@@ -1,6 +1,6 @@
 use models::{Country, Pickups};
-use stq_types::{CompanyId, CompanyPackageId, PackageId, ProductPrice};
 use stq_static_resources::Currency;
+use stq_types::{CompanyId, CompanyPackageId, PackageId, ProductPrice};
 
 use schema::companies_packages;
 
