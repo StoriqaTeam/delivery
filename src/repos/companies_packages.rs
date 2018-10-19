@@ -132,6 +132,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                         name: get_company_package_name(&company_raw.label, &package.name),
                         logo: company_raw.logo,
                         deliveries_to: package.deliveries_to,
+                        currency: company_raw.currency,
                         local_available,
                     });
                 }

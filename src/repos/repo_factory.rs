@@ -733,6 +733,7 @@ pub mod tests {
                     logo: "logo".to_string(),
                     deliveries_to: vec![],
                     local_available: false,
+                    currency: Currency::STQ,
                 }).collect())
         }
 
