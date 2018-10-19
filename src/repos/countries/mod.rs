@@ -48,6 +48,9 @@ pub trait CountriesRepo {
 
     /// Returns all countries as a tree
     fn get_all(&self) -> RepoResult<Country>;
+
+    /// Returns all countries as a vec
+    fn get_all_flatten(&self) -> RepoResult<Vec<Country>>;
 }
 
 impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> CountriesRepoImpl<'a, T> {
@@ -121,6 +124,17 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                     Ok(root)
                 }).map_err(|e: FailureError| e.context("Get all countries error occured").into())
         }
+    }
+
+    /// Returns all countries as a vec
+    fn get_all_flatten(&self) -> RepoResult<Vec<Country>> {
+        debug!("Get all countries as vec from db request.");
+        acl::check(&*self.acl, Resource::Countries, Action::Read, self, None)
+            .and_then(|_| {
+                let countries_ = countries.load::<RawCountry>(self.db_conn)?;
+                let all_countries = countries_.into_iter().map(Country::from).collect();
+                Ok(all_countries)
+            }).map_err(|e: FailureError| e.context("Get all flatten countries error occured").into())
     }
 }
 

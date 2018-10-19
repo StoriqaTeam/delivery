@@ -12,6 +12,7 @@ pub enum Route {
         user_id: UserId,
     },
     Countries,
+    CountriesFlatten,
     CountryByAlpha2 {
         alpha2: Alpha2,
     },
@@ -78,6 +79,7 @@ pub fn create_route_parser() -> RouteParser<Route> {
     });
 
     route_parser.add_route(r"^/countries$", || Route::Countries);
+    route_parser.add_route(r"^/countries/flatten$", || Route::CountriesFlatten);
 
     // Countries search
     route_parser.add_route_with_params(r"^/countries/alpha2/(\S+)$", |params| {
