@@ -216,15 +216,18 @@ pub fn get_country(country: &Country, country_id: &Alpha3) -> Option<Country> {
 }
 
 pub fn get_all_children_till_the_end(country: Country) -> Vec<Country> {
+    let mut childless_entries = Vec::new();
+    add_all_children_till_the_end(country, &mut childless_entries);
+    childless_entries
+}
+
+fn add_all_children_till_the_end(country: Country, accumulator: &mut Vec<Country>) {
     if country.children.is_empty() {
-        vec![country]
+        accumulator.push(country);
     } else {
-        let mut klabels = vec![];
-        for country_child in country.children {
-            let mut children_klabels = get_all_children_till_the_end(country_child);
-            klabels.append(&mut children_klabels);
+        for child in country.children {
+            add_all_children_till_the_end(child, accumulator);
         }
-        klabels
     }
 }
 

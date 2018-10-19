@@ -67,7 +67,7 @@ impl<
         })
     }
 
-    /// Returns country by label
+    /// Returns all countries
     fn get_all(&self) -> ServiceFuture<Country> {
         let repo_factory = self.static_context.repo_factory.clone();
         let user_id = self.dynamic_context.user_id;

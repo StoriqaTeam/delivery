@@ -288,6 +288,13 @@ impl<
             // GET /countries
             (&Get, Some(Route::Countries)) => {
                 debug!("User with id = '{:?}' is requesting  // GET /countries", user_id);
+                if Some(true) == parse_query!(req.query().unwrap_or_default(), "flatten" => bool) {
+                    serialize_future(
+                        service
+                            .get_all()
+                            .map(|root_country| ::repos::get_all_children_till_the_end(root_country)),
+                    );
+                }
                 serialize_future(service.get_all())
             }
 
