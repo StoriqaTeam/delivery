@@ -45,7 +45,7 @@ pub trait CompaniesPackagesRepo {
     fn get_packages(&self, id: CompanyId) -> RepoResult<Vec<Packages>>;
 
     /// Delete a companies_packages
-    fn delete(&self, id_arg: CompanyPackageId) -> RepoResult<CompaniesPackages>;
+    fn delete(&self, company_id_arg: CompanyId, package_id_arg: PackageId) -> RepoResult<CompaniesPackages>;
 }
 
 /// Implementation of CompaniesPackagesRepo trait
@@ -188,15 +188,21 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             }).map_err(move |e: FailureError| e.context(format!("get companies_packages company_id: {}.", id_arg)).into())
     }
 
-    fn delete(&self, id_arg: CompanyPackageId) -> RepoResult<CompaniesPackages> {
-        debug!("delete companies_packages by id: {}.", id_arg);
+    fn delete(&self, company_id_arg: CompanyId, package_id_arg: PackageId) -> RepoResult<CompaniesPackages> {
+        debug!(
+            "delete companies_packages by company_id: {}, package_id: {}.",
+            company_id_arg, package_id_arg
+        );
 
         acl::check(&*self.acl, Resource::CompaniesPackages, Action::Delete, self, None)?;
-        let filtered = companies_packages.filter(id.eq(id_arg));
+        let filtered = companies_packages.filter(company_id.eq(company_id_arg).and(package_id.eq(package_id_arg)));
         let query = diesel::delete(filtered);
-        query
-            .get_result(self.db_conn)
-            .map_err(move |e| e.context(format!("delete companies_packages id: {}.", id_arg)).into())
+        query.get_result(self.db_conn).map_err(move |e| {
+            e.context(format!(
+                "delete companies_packages company_id: {}, package_id: {}.",
+                company_id_arg, package_id_arg
+            )).into()
+        })
     }
 }
 

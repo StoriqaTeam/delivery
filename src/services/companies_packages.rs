@@ -28,7 +28,7 @@ pub trait CompaniesPackagesService {
     fn get_packages(&self, id: CompanyId) -> ServiceFuture<Vec<Packages>>;
 
     /// Delete a companies_packages
-    fn delete_company_package(&self, id: CompanyPackageId) -> ServiceFuture<CompaniesPackages>;
+    fn delete_company_package(&self, company_id: CompanyId, package_id: PackageId) -> ServiceFuture<CompaniesPackages>;
 }
 
 impl<
@@ -110,14 +110,14 @@ impl<
     }
 
     /// Delete a companies_packages
-    fn delete_company_package(&self, companies_packages_id: CompanyPackageId) -> ServiceFuture<CompaniesPackages> {
+    fn delete_company_package(&self, company_id: CompanyId, package_id: PackageId) -> ServiceFuture<CompaniesPackages> {
         let repo_factory = self.static_context.repo_factory.clone();
         let user_id = self.dynamic_context.user_id;
 
         self.spawn_on_pool(move |conn| {
             let companies_packages_repo = repo_factory.create_companies_packages_repo(&*conn, user_id);
             companies_packages_repo
-                .delete(companies_packages_id)
+                .delete(company_id, package_id)
                 .map_err(|e| e.context("Service CompaniesPackages, delete endpoint error occured.").into())
         })
     }
