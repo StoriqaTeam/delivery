@@ -276,13 +276,13 @@ impl<
                 serialize_future(service.get_packages(company_id))
             }
 
-            // DELETE /companies_packages/<company_package_id>
-            (&Delete, Some(Route::CompaniesPackagesById { company_package_id })) => {
+            // DELETE /companies/<company_id>/packages/<package_id>
+            (&Delete, Some(Route::CompaniesPackagesByIds { company_id, package_id })) => {
                 debug!(
-                    "User with id = '{:?}' is requesting  // DELETE /companies_packages/{}",
-                    user_id, company_package_id
+                    "User with id = '{:?}' is requesting  // DELETE /companies/{}/packages/{}",
+                    user_id, company_id, package_id
                 );
-                serialize_future(service.delete_company_package(company_package_id))
+                serialize_future(service.delete_company_package(company_id, package_id))
             }
 
             // GET /countries

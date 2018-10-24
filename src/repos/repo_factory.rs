@@ -790,11 +790,11 @@ pub mod tests {
         }
 
         /// Delete a companies_packages
-        fn delete(&self, id_arg: CompanyPackageId) -> RepoResult<CompaniesPackages> {
+        fn delete(&self, company_id_arg: CompanyId, package_id_arg: PackageId) -> RepoResult<CompaniesPackages> {
             Ok(CompaniesPackages {
-                id: id_arg,
-                company_id: CompanyId(1),
-                package_id: PackageId(1),
+                id: CompanyPackageId(1),
+                company_id: company_id_arg,
+                package_id: package_id_arg,
             })
         }
     }
