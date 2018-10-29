@@ -170,6 +170,12 @@ impl<
                 )
             }
 
+            // GET /companies
+            (&Get, Some(Route::Companies)) => {
+                debug!("User with id = '{:?}' is requesting  // GET /companies", user_id);
+                serialize_future(service.list_companies())
+            }
+
             // GET /companies/<company_id>
             (&Get, Some(Route::CompanyById { company_id })) => {
                 debug!("User with id = '{:?}' is requesting  // GET /companies/{}", user_id, company_id);
@@ -270,19 +276,25 @@ impl<
                 serialize_future(service.get_packages(company_id))
             }
 
-            // DELETE /companies_packages/<company_package_id>
-            (&Delete, Some(Route::CompaniesPackagesById { company_package_id })) => {
+            // DELETE /companies/<company_id>/packages/<package_id>
+            (&Delete, Some(Route::CompaniesPackagesByIds { company_id, package_id })) => {
                 debug!(
-                    "User with id = '{:?}' is requesting  // DELETE /companies_packages/{}",
-                    user_id, company_package_id
+                    "User with id = '{:?}' is requesting  // DELETE /companies/{}/packages/{}",
+                    user_id, company_id, package_id
                 );
-                serialize_future(service.delete_company_package(company_package_id))
+                serialize_future(service.delete_company_package(company_id, package_id))
             }
 
             // GET /countries
             (&Get, Some(Route::Countries)) => {
                 debug!("User with id = '{:?}' is requesting  // GET /countries", user_id);
                 serialize_future(service.get_all())
+            }
+
+            // GET /countries/flatten
+            (&Get, Some(Route::CountriesFlatten)) => {
+                debug!("User with id = '{:?}' is requesting  // GET /countries/flatten", user_id);
+                serialize_future(service.get_all_flatten())
             }
 
             // Get /countries/alpha2/<alpha2>

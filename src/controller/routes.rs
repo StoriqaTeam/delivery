@@ -12,6 +12,7 @@ pub enum Route {
         user_id: UserId,
     },
     Countries,
+    CountriesFlatten,
     CountryByAlpha2 {
         alpha2: Alpha2,
     },
@@ -40,6 +41,10 @@ pub enum Route {
     CompaniesPackages,
     CompaniesPackagesById {
         company_package_id: CompanyPackageId,
+    },
+    CompaniesPackagesByIds {
+        company_id: CompanyId,
+        package_id: PackageId,
     },
     PackagesByCompanyId {
         company_id: CompanyId,
@@ -78,6 +83,7 @@ pub fn create_route_parser() -> RouteParser<Route> {
     });
 
     route_parser.add_route(r"^/countries$", || Route::Countries);
+    route_parser.add_route(r"^/countries/flatten$", || Route::CountriesFlatten);
 
     // Countries search
     route_parser.add_route_with_params(r"^/countries/alpha2/(\S+)$", |params| {
@@ -155,6 +161,12 @@ pub fn create_route_parser() -> RouteParser<Route> {
             .get(0)
             .and_then(|string_id| string_id.parse().ok())
             .map(|company_id| Route::PackagesByCompanyId { company_id })
+    });
+
+    route_parser.add_route_with_params(r"^/companies/(\d+)/packages/(\d+)$", |params| {
+        let company_id = params.get(0)?.parse().ok().map(CompanyId)?;
+        let package_id = params.get(1)?.parse().ok().map(PackageId)?;
+        Some(Route::CompaniesPackagesByIds { company_id, package_id })
     });
 
     route_parser.add_route_with_params(r"^/packages/(\d+)/companies$", |params| {

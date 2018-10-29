@@ -21,6 +21,8 @@ pub trait CountriesService {
     fn find_country(&self, search: CountrySearch) -> ServiceFuture<Option<Country>>;
     /// Returns all countries as a tree
     fn get_all(&self) -> ServiceFuture<Country>;
+    /// Returns all countries as a flat Vec
+    fn get_all_flatten(&self) -> ServiceFuture<Vec<Country>>;
 }
 
 impl<
@@ -67,7 +69,7 @@ impl<
         })
     }
 
-    /// Returns country by label
+    /// Returns all countries
     fn get_all(&self) -> ServiceFuture<Country> {
         let repo_factory = self.static_context.repo_factory.clone();
         let user_id = self.dynamic_context.user_id;
@@ -77,6 +79,19 @@ impl<
             countries_repo
                 .get_all()
                 .map_err(|e| e.context("Service Countries, get_all endpoint error occured.").into())
+        })
+    }
+
+    /// Returns all countries as a flat Vec
+    fn get_all_flatten(&self) -> ServiceFuture<Vec<Country>> {
+        let repo_factory = self.static_context.repo_factory.clone();
+        let user_id = self.dynamic_context.user_id;
+
+        self.spawn_on_pool(move |conn| {
+            let countries_repo = repo_factory.create_countries_repo(&*conn, user_id);
+            countries_repo
+                .get_all_flatten()
+                .map_err(|e| e.context("Service Countries, get_all_flatten endpoint error occured.").into())
         })
     }
 }

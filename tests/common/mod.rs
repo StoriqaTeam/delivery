@@ -209,11 +209,14 @@ pub fn delete_deliveries_objects(
     base_url: String,
     user_id: UserId,
 ) {
-    let (package_id, company_id, companies_package_id) = ids;
+    let (package_id, company_id, _companies_package_id) = ids;
 
     let delete_result = core.run(http_client.request_with_auth_header::<CompaniesPackages>(
         Method::Delete,
-        format!("{}/{}/{}", base_url, MOCK_COMPANIES_PACKAGES_ENDPOINT, companies_package_id),
+        format!(
+            "{}/{}/{}/{}/{}",
+            base_url, MOCK_COMPANIES_ENDPOINT, company_id, MOCK_PACKAGES_ENDPOINT, package_id
+        ),
         None,
         Some(user_id.to_string()),
     ));

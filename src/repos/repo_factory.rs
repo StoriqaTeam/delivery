@@ -170,6 +170,7 @@ pub mod tests {
     use r2d2::ManageConnection;
     use tokio_core::reactor::Handle;
 
+    use stq_static_resources::Currency;
     use stq_types::*;
 
     use config::Config;
@@ -462,6 +463,11 @@ pub mod tests {
         fn get_all(&self) -> RepoResult<Country> {
             Ok(create_mock_countries())
         }
+
+        /// Returns all countries as a flatten vec
+        fn get_all_flatten(&self) -> RepoResult<Vec<Country>> {
+            Ok(create_mock_countries_flatten())
+        }
     }
 
     fn create_mock_countries() -> Country {
@@ -497,6 +503,19 @@ pub mod tests {
         }
     }
 
+    fn create_mock_countries_flatten() -> Vec<Country> {
+        vec![Country {
+            label: "RUS".to_string().into(),
+            children: vec![],
+            level: 2,
+            parent: Some("XEU".to_string().into()),
+            alpha2: Alpha2("RU".to_string()),
+            alpha3: Alpha3("RUS".to_string()),
+            numeric: 0,
+            is_selected: false,
+        }]
+    }
+
     #[derive(Clone, Default)]
     pub struct CompaniesRepoMock;
 
@@ -511,6 +530,7 @@ pub mod tests {
                 description: payload.description,
                 deliveries_from: payload.deliveries_from,
                 logo: payload.logo,
+                currency: payload.currency,
             };
 
             let countries_arg = create_mock_countries();
@@ -527,6 +547,7 @@ pub mod tests {
                     description: None,
                     deliveries_from: vec![],
                     logo: "".to_string(),
+                    currency: Currency::STQ,
                 },
                 Company {
                     id: CompanyId(2),
@@ -535,6 +556,7 @@ pub mod tests {
                     description: None,
                     deliveries_from: vec![],
                     logo: "".to_string(),
+                    currency: Currency::USD,
                 },
             ])
         }
@@ -552,6 +574,7 @@ pub mod tests {
                     description: None,
                     deliveries_from: vec![],
                     logo: "".to_string(),
+                    currency: Currency::STQ,
                 },
                 Company {
                     id: CompanyId(2),
@@ -560,6 +583,7 @@ pub mod tests {
                     description: None,
                     deliveries_from: vec![],
                     logo: "".to_string(),
+                    currency: Currency::USD,
                 },
             ])
         }
@@ -572,6 +596,7 @@ pub mod tests {
                 description: payload.description,
                 deliveries_from: vec![],
                 logo: payload.logo.unwrap(),
+                currency: payload.currency.unwrap(),
             })
         }
 
@@ -583,6 +608,7 @@ pub mod tests {
                 description: None,
                 deliveries_from: vec![],
                 logo: "".to_string(),
+                currency: Currency::STQ,
             })
         }
     }
@@ -754,6 +780,7 @@ pub mod tests {
                     logo: "logo".to_string(),
                     deliveries_to: vec![],
                     local_available: false,
+                    currency: Currency::STQ,
                 }).collect())
         }
 
@@ -773,6 +800,7 @@ pub mod tests {
                 label: "UPS".to_string(),
                 description: None,
                 deliveries_from: vec![],
+                currency: Currency::STQ,
                 logo: "".to_string(),
             }])
         }
@@ -791,11 +819,11 @@ pub mod tests {
         }
 
         /// Delete a companies_packages
-        fn delete(&self, id_arg: CompanyPackageId) -> RepoResult<CompaniesPackages> {
+        fn delete(&self, company_id_arg: CompanyId, package_id_arg: PackageId) -> RepoResult<CompaniesPackages> {
             Ok(CompaniesPackages {
-                id: id_arg,
-                company_id: CompanyId(1),
-                package_id: PackageId(1),
+                id: CompanyPackageId(1),
+                company_id: company_id_arg,
+                package_id: package_id_arg,
             })
         }
     }
