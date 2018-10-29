@@ -2,7 +2,8 @@ use diesel::connection::AnsiTransactionManager;
 use diesel::pg::Pg;
 use diesel::Connection;
 use failure::Error as FailureError;
-
+use std::sync::Arc;
+use stq_cache::cache::{Cache, CacheSingle};
 use stq_types::*;
 
 use models::*;
@@ -21,17 +22,37 @@ pub trait ReposFactory<C: Connection<Backend = Pg, TransactionManager = AnsiTran
     fn create_user_roles_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<UserRolesRepo + 'a>;
 }
 
-#[derive(Clone)]
-pub struct ReposFactoryImpl {
-    roles_cache: RolesCacheImpl,
-    country_cache: CountryCacheImpl,
+pub struct ReposFactoryImpl<C1, C2>
+where
+    C1: CacheSingle<Country>,
+    C2: Cache<Vec<DeliveryRole>>,
+{
+    country_cache: Arc<CountryCacheImpl<C1>>,
+    roles_cache: Arc<RolesCacheImpl<C2>>,
 }
 
-impl ReposFactoryImpl {
-    pub fn new(roles_cache: RolesCacheImpl, country_cache: CountryCacheImpl) -> Self {
+impl<C1, C2> Clone for ReposFactoryImpl<C1, C2>
+where
+    C1: CacheSingle<Country>,
+    C2: Cache<Vec<DeliveryRole>>,
+{
+    fn clone(&self) -> Self {
         Self {
-            roles_cache,
-            country_cache,
+            country_cache: self.country_cache.clone(),
+            roles_cache: self.roles_cache.clone(),
+        }
+    }
+}
+
+impl<C1, C2> ReposFactoryImpl<C1, C2>
+where
+    C1: CacheSingle<Country> + Send + Sync + 'static,
+    C2: Cache<Vec<DeliveryRole>> + Send + Sync + 'static,
+{
+    pub fn new(country_cache: CountryCacheImpl<C1>, roles_cache: RolesCacheImpl<C2>) -> Self {
+        Self {
+            country_cache: Arc::new(country_cache),
+            roles_cache: Arc::new(roles_cache),
         }
     }
 
@@ -61,7 +82,12 @@ impl ReposFactoryImpl {
     }
 }
 
-impl<C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> ReposFactory<C> for ReposFactoryImpl {
+impl<C, C1, C2> ReposFactory<C> for ReposFactoryImpl<C1, C2>
+where
+    C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static,
+    C1: CacheSingle<Country> + Send + Sync + 'static,
+    C2: Cache<Vec<DeliveryRole>> + Send + Sync + 'static,
+{
     fn create_companies_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<CompaniesRepo + 'a> {
         let acl = self.get_acl(db_conn, user_id);
         let all_countries = self.create_countries_repo(db_conn, user_id).get_all().ok().unwrap_or_default();
@@ -76,7 +102,8 @@ impl<C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 
 
     fn create_countries_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<CountriesRepo + 'a> {
         let acl = self.get_acl(db_conn, user_id);
-        Box::new(CountriesRepoImpl::new(db_conn, acl, self.country_cache.clone())) as Box<CountriesRepo>
+        let cache = self.country_cache.clone();
+        Box::new(CountriesRepoImpl::new(db_conn, acl, cache)) as Box<CountriesRepo>
     }
 
     fn create_products_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<ProductsRepo + 'a> {
@@ -102,15 +129,17 @@ impl<C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 
     }
 
     fn create_user_roles_repo_with_sys_acl<'a>(&self, db_conn: &'a C) -> Box<UserRolesRepo + 'a> {
+        let cache = self.roles_cache.clone();
         Box::new(UserRolesRepoImpl::new(
             db_conn,
             Box::new(SystemACL::default()) as Box<Acl<Resource, Action, Scope, FailureError, UserRole>>,
-            self.roles_cache.clone(),
+            cache,
         )) as Box<UserRolesRepo>
     }
     fn create_user_roles_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<UserRolesRepo + 'a> {
         let acl = self.get_acl(db_conn, user_id);
-        Box::new(UserRolesRepoImpl::new(db_conn, acl, self.roles_cache.clone())) as Box<UserRolesRepo>
+        let cache = self.roles_cache.clone();
+        Box::new(UserRolesRepoImpl::new(db_conn, acl, cache)) as Box<UserRolesRepo>
     }
 }
 

@@ -7,7 +7,8 @@ use diesel::query_dsl::RunQueryDsl;
 use diesel::sql_types::Bool;
 use diesel::Connection;
 use failure::Error as FailureError;
-
+use std::sync::Arc;
+use stq_cache::cache::CacheSingle;
 use stq_types::{self, Alpha3, CountryLabel, UserId};
 
 use models::authorization::*;
@@ -30,10 +31,14 @@ pub enum CountrySearch {
 }
 
 /// Countries repository, responsible for handling countries
-pub struct CountriesRepoImpl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> {
+pub struct CountriesRepoImpl<'a, C, T>
+where
+    C: CacheSingle<Country>,
+    T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static,
+{
     pub db_conn: &'a T,
     pub acl: Box<Acl<Resource, Action, Scope, FailureError, Country>>,
-    pub cache: CountryCacheImpl,
+    pub cache: Arc<CountryCacheImpl<C>>,
 }
 
 pub trait CountriesRepo {
@@ -53,13 +58,21 @@ pub trait CountriesRepo {
     fn get_all_flatten(&self) -> RepoResult<Vec<Country>>;
 }
 
-impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> CountriesRepoImpl<'a, T> {
-    pub fn new(db_conn: &'a T, acl: Box<Acl<Resource, Action, Scope, FailureError, Country>>, cache: CountryCacheImpl) -> Self {
+impl<'a, C, T> CountriesRepoImpl<'a, C, T>
+where
+    C: CacheSingle<Country>,
+    T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static,
+{
+    pub fn new(db_conn: &'a T, acl: Box<Acl<Resource, Action, Scope, FailureError, Country>>, cache: Arc<CountryCacheImpl<C>>) -> Self {
         Self { db_conn, acl, cache }
     }
 }
 
-impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> CountriesRepo for CountriesRepoImpl<'a, T> {
+impl<'a, C, T> CountriesRepo for CountriesRepoImpl<'a, C, T>
+where
+    C: CacheSingle<Country>,
+    T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static,
+{
     /// Find specific country by label
     fn find(&self, arg: Alpha3) -> RepoResult<Option<Country>> {
         debug!("Find in countries with aplha3 {}.", arg);
@@ -96,7 +109,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     /// Creates new country
     fn create(&self, payload: NewCountry) -> RepoResult<Country> {
         debug!("Create new country {:?}.", payload);
-        self.cache.clear();
+        self.cache.remove();
         let query = diesel::insert_into(countries).values(&payload);
         query
             .get_result::<RawCountry>(self.db_conn)
@@ -120,7 +133,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                         .into_iter()
                         .nth(0)
                         .ok_or_else(|| format_err!("Could not create countries tree"))?;
-                    self.cache.set(root.clone());
+                    self.cache.set(&root);
                     Ok(root)
                 }).map_err(|e: FailureError| e.context("Get all countries error occured").into())
         }
@@ -298,8 +311,10 @@ pub fn contains_country_code(country: &Country, country_code: &Alpha3) -> bool {
     }
 }
 
-impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> CheckScope<Scope, Country>
-    for CountriesRepoImpl<'a, T>
+impl<'a, C, T> CheckScope<Scope, Country> for CountriesRepoImpl<'a, C, T>
+where
+    C: CacheSingle<Country>,
+    T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static,
 {
     fn is_in_scope(&self, _user_label: UserId, scope: &Scope, _obj: Option<&Country>) -> bool {
         match *scope {

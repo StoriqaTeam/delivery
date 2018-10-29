@@ -10,7 +10,8 @@ use diesel::query_dsl::RunQueryDsl;
 use diesel::Connection;
 use failure::Error as FailureError;
 use failure::Fail;
-
+use std::sync::Arc;
+use stq_cache::cache::Cache;
 use stq_types::{DeliveryRole, RoleId, UserId};
 
 use models::authorization::*;
@@ -36,44 +37,56 @@ pub trait UserRolesRepo {
 }
 
 /// Implementation of UserRoles trait
-pub struct UserRolesRepoImpl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> {
-    pub db_conn: &'a T,
+pub struct UserRolesRepoImpl<'a, C, T>
+where
+    C: Cache<Vec<DeliveryRole>>,
+    T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static,
+{
     pub acl: Box<Acl<Resource, Action, Scope, FailureError, UserRole>>,
-    pub cached_roles: RolesCacheImpl,
+    pub db_conn: &'a T,
+    pub roles_cache: Arc<RolesCacheImpl<C>>,
 }
 
-impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> UserRolesRepoImpl<'a, T> {
-    pub fn new(db_conn: &'a T, acl: Box<Acl<Resource, Action, Scope, FailureError, UserRole>>, cached_roles: RolesCacheImpl) -> Self {
-        Self {
-            db_conn,
-            acl,
-            cached_roles,
-        }
+impl<'a, C, T> UserRolesRepoImpl<'a, C, T>
+where
+    C: Cache<Vec<DeliveryRole>>,
+    T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static,
+{
+    pub fn new(
+        db_conn: &'a T,
+        acl: Box<Acl<Resource, Action, Scope, FailureError, UserRole>>,
+        roles_cache: Arc<RolesCacheImpl<C>>,
+    ) -> Self {
+        Self { acl, db_conn, roles_cache }
     }
 }
 
-impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> UserRolesRepo for UserRolesRepoImpl<'a, T> {
+impl<'a, C, T> UserRolesRepo for UserRolesRepoImpl<'a, C, T>
+where
+    C: Cache<Vec<DeliveryRole>>,
+    T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static,
+{
     /// Returns list of user_roles for a specific user
     fn list_for_user(&self, user_id_value: UserId) -> RepoResult<Vec<DeliveryRole>> {
         debug!("list user roles for id {}.", user_id_value);
-        if self.cached_roles.contains(user_id_value) {
-            let user_roles = self.cached_roles.get(user_id_value);
+
+        if let Some(user_roles) = self.roles_cache.get(user_id_value) {
             Ok(user_roles)
         } else {
             let query = roles.filter(user_id.eq(user_id_value));
             query
                 .get_results::<UserRole>(self.db_conn)
-                .and_then(|user_roles_arg| {
+                .map(|user_roles_arg| {
                     let user_roles = user_roles_arg
                         .into_iter()
                         .map(|user_role| user_role.name)
                         .collect::<Vec<DeliveryRole>>();
-                    Ok(user_roles)
-                }).and_then(|user_roles| {
+
                     if !user_roles.is_empty() {
-                        self.cached_roles.add_roles(user_id_value, &user_roles);
+                        self.roles_cache.set(user_id_value, user_roles.clone());
                     }
-                    Ok(user_roles)
+
+                    user_roles
                 }).map_err(|e| {
                     e.context(format!("List user roles for user {} error occured.", user_id_value))
                         .into()
@@ -84,7 +97,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     /// Create a new user role
     fn create(&self, payload: NewUserRole) -> RepoResult<UserRole> {
         debug!("create new user role {:?}.", payload);
-        self.cached_roles.remove(payload.user_id);
+        self.roles_cache.remove(payload.user_id);
         let query = diesel::insert_into(roles).values(&payload);
         query
             .get_result(self.db_conn)
@@ -94,7 +107,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     /// Delete roles of a user
     fn delete_by_user_id(&self, user_id_arg: UserId) -> RepoResult<Vec<UserRole>> {
         debug!("delete user {} role.", user_id_arg);
-        self.cached_roles.remove(user_id_arg);
+        self.roles_cache.remove(user_id_arg);
         let filtered = roles.filter(user_id.eq(user_id_arg));
         let query = diesel::delete(filtered);
         query
@@ -111,14 +124,16 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             .get_result(self.db_conn)
             .map_err(|e| e.context(format!("Delete role {} error occured", id_arg)).into())
             .map(|user_role: UserRole| {
-                self.cached_roles.remove(user_role.user_id);
+                self.roles_cache.remove(user_role.user_id);
                 user_role
             })
     }
 }
 
-impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> CheckScope<Scope, UserRole>
-    for UserRolesRepoImpl<'a, T>
+impl<'a, C, T> CheckScope<Scope, UserRole> for UserRolesRepoImpl<'a, C, T>
+where
+    C: Cache<Vec<DeliveryRole>>,
+    T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static,
 {
     fn is_in_scope(&self, user_id_arg: UserId, scope: &Scope, obj: Option<&UserRole>) -> bool {
         match *scope {
