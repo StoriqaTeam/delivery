@@ -188,7 +188,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 
         let query = DslProducts::products
             .filter(DslProducts::base_product_id.eq(base_product_id_arg))
-            .filter(sql(format!("deliveries_to ?| {}", pg_str).as_ref()))
+            .filter(sql(format!("products.deliveries_to ?| {}", pg_str).as_ref()))
             .inner_join(
                 DslCompaniesPackages::companies_packages
                     .inner_join(DslCompanies::companies)
