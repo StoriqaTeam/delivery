@@ -6,9 +6,9 @@ use failure::Error as FailureError;
 
 use r2d2::ManageConnection;
 
-use stq_types::{Alpha3, BaseProductId, CompanyPackageId};
+use stq_types::{Alpha3, BaseProductId, CompanyPackageId, DeliveryMethodId};
 
-use models::{AvailableShippingForUser, NewProducts, NewShipping, Products, Shipping, ShippingProducts, UpdateProducts};
+use models::{AvailableShippingForUser, DeliveryMethod, NewProducts, NewShipping, Products, Shipping, ShippingProducts, UpdateProducts};
 use repos::countries::create_tree_used_countries;
 use repos::products::ProductsWithAvailableCountries;
 use repos::ReposFactory;
@@ -30,6 +30,12 @@ pub trait ProductsService {
         base_product_id: BaseProductId,
         user_country: Alpha3,
     ) -> ServiceFuture<AvailableShippingForUser>;
+
+    /// Get delivery method by id
+    fn get_delivery_method(
+        &self,
+        delivery_method_id: DeliveryMethodId,
+    ) -> ServiceFuture<Option<DeliveryMethod>>;
 
     /// Update a product
     fn update_products(
@@ -155,6 +161,27 @@ impl<
                         .get(base_product_id)
                         .map(|pickups| AvailableShippingForUser { packages, pickups })
                 }).map_err(|e| e.context("Service Products, find_available_to endpoint error occured.").into())
+        })
+    }
+
+    fn get_delivery_method(
+        &self,
+        delivery_method_id: DeliveryMethodId,
+    ) -> ServiceFuture<Option<DeliveryMethod>> {
+        let repo_factory = self.static_context.repo_factory.clone();
+        let user_id = self.dynamic_context.user_id;
+
+        self.spawn_on_pool(move |conn| {
+            match delivery_method_id {
+                DeliveryMethodId::Package { id } => {
+                    let companies_packages_repo = repo_factory.create_companies_packages_repo(&*conn, user_id);
+                    companies_packages_repo.get(id).map(|opt| opt.map(DeliveryMethod::Package))
+                },
+                DeliveryMethodId::Pickup { id } => {
+                    let pickups_repo = repo_factory.create_pickups_repo(&*conn, user_id);
+                    pickups_repo.get_by_id(id).map(|opt| opt.map(DeliveryMethod::Pickup))
+                }
+            }.map_err(|e| e.context("Service Products, get_delivery_method endpoint error occured.").into())
         })
     }
 

@@ -42,3 +42,10 @@ pub struct AvailableShippingForUser {
     pub packages: Vec<AvailablePackageForUser>,
     pub pickups: Option<Pickups>,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case", untagged)]
+pub enum DeliveryMethod {
+    Package(CompaniesPackages),
+    Pickup(Pickups),
+}

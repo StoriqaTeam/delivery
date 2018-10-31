@@ -22,6 +22,9 @@ pub enum Route {
     CountryByNumeric {
         numeric: i32,
     },
+    DeliveryMethod {
+        id: i32,
+    },
     Products,
     ProductsById {
         base_product_id: BaseProductId,
@@ -107,6 +110,13 @@ pub fn create_route_parser() -> RouteParser<Route> {
             .get(0)
             .and_then(|string_id| string_id.parse().ok())
             .map(|numeric| Route::CountryByNumeric { numeric })
+    });
+
+    route_parser.add_route_with_params(r"^/delivery_method/(\d+)$", |params| {
+        params
+            .get(0)
+            .and_then(|string_id| string_id.parse().ok())
+            .map(|id| Route::DeliveryMethod { id })
     });
 
     route_parser.add_route(r"^/products$", || Route::Products);

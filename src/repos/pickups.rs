@@ -12,7 +12,7 @@ use diesel::Connection;
 use failure::Error as FailureError;
 use failure::Fail;
 
-use stq_types::{BaseProductId, UserId};
+use stq_types::{BaseProductId, PickupId, UserId};
 
 use models::authorization::*;
 use repos::legacy_acl::*;
@@ -34,6 +34,9 @@ pub trait PickupsRepo {
 
     /// Getting pickups by base_product_id
     fn get(&self, base_product_id_arg: BaseProductId) -> RepoResult<Option<Pickups>>;
+
+    /// Get pickup by id
+    fn get_by_id(&self, id: PickupId) -> RepoResult<Option<Pickups>>;
 
     /// Update a pickups
     fn update(&self, base_product_id_arg: BaseProductId, payload: UpdatePickups) -> RepoResult<Pickups>;
@@ -101,6 +104,26 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 Ok(result)
             }).map_err(|e: FailureError| {
                 e.context(format!("Getting pickups by base_product_id {}", base_product_id_arg))
+                    .into()
+            })
+    }
+
+    /// Get pickup by id
+    fn get_by_id(&self, pickup_id_arg: PickupId) -> RepoResult<Option<Pickups>> {
+        debug!("Get pickup by id {}", pickup_id_arg);
+
+        pickups
+            .find(pickup_id_arg)
+            .get_result(self.db_conn)
+            .optional()
+            .map_err(From::from)
+            .and_then(|result: Option<Pickups>| {
+                if let Some(ref result) = result {
+                    acl::check(&*self.acl, Resource::Pickups, Action::Read, self, Some(result))?;
+                }
+                Ok(result)
+            }).map_err(|e: FailureError| {
+                e.context(format!("Get pickup by id {}", pickup_id_arg))
                     .into()
             })
     }

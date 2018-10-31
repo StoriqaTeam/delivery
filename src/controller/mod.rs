@@ -249,6 +249,32 @@ impl<
                 }
             }
 
+            // GET /delivery_method/<id>?type=<type>
+            (&Get, Some(Route::DeliveryMethod { id })) => {
+                debug!(
+                    "User with id = '{:?}' is requesting  // GET /delivery_method/{}",
+                    user_id, id
+                );
+
+                parse_query!(req.query().unwrap_or_default(), "type" => String)
+                    .and_then(|s| match s.as_str() {
+                        "package" => Some(serialize_future(
+                            service.get_delivery_method(DeliveryMethodId::Package { id: CompanyPackageId(id) })
+                        )),
+                        "pickup" => Some(serialize_future(
+                            service.get_delivery_method(DeliveryMethodId::Pickup { id: PickupId(id) })
+                        )),
+                        _ => None,
+                    })
+                    .unwrap_or(
+                        Box::new(future::err(
+                            format_err!("Parsing query parameters // GET /delivery_method/{} failed!", id)
+                                .context(Error::Parse)
+                                .into(),
+                        ))
+                    )
+            }
+
             // Get /companies_packages/<company_package_id>
             (&Get, Some(Route::CompaniesPackagesById { company_package_id })) => {
                 debug!(
