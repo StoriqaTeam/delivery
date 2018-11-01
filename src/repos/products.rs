@@ -17,7 +17,7 @@ use models::authorization::*;
 use models::countries::Country;
 use models::{
     AvailablePackageForUser, CompaniesPackages, CompanyRaw, NewProducts, NewProductsRaw, PackagesRaw, Products, ProductsRaw,
-    UpdateProducts, UserRole,
+    ShippingVariant, UpdateProducts, UserRole,
 };
 
 use repos::legacy_acl::*;
@@ -204,25 +204,42 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 
         query
             .get_results::<(ProductsRaw, (CompaniesPackages, CompanyRaw, PackagesRaw))>(self.db_conn)
-            .map_err(From::from)
-            .and_then(|results| {
-                let mut data = vec![];
-                for result in results {
-                    let (product_raw, (companies_package, company_raw, package_raw)) = result;
-                    data.push(AvailablePackageForUser {
-                        id: companies_package.id,
-                        name: get_company_package_name(&company_raw.label, &package_raw.name),
-                        logo: company_raw.logo,
-                        price: product_raw.price,
-                    });
-                }
+            .map(|results| {
+                let available_packages = results
+                    .iter()
+                    .map(|result| {
+                        let (product_raw, (companies_package, company_raw, package_raw)) = result;
+                        AvailablePackageForUser {
+                            id: companies_package.id,
+                            shipping_id: product_raw.id,
+                            name: get_company_package_name(&company_raw.label, &package_raw.name),
+                            logo: company_raw.logo.clone(),
+                            price: product_raw.price,
+                            shipping_variant: product_raw.shipping.clone(),
+                        }
+                    }).collect::<Vec<_>>();
 
-                Ok(data)
-            }).map_err(move |e: FailureError| {
-                e.context(format!(
-                    "Find available product {} delivery to users country {} failure.",
-                    base_product_id_arg, user_country
-                )).into()
+                let local_package_ids = available_packages
+                    .iter()
+                    .filter_map(|package| {
+                        if package.shipping_variant.clone() == ShippingVariant::Local {
+                            Some(package.id)
+                        } else {
+                            None
+                        }
+                    }).collect::<Vec<_>>();
+
+                available_packages
+                    .into_iter()
+                    .filter(|package| {
+                        package.shipping_variant.clone() == ShippingVariant::Local || !local_package_ids.contains(&package.id)
+                    }).collect::<Vec<_>>()
+            }).map_err(move |e| {
+                FailureError::from(e)
+                    .context(format!(
+                        "Find available product {} delivery to users country {} failure.",
+                        base_product_id_arg, user_country
+                    )).into()
             })
     }
 
@@ -255,9 +272,11 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                     let (product_raw, (companies_package, company_raw, package_raw)) = result;
                     let available_package = AvailablePackageForUser {
                         id: companies_package.id,
+                        shipping_id: product_raw.id,
                         name: get_company_package_name(&company_raw.label, &package_raw.name),
                         logo: company_raw.logo,
                         price: product_raw.price,
+                        shipping_variant: product_raw.shipping,
                     };
 
                     Ok(Some(available_package))
