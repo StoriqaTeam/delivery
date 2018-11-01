@@ -1,4 +1,4 @@
-use models::{Country, Pickups};
+use models::{Country, Pickups, ShippingVariant};
 use stq_static_resources::Currency;
 use stq_types::{CompanyId, CompanyPackageId, PackageId, ProductPrice};
 
@@ -32,9 +32,11 @@ pub struct AvailablePackages {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AvailablePackageForUser {
     pub id: CompanyPackageId,
+    pub shipping_id: i32,
     pub name: String,
     pub logo: String,
     pub price: Option<ProductPrice>,
+    pub shipping_variant: ShippingVariant,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
