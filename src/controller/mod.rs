@@ -249,6 +249,21 @@ impl<
                 }
             }
 
+            // GET /available_packages_for_user/products/:id/companies_packages/:id
+            (
+                &Get,
+                Some(Route::AvailablePackageForUser {
+                    base_product_id,
+                    company_package_id,
+                }),
+            ) => {
+                debug!(
+                    "User with id = '{:?}' is requesting  // GET /available_packages_for_user/products/{}/companies_packages/{}",
+                    user_id, base_product_id, company_package_id
+                );
+                serialize_future(service.get_available_package_for_user(base_product_id, company_package_id))
+            }
+
             // Get /companies_packages/<company_package_id>
             (&Get, Some(Route::CompaniesPackagesById { company_package_id })) => {
                 debug!(
