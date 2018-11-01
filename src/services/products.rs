@@ -8,7 +8,9 @@ use r2d2::ManageConnection;
 
 use stq_types::{Alpha3, BaseProductId, CompanyPackageId};
 
-use models::{AvailableShippingForUser, NewProducts, NewShipping, Products, Shipping, ShippingProducts, UpdateProducts};
+use models::{
+    AvailablePackageForUser, AvailableShippingForUser, NewProducts, NewShipping, Products, Shipping, ShippingProducts, UpdateProducts,
+};
 use repos::countries::create_tree_used_countries;
 use repos::products::ProductsWithAvailableCountries;
 use repos::ReposFactory;
@@ -38,6 +40,13 @@ pub trait ProductsService {
         company_package_id: CompanyPackageId,
         payload: UpdateProducts,
     ) -> ServiceFuture<Products>;
+
+    /// Returns available package for user by id
+    fn get_available_package_for_user(
+        &self,
+        base_product_id: BaseProductId,
+        package_id: CompanyPackageId,
+    ) -> ServiceFuture<Option<AvailablePackageForUser>>;
 
     fn delete_products(&self, base_product_id_arg: BaseProductId) -> ServiceFuture<()>;
 }
@@ -132,7 +141,10 @@ impl<
                         items: products,
                         pickup: pickups,
                     })
-                }).map_err(|e| e.context("Service Products, get_by_base_product_id endpoint error occured.").into())
+                }).map_err(|e| {
+                    e.context("Service Products, get_by_base_product_id endpoint error occurred.")
+                        .into()
+                })
         })
     }
 
@@ -154,7 +166,28 @@ impl<
                     pickups_repo
                         .get(base_product_id)
                         .map(|pickups| AvailableShippingForUser { packages, pickups })
-                }).map_err(|e| e.context("Service Products, find_available_to endpoint error occured.").into())
+                }).map_err(|e| e.context("Service Products, find_available_to endpoint error occurred.").into())
+        })
+    }
+
+    /// Returns available package for user by id
+    fn get_available_package_for_user(
+        &self,
+        base_product_id: BaseProductId,
+        package_id: CompanyPackageId,
+    ) -> ServiceFuture<Option<AvailablePackageForUser>> {
+        let repo_factory = self.static_context.repo_factory.clone();
+        let user_id = self.dynamic_context.user_id;
+
+        self.spawn_on_pool(move |conn| {
+            let products_repo = repo_factory.create_products_repo(&*conn, user_id);
+
+            products_repo
+                .get_available_package_for_user(base_product_id, package_id)
+                .map_err(|e| {
+                    e.context("Service Products, get_available_package_for_user endpoint error occurred.")
+                        .into()
+                })
         })
     }
 
