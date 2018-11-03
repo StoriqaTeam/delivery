@@ -133,7 +133,12 @@ impl<T> Acl<Resource, Action, Scope, FailureError, T> for UnauthorizedAcl {
     ) -> Result<bool, FailureError> {
         if action == Action::Read {
             match resource {
+                Resource::Companies => Ok(true),
+                Resource::CompaniesPackages => Ok(true),
                 Resource::Countries => Ok(true),
+                Resource::Packages => Ok(true),
+                Resource::Pickups => Ok(true),
+                Resource::Products => Ok(true),
                 _ => Ok(false),
             }
         } else {
