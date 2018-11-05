@@ -6,7 +6,7 @@ use failure::Error as FailureError;
 
 use r2d2::ManageConnection;
 
-use stq_types::{Alpha3, BaseProductId, CompanyPackageId};
+use stq_types::{Alpha3, BaseProductId, CompanyPackageId, ShippingId};
 
 use models::{
     AvailablePackageForUser, AvailableShippingForUser, NewProducts, NewShipping, Products, Shipping, ShippingProducts, UpdateProducts,
@@ -49,7 +49,7 @@ pub trait ProductsService {
     ) -> ServiceFuture<Option<AvailablePackageForUser>>;
 
     /// Returns available package for user by shipping id
-    fn get_available_package_for_user_by_shipping_id(&self, shipping_id: i32) -> ServiceFuture<Option<AvailablePackageForUser>>;
+    fn get_available_package_for_user_by_shipping_id(&self, shipping_id: ShippingId) -> ServiceFuture<Option<AvailablePackageForUser>>;
 
     fn delete_products(&self, base_product_id_arg: BaseProductId) -> ServiceFuture<()>;
 }
@@ -195,7 +195,7 @@ impl<
     }
 
     /// Returns available package for user by shipping id
-    fn get_available_package_for_user_by_shipping_id(&self, shipping_id: i32) -> ServiceFuture<Option<AvailablePackageForUser>> {
+    fn get_available_package_for_user_by_shipping_id(&self, shipping_id: ShippingId) -> ServiceFuture<Option<AvailablePackageForUser>> {
         let repo_factory = self.static_context.repo_factory.clone();
         let user_id = self.dynamic_context.user_id;
 

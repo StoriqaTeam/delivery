@@ -61,7 +61,7 @@ pub enum Route {
         company_package_id: CompanyPackageId,
     },
     AvailablePackageForUserByShippingId {
-        shipping_id: i32,
+        shipping_id: ShippingId,
     },
     UsersAddresses,
     UserAddress {
@@ -203,7 +203,7 @@ pub fn create_route_parser() -> RouteParser<Route> {
     );
 
     route_parser.add_route_with_params(r"^/available_packages_for_user/by_shipping_id/(\d+)$", |params| {
-        let shipping_id = params.get(0)?.parse().ok()?;
+        let shipping_id = ShippingId(params.get(0)?.parse().ok()?);
         Some(Route::AvailablePackageForUserByShippingId { shipping_id })
     });
 

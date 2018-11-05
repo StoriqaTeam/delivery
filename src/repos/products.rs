@@ -11,7 +11,7 @@ use diesel::query_dsl::RunQueryDsl;
 use diesel::Connection;
 use failure::Error as FailureError;
 
-use stq_types::{BaseProductId, CompanyPackageId, UserId};
+use stq_types::{BaseProductId, CompanyPackageId, ShippingId, UserId};
 
 use models::authorization::*;
 use models::countries::Country;
@@ -64,7 +64,7 @@ pub trait ProductsRepo {
     ) -> RepoResult<Option<AvailablePackageForUser>>;
 
     /// Returns available package for user by shipping id
-    fn get_available_package_for_user_by_shipping_id(&self, shipping_id_arg: i32) -> RepoResult<Option<AvailablePackageForUser>>;
+    fn get_available_package_for_user_by_shipping_id(&self, shipping_id_arg: ShippingId) -> RepoResult<Option<AvailablePackageForUser>>;
 
     /// Delete a products
     fn delete(&self, base_product_id_arg: BaseProductId) -> RepoResult<Vec<Products>>;
@@ -294,7 +294,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             })
     }
 
-    fn get_available_package_for_user_by_shipping_id(&self, shipping_id_arg: i32) -> RepoResult<Option<AvailablePackageForUser>> {
+    fn get_available_package_for_user_by_shipping_id(&self, shipping_id_arg: ShippingId) -> RepoResult<Option<AvailablePackageForUser>> {
         debug!("Get available package for shipping id: {}.", shipping_id_arg);
 
         let query = DslProducts::products
