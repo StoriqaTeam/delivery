@@ -344,6 +344,8 @@ pub mod tests {
         fn find_available_to(&self, _base_product_id: BaseProductId, _user_country: Alpha3) -> RepoResult<Vec<AvailablePackageForUser>> {
             Ok(vec![AvailablePackageForUser {
                 id: CompanyPackageId(1),
+                shipping_id: 1,
+                shipping_variant: ShippingVariant::Local,
                 name: "UPS-avia".to_string(),
                 logo: "logo".to_string(),
                 price: None,
@@ -352,9 +354,13 @@ pub mod tests {
 
         fn get_available_package_for_user(
             &self,
-            base_product_id_arg: BaseProductId,
-            package_id_arg: CompanyPackageId,
+            _base_product_id_arg: BaseProductId,
+            _package_id_arg: CompanyPackageId,
         ) -> RepoResult<Option<AvailablePackageForUser>> {
+            Ok(None)
+        }
+
+        fn get_available_package_for_user_by_shipping_id(&self, _shipping_id: i32) -> RepoResult<Option<AvailablePackageForUser>> {
             Ok(None)
         }
 

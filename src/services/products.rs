@@ -48,6 +48,9 @@ pub trait ProductsService {
         package_id: CompanyPackageId,
     ) -> ServiceFuture<Option<AvailablePackageForUser>>;
 
+    /// Returns available package for user by shipping id
+    fn get_available_package_for_user_by_shipping_id(&self, shipping_id: i32) -> ServiceFuture<Option<AvailablePackageForUser>>;
+
     fn delete_products(&self, base_product_id_arg: BaseProductId) -> ServiceFuture<()>;
 }
 
@@ -186,6 +189,23 @@ impl<
                 .get_available_package_for_user(base_product_id, package_id)
                 .map_err(|e| {
                     e.context("Service Products, get_available_package_for_user endpoint error occurred.")
+                        .into()
+                })
+        })
+    }
+
+    /// Returns available package for user by shipping id
+    fn get_available_package_for_user_by_shipping_id(&self, shipping_id: i32) -> ServiceFuture<Option<AvailablePackageForUser>> {
+        let repo_factory = self.static_context.repo_factory.clone();
+        let user_id = self.dynamic_context.user_id;
+
+        self.spawn_on_pool(move |conn| {
+            let products_repo = repo_factory.create_products_repo(&*conn, user_id);
+
+            products_repo
+                .get_available_package_for_user_by_shipping_id(shipping_id)
+                .map_err(|e| {
+                    e.context("Service Products, get_available_package_for_user_by_shipping_id endpoint error occurred.")
                         .into()
                 })
         })
