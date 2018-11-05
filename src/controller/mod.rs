@@ -264,6 +264,15 @@ impl<
                 serialize_future(service.get_available_package_for_user(base_product_id, company_package_id))
             }
 
+            // GET /available_packages_for_user/by_shipping_id
+            (&Get, Some(Route::AvailablePackageForUserByShippingId { shipping_id })) => {
+                debug!(
+                    "User with id = '{:?}' is requesting  // GET /available_packages_for_user/by_shipping_id/{}",
+                    user_id, shipping_id,
+                );
+                serialize_future(service.get_available_package_for_user_by_shipping_id(shipping_id))
+            }
+
             // Get /companies_packages/<company_package_id>
             (&Get, Some(Route::CompaniesPackagesById { company_package_id })) => {
                 debug!(

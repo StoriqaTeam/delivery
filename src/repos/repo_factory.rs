@@ -285,7 +285,7 @@ pub mod tests {
         /// Create a new products
         fn create(&self, payload: NewProducts) -> RepoResult<Products> {
             Ok(Products {
-                id: 1,
+                id: ShippingId(1),
                 base_product_id: payload.base_product_id,
                 store_id: payload.store_id,
                 company_package_id: payload.company_package_id,
@@ -300,7 +300,7 @@ pub mod tests {
             let mut result = vec![];
             for item in payloads {
                 result.push(Products {
-                    id: 1,
+                    id: ShippingId(1),
                     base_product_id: item.base_product_id,
                     store_id: item.store_id,
                     company_package_id: item.company_package_id,
@@ -316,7 +316,7 @@ pub mod tests {
         /// Get a products
         fn get_by_base_product_id(&self, base_product_id: BaseProductId) -> RepoResult<Vec<Products>> {
             Ok(vec![Products {
-                id: 1,
+                id: ShippingId(1),
                 base_product_id: base_product_id,
                 store_id: StoreId(1),
                 company_package_id: CompanyPackageId(1),
@@ -328,7 +328,7 @@ pub mod tests {
 
         fn get_products_countries(&self, base_product_id: BaseProductId) -> RepoResult<Vec<ProductsWithAvailableCountries>> {
             let product = Products {
-                id: 1,
+                id: ShippingId(1),
                 base_product_id,
                 store_id: StoreId(1),
                 company_package_id: CompanyPackageId(1),
@@ -344,6 +344,8 @@ pub mod tests {
         fn find_available_to(&self, _base_product_id: BaseProductId, _user_country: Alpha3) -> RepoResult<Vec<AvailablePackageForUser>> {
             Ok(vec![AvailablePackageForUser {
                 id: CompanyPackageId(1),
+                shipping_id: ShippingId(1),
+                shipping_variant: ShippingVariant::Local,
                 name: "UPS-avia".to_string(),
                 logo: "logo".to_string(),
                 price: None,
@@ -352,9 +354,13 @@ pub mod tests {
 
         fn get_available_package_for_user(
             &self,
-            base_product_id_arg: BaseProductId,
-            package_id_arg: CompanyPackageId,
+            _base_product_id_arg: BaseProductId,
+            _package_id_arg: CompanyPackageId,
         ) -> RepoResult<Option<AvailablePackageForUser>> {
+            Ok(None)
+        }
+
+        fn get_available_package_for_user_by_shipping_id(&self, _shipping_id: ShippingId) -> RepoResult<Option<AvailablePackageForUser>> {
             Ok(None)
         }
 
@@ -366,7 +372,7 @@ pub mod tests {
             payload: UpdateProducts,
         ) -> RepoResult<Products> {
             Ok(Products {
-                id: 1,
+                id: ShippingId(1),
                 base_product_id: base_product_id_arg,
                 store_id: StoreId(1),
                 company_package_id,
@@ -379,7 +385,7 @@ pub mod tests {
         /// Delete a products
         fn delete(&self, base_product_id_arg: BaseProductId) -> RepoResult<Vec<Products>> {
             Ok(vec![Products {
-                id: 1,
+                id: ShippingId(1),
                 base_product_id: base_product_id_arg,
                 store_id: StoreId(1),
                 company_package_id: CompanyPackageId(1),

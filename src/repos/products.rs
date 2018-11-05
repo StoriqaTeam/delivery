@@ -11,7 +11,7 @@ use diesel::query_dsl::RunQueryDsl;
 use diesel::Connection;
 use failure::Error as FailureError;
 
-use stq_types::{BaseProductId, CompanyPackageId, UserId};
+use stq_types::{BaseProductId, CompanyPackageId, ShippingId, UserId};
 
 use models::authorization::*;
 use models::countries::Country;
@@ -62,6 +62,9 @@ pub trait ProductsRepo {
         base_product_id_arg: BaseProductId,
         package_id_arg: CompanyPackageId,
     ) -> RepoResult<Option<AvailablePackageForUser>>;
+
+    /// Returns available package for user by shipping id
+    fn get_available_package_for_user_by_shipping_id(&self, shipping_id_arg: ShippingId) -> RepoResult<Option<AvailablePackageForUser>>;
 
     /// Delete a products
     fn delete(&self, base_product_id_arg: BaseProductId) -> RepoResult<Vec<Products>>;
@@ -288,6 +291,43 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                     "Get available package for base product: {} with select company package id: {} failure.",
                     base_product_id_arg, package_id_arg
                 )).into()
+            })
+    }
+
+    fn get_available_package_for_user_by_shipping_id(&self, shipping_id_arg: ShippingId) -> RepoResult<Option<AvailablePackageForUser>> {
+        debug!("Get available package for shipping id: {}.", shipping_id_arg);
+
+        let query = DslProducts::products
+            .filter(DslProducts::id.eq(shipping_id_arg))
+            .inner_join(
+                DslCompaniesPackages::companies_packages
+                    .inner_join(DslCompanies::companies)
+                    .inner_join(DslPackages::packages),
+            ).order(DslCompanies::label);
+
+        query
+            .get_result::<(ProductsRaw, (CompaniesPackages, CompanyRaw, PackagesRaw))>(self.db_conn)
+            .optional()
+            .map_err(From::from)
+            .and_then(|result| {
+                if let Some(result) = result {
+                    let (product_raw, (companies_package, company_raw, package_raw)) = result;
+                    let available_package = AvailablePackageForUser {
+                        id: companies_package.id,
+                        shipping_id: product_raw.id,
+                        name: get_company_package_name(&company_raw.label, &package_raw.name),
+                        logo: company_raw.logo,
+                        price: product_raw.price,
+                        shipping_variant: product_raw.shipping,
+                    };
+
+                    Ok(Some(available_package))
+                } else {
+                    Ok(None)
+                }
+            }).map_err(move |e: FailureError| {
+                e.context(format!("Get available package for shipping id: {} failure.", shipping_id_arg))
+                    .into()
             })
     }
 

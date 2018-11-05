@@ -2,7 +2,7 @@ use failure::Error as FailureError;
 use failure::Fail;
 use serde_json;
 
-use stq_types::{Alpha3, BaseProductId, CompanyPackageId, ProductPrice, StoreId};
+use stq_types::{Alpha3, BaseProductId, CompanyPackageId, ProductPrice, ShippingId, StoreId};
 
 use errors::Error;
 use schema::products;
@@ -16,7 +16,7 @@ pub enum ShippingVariant {
 #[derive(Serialize, Queryable, Insertable, Debug, QueryableByName)]
 #[table_name = "products"]
 pub struct ProductsRaw {
-    pub id: i32,
+    pub id: ShippingId,
     pub base_product_id: BaseProductId,
     pub store_id: StoreId,
     pub company_package_id: CompanyPackageId,
@@ -46,7 +46,7 @@ pub struct UpdateProductsRaw {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Products {
-    pub id: i32,
+    pub id: ShippingId,
     pub base_product_id: BaseProductId,
     pub store_id: StoreId,
     pub company_package_id: CompanyPackageId,
