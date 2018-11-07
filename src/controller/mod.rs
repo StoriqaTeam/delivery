@@ -15,11 +15,11 @@ use hyper::{Delete, Get, Post, Put};
 use r2d2::ManageConnection;
 use validator::Validate;
 
-use stq_http::controller::Controller;
-use stq_http::controller::ControllerFuture;
-use stq_http::errors::ErrorMessageWrapper;
-use stq_http::request_util::parse_body;
-use stq_http::request_util::serialize_future;
+use stq_http::{
+    controller::{Controller, ControllerFuture},
+    errors::ErrorMessageWrapper,
+    request_util::{self, parse_body, serialize_future},
+};
 use stq_types::*;
 
 use self::context::{DynamicContext, StaticContext};
@@ -75,59 +75,72 @@ impl<
             .and_then(|id| i32::from_str(&id).ok())
             .map(UserId);
 
-        debug!("User with id = '{:?}' is requesting {}", user_id, req.path());
+        let correlation_token = request_util::get_correlation_token(&req);
 
-        let dynamic_context = DynamicContext::new(user_id);
+        debug!(
+            "Server received Request, method: {}, url: {}, user id: {:?}, correlation token: {}",
+            req.method(),
+            req.path(),
+            user_id,
+            correlation_token
+        );
+
+        let dynamic_context = DynamicContext::new(user_id, correlation_token.clone());
         let service = Service::new(self.static_context.clone(), dynamic_context);
 
         let path = req.path().to_string();
 
         let fut = match (&req.method().clone(), self.static_context.route_parser.test(req.path())) {
             (Get, Some(Route::RolesByUserId { user_id })) => {
-                debug!("Received request to get roles by user id {}", user_id);
+                debug!("Server received Request, action: get roles, user id: {}", user_id);
                 serialize_future({ service.get_roles(user_id) })
             }
             (Post, Some(Route::Roles)) => serialize_future({
                 parse_body::<NewUserRole>(req.body()).and_then(move |data| {
-                    debug!("Received request to create role {:?}", data);
+                    debug!("Server received Request, action: create role, role: {:?}", data);
                     service.create_role(data)
                 })
             }),
             (Delete, Some(Route::RolesByUserId { user_id })) => {
-                debug!("Received request to delete role by user id {}", user_id);
+                debug!("Server received Request, action: delete role by user id, user id: {}", user_id);
                 serialize_future({ service.delete_by_user_id(user_id) })
             }
             (Delete, Some(Route::RoleById { id })) => {
-                debug!("Received request to delete role by id {}", id);
+                debug!("Server received Request, action: delete role by id, role: {}", id);
                 serialize_future({ service.delete_by_id(id) })
             }
 
             // POST /products/<base_product_id>
-            (&Post, Some(Route::ProductsById { base_product_id })) => {
+            (Post, Some(Route::ProductsById { base_product_id })) => {
                 debug!(
-                    "User with id = '{:?}' is requesting  // POST /products/{}",
+                    "Server received Request, action: create new shipping record, user id: {:?}, base_product_id: {}",
                     user_id, base_product_id
                 );
                 serialize_future(
                     parse_body::<NewShipping>(req.body())
-                        .map_err(|e| {
-                            e.context("Parsing body // POST /products in NewShipping failed!")
-                                .context(Error::Parse)
-                                .into()
+                        .map_err(move |e| {
+                            e.context(format!(
+                                "Parsing body failed, target: NewShipping, base_product_id: {}",
+                                base_product_id
+                            )).context(Error::Parse)
+                            .into()
                         }).and_then(move |new_shipping| service.upsert(base_product_id, new_shipping)),
                 )
             }
 
             // GET /products/<base_product_id>
-            (&Get, Some(Route::ProductsById { base_product_id })) => {
-                debug!("User with id = '{:?}' is requesting  // GET /products/{}", user_id, base_product_id);
+            (Get, Some(Route::ProductsById { base_product_id })) => {
+                debug!(
+                    "Server received Request, action: get shipping record, user id: {:?}, base_product_id: {}",
+                    user_id, base_product_id
+                );
                 serialize_future(service.get_by_base_product_id(base_product_id))
             }
 
             // DELETE /products/<base_product_id>
-            (&Delete, Some(Route::ProductsById { base_product_id })) => {
+            (Delete, Some(Route::ProductsById { base_product_id })) => {
                 debug!(
-                    "User with id = '{:?}' is requesting  // DELETE /products/{}",
+                    "Server received Request, action: delete shipping record, user id: {:?}, base_product_id: {}",
                     user_id, base_product_id
                 );
                 serialize_future(service.delete_products(base_product_id))
@@ -135,21 +148,21 @@ impl<
 
             // PUT /products/<base_product_id>/company_package/<company_package_id>
             (
-                &Put,
+                Put,
                 Some(Route::ProductsByIdAndCompanyPackageId {
                     base_product_id,
                     company_package_id,
                 }),
             ) => {
                 debug!(
-                    "User with id = '{:?}' is requesting  // PUT /products/{}/company_package/{}",
+                    "Server received Request, action: update shipping record, user id: {:?}, base_product_id: {}, company_package_id: {}",
                     user_id, base_product_id, company_package_id
                 );
                 serialize_future(
                     parse_body::<UpdateProducts>(req.body())
                         .map_err(move |e| {
                             e.context(format!(
-                                "Parsing body // PUT /products/{}/company_package/{} in UpdateProducts failed!",
+                                "Parsing body failed, target: UpdateProducts, base_product_id: {}, company_package_id: {}",
                                 base_product_id, company_package_id
                             )).context(Error::Parse)
                             .into()
@@ -158,37 +171,40 @@ impl<
             }
 
             // POST /companies
-            (&Post, Some(Route::Companies)) => {
-                debug!("User with id = '{:?}' is requesting  // POST /companies", user_id);
+            (Post, Some(Route::Companies)) => {
+                debug!("Server received Request, action: create new company, user id: {:?}", user_id);
                 serialize_future(
                     parse_body::<NewCompany>(req.body())
-                        .map_err(|e| {
-                            e.context("Parsing body // POST /companies in NewCompanies failed!")
-                                .context(Error::Parse)
-                                .into()
-                        }).and_then(move |new_company| service.create_company(new_company)),
+                        .map_err(|e| e.context("Parsing body failed, target: NewCompanies").context(Error::Parse).into())
+                        .and_then(move |new_company| service.create_company(new_company)),
                 )
             }
 
             // GET /companies
-            (&Get, Some(Route::Companies)) => {
-                debug!("User with id = '{:?}' is requesting  // GET /companies", user_id);
+            (Get, Some(Route::Companies)) => {
+                debug!("Server received Request, action: get companies, user id: {:?}", user_id);
                 serialize_future(service.list_companies())
             }
 
             // GET /companies/<company_id>
-            (&Get, Some(Route::CompanyById { company_id })) => {
-                debug!("User with id = '{:?}' is requesting  // GET /companies/{}", user_id, company_id);
+            (Get, Some(Route::CompanyById { company_id })) => {
+                debug!(
+                    "Server received Request, action: find company, user id: {:?}, company id: {}",
+                    user_id, company_id
+                );
                 serialize_future(service.find_company(company_id))
             }
 
             // PUT /companies/<company_id>
-            (&Put, Some(Route::CompanyById { company_id })) => {
-                debug!("User with id = '{:?}' is requesting  // PUT /companies/{}", user_id, company_id);
+            (Put, Some(Route::CompanyById { company_id })) => {
+                debug!(
+                    "Server received Request, action: update company, user id: {:?}, company id: {}",
+                    user_id, company_id
+                );
                 serialize_future(
                     parse_body::<UpdateCompany>(req.body())
                         .map_err(move |e| {
-                            e.context(format!("Parsing body // PUT /companies/{} in UpdateCompany failed!", company_id))
+                            e.context(format!("Parsing body failed, target: UpdateCompany, company id: {}", company_id))
                                 .context(Error::Parse)
                                 .into()
                         }).and_then(move |update_company| service.update_company(company_id, update_company)),
@@ -196,18 +212,24 @@ impl<
             }
 
             // DELETE /companies/<company_id>
-            (&Delete, Some(Route::CompanyById { company_id })) => {
-                debug!("User with id = '{:?}' is requesting  // DELETE /companies/{}", user_id, company_id);
+            (Delete, Some(Route::CompanyById { company_id })) => {
+                debug!(
+                    "Server received Request, action: delete company, user id: {:?}, company id: {}",
+                    user_id, company_id
+                );
                 serialize_future(service.delete_company(company_id))
             }
 
             // POST /companies_packages
-            (&Post, Some(Route::CompaniesPackages)) => {
-                debug!("User with id = '{:?}' is requesting  // POST /companies_packages", user_id);
+            (Post, Some(Route::CompaniesPackages)) => {
+                debug!(
+                    "Server received Request, action: update company package record, user id: {:?}",
+                    user_id
+                );
                 serialize_future(
                     parse_body::<NewCompaniesPackages>(req.body())
                         .map_err(|e| {
-                            e.context("Parsing body // POST /companies in NewCompaniesPackages failed!")
+                            e.context("Parsing body failed, target: NewCompaniesPackages")
                                 .context(Error::Parse)
                                 .into()
                         }).and_then(move |new_companies_packages| service.create_company_package(new_companies_packages)),
@@ -215,15 +237,15 @@ impl<
             }
 
             // GET /available_packages
-            (&Get, Some(Route::AvailablePackages)) => {
-                debug!("User with id = '{:?}' is requesting  // GET /available_packages", user_id);
+            (Get, Some(Route::AvailablePackages)) => {
+                debug!("Server received Request, action: get available packages, user id: {:?}", user_id);
                 if let (Some(country), Some(size), Some(weight)) =
                     parse_query!(req.query().unwrap_or_default(), "country" => Alpha3, "size" => f64, "weight" => f64)
                 {
                     serialize_future(service.get_available_packages(country, size, weight))
                 } else {
                     Box::new(future::err(
-                        format_err!("Parsing query parameters // GET /available_packages failed!")
+                        format_err!("Parsing query parameters failed, action: get available packages")
                             .context(Error::Parse)
                             .into(),
                     ))
@@ -231,9 +253,9 @@ impl<
             }
 
             // GET /available_packages_for_user/<base_product_id>
-            (&Get, Some(Route::AvailablePackagesForUser { base_product_id })) => {
+            (Get, Some(Route::AvailablePackagesForUser { base_product_id })) => {
                 debug!(
-                    "User with id = '{:?}' is requesting  // GET /available_packages_for_user/{}",
+                    "Server received Request, action: get available packages for user, user id: {:?}, base product id: {}",
                     user_id, base_product_id
                 );
                 if let Some(user_country) = parse_query!(req.query().unwrap_or_default(), "user_country" => Alpha3) {
@@ -241,7 +263,7 @@ impl<
                 } else {
                     Box::new(future::err(
                         format_err!(
-                            "Parsing query parameters // GET /available_packages_for_user/{} failed!",
+                            "Parsing query parameters failed, action: get available packages for user, base product id: {}",
                             base_product_id
                         ).context(Error::Parse)
                         .into(),
@@ -251,113 +273,117 @@ impl<
 
             // GET /available_packages_for_user/products/:id/companies_packages/:id
             (
-                &Get,
+                Get,
                 Some(Route::AvailablePackageForUser {
                     base_product_id,
                     company_package_id,
                 }),
             ) => {
                 debug!(
-                    "User with id = '{:?}' is requesting  // GET /available_packages_for_user/products/{}/companies_packages/{}",
+                    "Server received Request, action: get available packages for user, user id: {:?}, base product id: {}, company package id: {}",
                     user_id, base_product_id, company_package_id
                 );
                 serialize_future(service.get_available_package_for_user(base_product_id, company_package_id))
             }
 
             // GET /available_packages_for_user/by_shipping_id
-            (&Get, Some(Route::AvailablePackageForUserByShippingId { shipping_id })) => {
+            (Get, Some(Route::AvailablePackageForUserByShippingId { shipping_id })) => {
                 debug!(
-                    "User with id = '{:?}' is requesting  // GET /available_packages_for_user/by_shipping_id/{}",
-                    user_id, shipping_id,
-                );
+                    "Server received Request, action: get available packages for user, user id: {:?}, shipping id: {}",
+                    user_id, shipping_id);
                 serialize_future(service.get_available_package_for_user_by_shipping_id(shipping_id))
             }
 
             // Get /companies_packages/<company_package_id>
-            (&Get, Some(Route::CompaniesPackagesById { company_package_id })) => {
+            (Get, Some(Route::CompaniesPackagesById { company_package_id })) => {
                 debug!(
-                    "User with id = '{:?}' is requesting  // GET /companies_packages/{}",
-                    user_id, company_package_id
-                );
+                    "Server received Request, action: get company packages, user id: {:?}, company package id: {}",
+                    user_id, company_package_id);
                 serialize_future(service.get_company_package(company_package_id))
             }
 
             // Get /packages/<package_id>/companies
-            (&Get, Some(Route::CompaniesByPackageId { package_id })) => {
+            (Get, Some(Route::CompaniesByPackageId { package_id })) => {
                 debug!(
-                    "User with id = '{:?}' is requesting // GET /packages/{}/companies",
-                    user_id, package_id
-                );
+                    "Server received Request, action: get packages, user id: {:?}, package id: {}",
+                    user_id, package_id);
                 serialize_future(service.get_companies(package_id))
             }
 
             // Get /companies/<company_id>/packages
-            (&Get, Some(Route::PackagesByCompanyId { company_id })) => {
+            (Get, Some(Route::PackagesByCompanyId { company_id })) => {
                 debug!(
-                    "User with id = '{:?}' is requesting // GET /companies/{}/packages",
-                    user_id, company_id
-                );
+                    "Server received Request, action: get packages, user id: {:?}, company id: {}",
+                    user_id, company_id);
                 serialize_future(service.get_packages(company_id))
             }
 
             // DELETE /companies/<company_id>/packages/<package_id>
-            (&Delete, Some(Route::CompaniesPackagesByIds { company_id, package_id })) => {
+            (Delete, Some(Route::CompaniesPackagesByIds { company_id, package_id })) => {
                 debug!(
-                    "User with id = '{:?}' is requesting  // DELETE /companies/{}/packages/{}",
-                    user_id, company_id, package_id
-                );
+                    "Server received Request, action: delete company packages, user id: {:?}, company id: {}, package id: {}",
+                    user_id, company_id, package_id);
                 serialize_future(service.delete_company_package(company_id, package_id))
             }
 
             // GET /countries
-            (&Get, Some(Route::Countries)) => {
-                debug!("User with id = '{:?}' is requesting  // GET /countries", user_id);
+            (Get, Some(Route::Countries)) => {
+                debug!(
+                    "Server received Request, action: get countries tree, user id: {:?}",
+                    user_id);
                 serialize_future(service.get_all())
             }
 
             // GET /countries/flatten
-            (&Get, Some(Route::CountriesFlatten)) => {
-                debug!("User with id = '{:?}' is requesting  // GET /countries/flatten", user_id);
+            (Get, Some(Route::CountriesFlatten)) => {
+                debug!(
+                    "Server received Request, action: get countries flatten, user id: {:?}",
+                    user_id);
                 serialize_future(service.get_all_flatten())
             }
 
             // Get /countries/alpha2/<alpha2>
-            (&Get, Some(Route::CountryByAlpha2 { alpha2 })) => {
-                debug!("User with id = '{:?}' is requesting  // GET /countries/alpha2/{}", user_id, alpha2);
+            (Get, Some(Route::CountryByAlpha2 { alpha2 })) => {
+                debug!(
+                    "Server received Request, action: get country, user id: {:?}, alpha2: {}",
+                    user_id, alpha2);
                 let search = CountrySearch::Alpha2(alpha2);
                 serialize_future(service.find_country(search))
             }
 
             // Get /countries/alpha3/<alpha3>
-            (&Get, Some(Route::CountryByAlpha3 { alpha3 })) => {
-                debug!("User with id = '{:?}' is requesting  // GET /countries/alpha3/{}", user_id, alpha3);
+            (Get, Some(Route::CountryByAlpha3 { alpha3 })) => {
+                debug!(
+                    "Server received Request, action: get country, user id: {:?}, alpha3: {}",
+                    user_id, alpha3);
                 let search = CountrySearch::Alpha3(alpha3);
                 serialize_future(service.find_country(search))
             }
 
             // Get /countries/numeric/<numeric_id>
-            (&Get, Some(Route::CountryByNumeric { numeric })) => {
+            (Get, Some(Route::CountryByNumeric { numeric })) => {
                 debug!(
-                    "User with id = '{:?}' is requesting  // GET /countries/numeric/{}",
-                    user_id, numeric
-                );
+                    "Server received Request, action: get country, user id: {:?}, numeric: {}",
+                    user_id, numeric);
                 let search = CountrySearch::Numeric(numeric);
                 serialize_future(service.find_country(search))
             }
 
             // POST /countries
-            (&Post, Some(Route::Countries)) => {
-                debug!("User with id = '{:?}' is requesting  // POST /countries", user_id);
+            (Post, Some(Route::Countries)) => {
+                debug!(
+                    "Server received Request, action: create country, user id: {:?}",
+                    user_id);
                 serialize_future(
                     parse_body::<NewCountry>(req.body())
                         .map_err(|e| {
-                            e.context("Parsing body // POST /countries in NewCountry failed!")
+                            e.context("Parsing body failed, target: NewCountry")
                                 .context(Error::Parse)
                                 .into()
                         }).and_then(move |new_country| {
                             new_country
                                 .validate()
-                                .map_err(|e| format_err!("Validation of NewCountry failed!").context(Error::Validate(e)).into())
+                                .map_err(|e| format_err!("Validation failed, target: NewCountry").context(Error::Validate(e)).into())
                                 .into_future()
                                 .and_then(move |_| service.create_country(new_country))
                         }),
@@ -365,12 +391,14 @@ impl<
             }
 
             // POST /packages
-            (&Post, Some(Route::Packages)) => {
-                debug!("User with id = '{:?}' is requesting  // POST /packages", user_id);
+            (Post, Some(Route::Packages)) => {
+                 debug!(
+                    "Server received Request, action: create new package, user id: {:?}",
+                    user_id);
                 serialize_future(
                     parse_body::<NewPackages>(req.body())
                         .map_err(|e| {
-                            e.context("Parsing body // POST /packages in NewPackages failed!")
+                            e.context("Parsing body failed, target: NewPackages")
                                 .context(Error::Parse)
                                 .into()
                         }).and_then(move |new_package| service.create_package(new_package)),
@@ -378,24 +406,30 @@ impl<
             }
 
             // GET /packages/<package_id>
-            (&Get, Some(Route::PackagesById { package_id })) => {
-                debug!("User with id = '{:?}' is requesting  // GET /packages/{}", user_id, package_id);
+            (Get, Some(Route::PackagesById { package_id })) => {
+                debug!(
+                    "Server received Request, action: get package, user id: {:?}, package id: {}",
+                    user_id, package_id);
                 serialize_future(service.find_packages(package_id))
             }
 
             // GET /packages
-            (&Get, Some(Route::Packages)) => {
-                debug!("User with id = '{:?}' is requesting  // GET /packages", user_id);
+            (Get, Some(Route::Packages)) => {
+                debug!(
+                    "Server received Request, action: get packages, user id: {:?}",
+                    user_id);
                 serialize_future(service.list_packages())
             }
 
             // PUT /packages/<package_id>
-            (&Put, Some(Route::PackagesById { package_id })) => {
-                debug!("User with id = '{:?}' is requesting  // PUT /packages/{}", user_id, package_id);
+            (Put, Some(Route::PackagesById { package_id })) => {
+                debug!(
+                    "Server received Request, action: update package, user id: {:?}, package id: {}",
+                    user_id, package_id);
                 serialize_future(
                     parse_body::<UpdatePackages>(req.body())
                         .map_err(move |e| {
-                            e.context(format!("Parsing body // PUT /packages/{} in UpdatePackages failed!", package_id))
+                            e.context(format!("Parsing body failed, target: UpdatePackages, package id: {}", package_id))
                                 .context(Error::Parse)
                                 .into()
                         }).and_then(move |update_package| service.update_package(package_id, update_package)),
@@ -403,31 +437,37 @@ impl<
             }
 
             // DELETE /packages/<package_id>
-            (&Delete, Some(Route::PackagesById { package_id })) => {
-                debug!("User with id = '{:?}' is requesting  // DELETE /packages/{}", user_id, package_id);
+            (Delete, Some(Route::PackagesById { package_id })) => {
+                debug!(
+                    "Server received Request, action: delete package, user id: {:?}, package id: {}",
+                    user_id, package_id);
                 serialize_future(service.delete_package(package_id))
             }
 
             // GET /users/<user_id>/addresses
-            (&Get, Some(Route::UserAddress { user_id })) => {
-                debug!("Received request to get addresses for user {}", user_id);
+            (Get, Some(Route::UserAddress { user_id })) => {
+                debug!(
+                    "Server received Request, action: get user address, user id: {}",
+                    user_id);
                 serialize_future(service.get_addresses(user_id))
             }
 
             // POST /users/addresses
-            (&Post, Some(Route::UsersAddresses)) => {
-                debug!("Received request to create delivery address with user id {:?}", user_id);
+            (Post, Some(Route::UsersAddresses)) => {
+                debug!(
+                    "Server received Request, action: create user address, user id: {:?}",
+                    user_id);
                 serialize_future(
                     parse_body::<NewUserAddress>(req.body())
                         .map_err(|e| {
-                            e.context("Parsing body // POST /users/addresses in NewUserAddress failed!")
+                            e.context("Parsing body failed, target: NewUserAddress")
                                 .context(Error::Parse)
                                 .into()
                         }).and_then(move |new_address| {
                             new_address
                                 .validate()
                                 .map_err(|e| {
-                                    format_err!("Validation of NewUserAddress failed!")
+                                    format_err!("Validation failed, target: NewUserAddress")
                                         .context(Error::Validate(e))
                                         .into()
                                 }).into_future()
@@ -437,13 +477,15 @@ impl<
             }
 
             // PUT /users/addresses/<id>
-            (&Put, Some(Route::UserAddressById { user_address_id })) => {
-                debug!("Received request to update user address {}", user_address_id);
+            (Put, Some(Route::UserAddressById { user_address_id })) => {
+                debug!(
+                    "Server received Request, action: update user address, user id: {:?}, user address id: {}",
+                    user_id, user_address_id);
                 serialize_future(
                     parse_body::<UpdateUserAddress>(req.body())
                         .map_err(move |e| {
                             e.context(format!(
-                                "Parsing body PUT /users/addresses/{} in UpdateUserAddress failed!",
+                                "Parsing body failed, target: UpdateUserAddress, user address id: {}",
                                 user_address_id
                             )).context(Error::Parse)
                             .into()
@@ -451,7 +493,7 @@ impl<
                             new_address
                                 .validate()
                                 .map_err(|e| {
-                                    format_err!("Validation of UpdateUserAddress failed!")
+                                    format_err!("Validation failed, target: UpdateUserAddress")
                                         .context(Error::Validate(e))
                                         .into()
                                 }).into_future()
@@ -461,9 +503,11 @@ impl<
             }
 
             // DELETE /users/addresses/<id>
-            (&Delete, Some(Route::UserAddressById { user_address_id })) => {
-                debug!("Received request to delete user  address with id {}", user_address_id);
-                serialize_future(service.delete_address(user_address_id))
+            (Delete, Some(Route::UserAddressById { user_address_id })) => {
+               debug!(
+                    "Server received Request, action: delete user address, user id: {:?}, user address id: {}",
+                    user_id, user_address_id);
+                 serialize_future(service.delete_address(user_address_id))
             }
 
             // Fallback
