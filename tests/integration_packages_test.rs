@@ -212,7 +212,7 @@ fn test_package_unauthorized(core: &mut tokio_core::reactor::Core, http_client: 
         None,
     ));
     println!("{:?}", read_result);
-    assert!(read_result.is_err());
+    assert!(read_result.is_ok());
 
     // update
     println!("run update package ");

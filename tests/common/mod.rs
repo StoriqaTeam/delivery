@@ -187,6 +187,7 @@ pub fn create_delivery_objects(
     let package_id = create_result.unwrap().id;
 
     let create_result = create_company(new_company, core, http_client, base_url.clone(), user_id);
+    println!("result create company {:#?}", create_result);
     assert!(create_result.is_ok(), "Can not create company");
     let company_id = create_result.unwrap().id;
 
