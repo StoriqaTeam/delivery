@@ -291,7 +291,7 @@ fn test_companies_packages_unauthorized(core: &mut tokio_core::reactor::Core, ht
         None,
     ));
 
-    assert!(read_result.is_err());
+    assert!(read_result.is_ok());
 
     // read companies
     println!("run search companies by package id");
