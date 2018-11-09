@@ -1,6 +1,6 @@
 use models::{Country, Pickups, ShippingVariant};
 use stq_static_resources::Currency;
-use stq_types::{CompanyId, CompanyPackageId, PackageId, ProductPrice, ShippingId};
+use stq_types::{BaseProductId, CompanyId, CompanyPackageId, PackageId, ProductPrice, ShippingId, StoreId};
 
 use schema::companies_packages;
 
@@ -37,6 +37,9 @@ pub struct AvailablePackageForUser {
     pub logo: String,
     pub price: Option<ProductPrice>,
     pub shipping_variant: ShippingVariant,
+    pub deliveries_to: Vec<Country>,
+    pub base_product_id: BaseProductId,
+    pub store_id: StoreId,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

@@ -181,6 +181,8 @@ pub mod tests {
 
     pub const MOCK_REPO_FACTORY: ReposFactoryMock = ReposFactoryMock {};
     pub static MOCK_USER_ID: UserId = UserId(1);
+    pub static MOCK_STORE_ID: StoreId = StoreId(1);
+    pub static MOCK_BASE_PRODUCT_ID: BaseProductId = BaseProductId(1);
 
     #[derive(Default, Copy, Clone)]
     pub struct ReposFactoryMock;
@@ -349,6 +351,9 @@ pub mod tests {
                 name: "UPS-avia".to_string(),
                 logo: "logo".to_string(),
                 price: None,
+                store_id: MOCK_STORE_ID,
+                base_product_id: MOCK_BASE_PRODUCT_ID,
+                deliveries_to: vec![],
             }])
         }
 
