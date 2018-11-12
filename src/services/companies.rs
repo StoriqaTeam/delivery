@@ -4,6 +4,8 @@ use diesel::pg::Pg;
 use diesel::Connection;
 use r2d2::ManageConnection;
 
+use failure::Error as FailureError;
+
 use stq_types::{Alpha3, CompanyId};
 
 use models::companies::{Company, NewCompany, UpdateCompany};
@@ -43,9 +45,11 @@ impl<
 
         self.spawn_on_pool(move |conn| {
             let company_repo = repo_factory.create_companies_repo(&*conn, user_id);
-            company_repo
-                .create(payload)
-                .map_err(|e| e.context("Service Companies, create endpoint error occured.").into())
+            conn.transaction::<Company, FailureError, _>(move || {
+                company_repo
+                    .create(payload)
+                    .map_err(|e| e.context("Service Companies, create endpoint error occured.").into())
+            })
         })
     }
 

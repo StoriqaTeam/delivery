@@ -5,6 +5,8 @@ use diesel::pg::Pg;
 use diesel::Connection;
 use r2d2::ManageConnection;
 
+use failure::Error as FailureError;
+
 use stq_types::{Alpha3, PackageId};
 
 use super::types::{Service, ServiceFuture};
@@ -43,9 +45,11 @@ impl<
 
         self.spawn_on_pool(move |conn| {
             let packages_repo = repo_factory.create_packages_repo(&*conn, user_id);
-            packages_repo
-                .create(payload)
-                .map_err(|e| e.context("Service Packages, create endpoint error occured.").into())
+            conn.transaction::<Packages, FailureError, _>(move || {
+                packages_repo
+                    .create(payload)
+                    .map_err(|e| e.context("Service Packages, create endpoint error occured.").into())
+            })
         })
     }
 
