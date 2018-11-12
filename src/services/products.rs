@@ -66,9 +66,11 @@ impl<
 
         self.spawn_on_pool(move |conn| {
             let products_repo = repo_factory.create_products_repo(&*conn, user_id);
-            products_repo
-                .create(payload)
-                .map_err(|e| e.context("Service Products, create endpoint error occured.").into())
+            conn.transaction::<Products, FailureError, _>(move || {
+                products_repo
+                    .create(payload)
+                    .map_err(|e| e.context("Service Products, create endpoint error occured.").into())
+            })
         })
     }
 

@@ -6,6 +6,8 @@ use diesel::Connection;
 
 use r2d2::ManageConnection;
 
+use failure::Error as FailureError;
+
 use stq_types::UserId;
 
 use super::types::{Service, ServiceFuture};
@@ -62,9 +64,11 @@ impl<
 
         self.spawn_on_pool(move |conn| {
             let users_addresses_repo = repo_factory.create_users_addresses_repo(&*conn, user_id);
-            users_addresses_repo
-                .create(payload)
-                .map_err(|e| e.context("Service UserAddress, create endpoint error occured.").into())
+            conn.transaction::<UserAddress, FailureError, _>(move || {
+                users_addresses_repo
+                    .create(payload)
+                    .map_err(|e| e.context("Service UserAddress, create endpoint error occured.").into())
+            })
         })
     }
 
