@@ -69,6 +69,13 @@ impl ProductsRaw {
             shipping: self.shipping,
         })
     }
+
+    pub fn get_deliveries_to(&self) -> Result<Vec<Alpha3>, FailureError> {
+        let used_codes = serde_json::from_value(self.deliveries_to.clone())
+            .map_err(|e| e.context("Can not parse deliveries_to from db").context(Error::Parse))?;
+
+        Ok(used_codes)
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
