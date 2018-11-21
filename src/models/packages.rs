@@ -35,7 +35,7 @@ pub struct Packages {
 impl PackagesRaw {
     pub fn to_packages(self, countries_arg: &Country) -> Result<Packages, FailureError> {
         let used_codes: Vec<Alpha3> = serde_json::from_value(self.deliveries_to)
-            .map_err(|e| e.context("Can not parse deliveries_to from db").context(Error::Parse))?;
+            .map_err(|e| e.context("Can not parse deliveries_to from db"))?;
         let deliveries_to = create_tree_used_countries(countries_arg, &used_codes);
 
         Ok(Packages {

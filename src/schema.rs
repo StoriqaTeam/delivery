@@ -16,6 +16,8 @@ table! {
         company_id -> Int4,
         package_id -> Int4,
         shipping_rate_source -> Varchar,
+        shipping_rates -> Jsonb,
+        dimensional_factor -> Float8,
     }
 }
 

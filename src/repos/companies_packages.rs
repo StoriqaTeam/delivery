@@ -16,7 +16,7 @@ use models::authorization::*;
 use repos::legacy_acl::*;
 use repos::types::RepoResult;
 
-use models::{AvailablePackages, CompaniesPackages, Company, CompanyRaw, Country, NewCompaniesPackages, Packages, PackagesRaw};
+use models::{AvailablePackages, CompaniesPackagesRaw, Company, CompanyRaw, Country, NewCompaniesPackagesRaw, Packages, PackagesRaw};
 use repos::*;
 use schema::companies::dsl as DslCompanies;
 use schema::companies_packages::dsl::*;

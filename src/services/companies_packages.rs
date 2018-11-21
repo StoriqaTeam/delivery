@@ -9,19 +9,19 @@ use failure::Error as FailureError;
 
 use stq_types::{Alpha3, CompanyId, CompanyPackageId, PackageId};
 
-use models::{AvailablePackages, CompaniesPackages, Company, NewCompaniesPackages, Packages};
+use models::{AvailablePackages, CompanyPackage, Company, NewCompanyPackage, Packages};
 use repos::ReposFactory;
 use services::types::{Service, ServiceFuture};
 
 pub trait CompaniesPackagesService {
     /// Create a new companies_packages
-    fn create_company_package(&self, payload: NewCompaniesPackages) -> ServiceFuture<CompaniesPackages>;
+    fn create_company_package(&self, payload: NewCompanyPackage) -> ServiceFuture<CompanyPackage>;
 
     /// Returns available packages supported by the country
     fn get_available_packages(&self, country: Alpha3, size: f64, weight: f64) -> ServiceFuture<Vec<AvailablePackages>>;
 
     /// Returns company package by id
-    fn get_company_package(&self, id: CompanyPackageId) -> ServiceFuture<Option<CompaniesPackages>>;
+    fn get_company_package(&self, id: CompanyPackageId) -> ServiceFuture<Option<CompanyPackage>>;
 
     /// Returns companies by package id
     fn get_companies(&self, id: PackageId) -> ServiceFuture<Vec<Company>>;
@@ -30,7 +30,7 @@ pub trait CompaniesPackagesService {
     fn get_packages(&self, id: CompanyId) -> ServiceFuture<Vec<Packages>>;
 
     /// Delete a companies_packages
-    fn delete_company_package(&self, company_id: CompanyId, package_id: PackageId) -> ServiceFuture<CompaniesPackages>;
+    fn delete_company_package(&self, company_id: CompanyId, package_id: PackageId) -> ServiceFuture<CompanyPackage>;
 }
 
 impl<
@@ -40,13 +40,13 @@ impl<
     > CompaniesPackagesService for Service<T, M, F>
 {
     /// Create a new companies_packages
-    fn create_company_package(&self, payload: NewCompaniesPackages) -> ServiceFuture<CompaniesPackages> {
+    fn create_company_package(&self, payload: NewCompanyPackage) -> ServiceFuture<CompanyPackage> {
         let repo_factory = self.static_context.repo_factory.clone();
         let user_id = self.dynamic_context.user_id;
 
         self.spawn_on_pool(move |conn| {
             let companies_packages_repo = repo_factory.create_companies_packages_repo(&*conn, user_id);
-            conn.transaction::<CompaniesPackages, FailureError, _>(move || {
+            conn.transaction::<CompanyPackage, FailureError, _>(move || {
                 companies_packages_repo
                     .create(payload)
                     .map_err(|e| e.context("Service CompaniesPackages, create endpoint error occured.").into())
@@ -55,7 +55,7 @@ impl<
     }
 
     /// Returns company package by id
-    fn get_company_package(&self, id: CompanyPackageId) -> ServiceFuture<Option<CompaniesPackages>> {
+    fn get_company_package(&self, id: CompanyPackageId) -> ServiceFuture<Option<CompanyPackage>> {
         let repo_factory = self.static_context.repo_factory.clone();
         let user_id = self.dynamic_context.user_id;
 
