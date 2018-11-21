@@ -4,12 +4,26 @@ use stq_types::{BaseProductId, CompanyId, CompanyPackageId, PackageId, ProductPr
 
 use schema::companies_packages;
 
+#[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug, DieselTypes)]
+pub enum ShippingRateSource {
+    NotAvailable,
+    Static,
+    OnDemand,
+}
+
+impl Default for ShippingRateSource {
+    fn default() -> Self {
+        ShippingRateSource::NotAvailable
+    }
+}
+
 #[derive(Serialize, Deserialize, Associations, Queryable, Debug)]
 #[table_name = "companies_packages"]
 pub struct CompaniesPackages {
     pub id: CompanyPackageId,
     pub company_id: CompanyId,
     pub package_id: PackageId,
+    pub shipping_rate_source: ShippingRateSource,
 }
 
 #[derive(Serialize, Deserialize, Insertable, Clone, Debug)]
@@ -17,6 +31,7 @@ pub struct CompaniesPackages {
 pub struct NewCompaniesPackages {
     pub company_id: CompanyId,
     pub package_id: PackageId,
+    pub shipping_rate_source: Option<ShippingRateSource>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
