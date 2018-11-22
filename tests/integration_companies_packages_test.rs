@@ -22,14 +22,19 @@ static MOCK_COMPANIES_PACKAGES_ENDPOINT: &'static str = "companies_packages";
 fn create_companies_packages(
     company_id: CompanyId,
     package_id: PackageId,
+    shipping_rate_source: ShippingRateSource,
     core: &mut tokio_core::reactor::Core,
     http_client: &HttpClientHandle,
     base_url: String,
     user_id: Option<UserId>,
-) -> Result<CompaniesPackages, client::Error> {
-    let new_companies_packages = NewCompaniesPackages { company_id, package_id };
+) -> Result<CompanyPackage, client::Error> {
+    let new_companies_packages = NewCompanyPackage {
+        company_id,
+        package_id,
+        shipping_rate_source: Some(shipping_rate_source),
+    };
     let body: String = serde_json::to_string(&new_companies_packages).unwrap().to_string();
-    let create_result = core.run(http_client.request_with_auth_header::<CompaniesPackages>(
+    let create_result = core.run(http_client.request_with_auth_header::<CompanyPackage>(
         Method::Post,
         get_url_request(base_url),
         Some(body),
@@ -100,7 +105,12 @@ fn test_companies_packages_superuser_crud(core: &mut tokio_core::reactor::Core, 
     let package_name = "Avia".to_string();
     let company_name = "US UPS".to_string();
 
-    let payload = (create_company(company_name), create_package(package_name));
+    let payload = (
+        create_company(company_name),
+        create_package(package_name),
+        ShippingRateSource::NotAvailable,
+    );
+
     let (package_id, company_id, companies_package_id) =
         common::create_delivery_objects(payload, core, http_client, base_url.clone(), Some(user_id));
 
@@ -109,7 +119,7 @@ fn test_companies_packages_superuser_crud(core: &mut tokio_core::reactor::Core, 
         "user: {:?} - run search companies_packages by id {:?}",
         user_id, companies_package_id
     );
-    let read_result = core.run(http_client.request_with_auth_header::<CompaniesPackages>(
+    let read_result = core.run(http_client.request_with_auth_header::<CompanyPackage>(
         Method::Get,
         get_url_request_by_id(base_url.clone(), &companies_package_id),
         None,
@@ -179,7 +189,12 @@ fn test_companies_packages_regular_user_crud(core: &mut tokio_core::reactor::Cor
     let company_name = "US UPS".to_string();
     let super_user_id = UserId(1);
 
-    let payload = (create_company(company_name), create_package(package_name));
+    let payload = (
+        create_company(company_name),
+        create_package(package_name),
+        ShippingRateSource::NotAvailable,
+    );
+
     let (package_id, company_id, companies_package_id) =
         common::create_delivery_objects(payload, core, http_client, base_url.clone(), Some(super_user_id.clone()));
 
@@ -193,6 +208,7 @@ fn test_companies_packages_regular_user_crud(core: &mut tokio_core::reactor::Cor
     let create_result = create_companies_packages(
         company_id.clone(),
         package_id.clone(),
+        ShippingRateSource::NotAvailable,
         core,
         &http_client,
         base_url.clone(),
@@ -202,7 +218,7 @@ fn test_companies_packages_regular_user_crud(core: &mut tokio_core::reactor::Cor
 
     // read search
     println!("run search companies_packages by id");
-    let read_result = core.run(http_client.request_with_auth_header::<CompaniesPackages>(
+    let read_result = core.run(http_client.request_with_auth_header::<CompanyPackage>(
         Method::Get,
         get_url_request_by_id(base_url.clone(), &companies_package_id),
         None,
@@ -249,7 +265,7 @@ fn test_companies_packages_regular_user_crud(core: &mut tokio_core::reactor::Cor
 
     // delete
     println!("run delete companies_packages ");
-    let delete_result = core.run(http_client.request_with_auth_header::<CompaniesPackages>(
+    let delete_result = core.run(http_client.request_with_auth_header::<CompanyPackage>(
         Method::Delete,
         get_url_request_by_id(base_url.clone(), &companies_package_id),
         None,
@@ -272,19 +288,32 @@ fn test_companies_packages_unauthorized(core: &mut tokio_core::reactor::Core, ht
     let company_name = "US UPS".to_string();
     let super_user_id = UserId(1);
 
-    let payload = (create_company(company_name), create_package(package_name));
+    let payload = (
+        create_company(company_name),
+        create_package(package_name),
+        ShippingRateSource::NotAvailable,
+    );
     let (package_id, company_id, companies_package_id) =
         common::create_delivery_objects(payload, core, http_client, base_url.clone(), Some(super_user_id.clone()));
 
     // create
     println!("run create new companies_packages ");
-    let create_result = create_companies_packages(company_id, package_id, core, &http_client, base_url.clone(), None);
+    let create_result = create_companies_packages(
+        company_id,
+        package_id,
+        ShippingRateSource::NotAvailable,
+        core,
+        &http_client,
+        base_url.clone(),
+        None,
+    );
+
     println!("{:?}", create_result);
     assert!(create_result.is_err());
 
     // read search
     println!("run search companies_packages by id");
-    let read_result = core.run(http_client.request_with_auth_header::<CompaniesPackages>(
+    let read_result = core.run(http_client.request_with_auth_header::<CompanyPackage>(
         Method::Get,
         get_url_request_by_id(base_url.clone(), &companies_package_id),
         None,
@@ -329,7 +358,7 @@ fn test_companies_packages_unauthorized(core: &mut tokio_core::reactor::Core, ht
 
     // delete
     println!("run delete companies_packages ");
-    let delete_result = core.run(http_client.request_with_auth_header::<CompaniesPackages>(
+    let delete_result = core.run(http_client.request_with_auth_header::<CompanyPackage>(
         Method::Delete,
         get_url_request_by_id(base_url.clone(), &companies_package_id),
         None,
