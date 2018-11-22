@@ -112,7 +112,12 @@ fn test_products_superuser_crud(core: &mut tokio_core::reactor::Core, http_clien
 
     let countries = vec!["RUS", "USA", "BRA"].into_iter().map(|v| Alpha3(v.to_string())).collect();
 
-    let payload = (create_company(company_name), create_package(package_name));
+    let payload = (
+        create_company(company_name),
+        create_package(package_name),
+        ShippingRateSource::NotAvailable,
+    );
+
     let (package_id, company_id, companies_package_id) =
         common::create_delivery_objects(payload, core, http_client, base_url.clone(), Some(user_id));
 
@@ -162,7 +167,12 @@ fn test_products_regular_user_crud(core: &mut tokio_core::reactor::Core, http_cl
 
     let countries = vec!["RUS", "USA", "BRA"].into_iter().map(|v| Alpha3(v.to_string())).collect();
 
-    let payload = (create_company(company_name), create_package(package_name));
+    let payload = (
+        create_company(company_name),
+        create_package(package_name),
+        ShippingRateSource::NotAvailable,
+    );
+
     let (package_id, company_id, companies_package_id) =
         common::create_delivery_objects(payload, core, http_client, base_url.clone(), Some(super_user_id));
 
@@ -211,7 +221,12 @@ fn test_products_unauthorized(core: &mut tokio_core::reactor::Core, http_client:
 
     let countries = vec!["RUS", "USA", "BRA"].into_iter().map(|v| Alpha3(v.to_string())).collect();
 
-    let payload = (create_company(company_name), create_package(package_name));
+    let payload = (
+        create_company(company_name),
+        create_package(package_name),
+        ShippingRateSource::NotAvailable,
+    );
+
     let (package_id, company_id, companies_package_id) =
         common::create_delivery_objects(payload, core, http_client, base_url.clone(), Some(super_user_id.clone()));
 
@@ -227,6 +242,7 @@ fn test_products_unauthorized(core: &mut tokio_core::reactor::Core, http_client:
         url_crd.clone(),
         None,
     );
+
     println!("create shipping {:?}", create_result);
     assert!(create_result.is_err());
 
@@ -262,7 +278,12 @@ fn test_products_store_manager(core: &mut tokio_core::reactor::Core, http_client
 
     let countries = vec!["RUS", "USA", "BRA"].into_iter().map(|v| Alpha3(v.to_string())).collect();
 
-    let payload = (create_company(company_name), create_package(package_name));
+    let payload = (
+        create_company(company_name),
+        create_package(package_name),
+        ShippingRateSource::NotAvailable,
+    );
+
     let (package_id, company_id, companies_package_id) =
         common::create_delivery_objects(payload, core, http_client, base_url.clone(), Some(super_user_id));
 

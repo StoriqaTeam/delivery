@@ -775,11 +775,19 @@ pub mod tests {
 
     impl CompaniesPackagesRepo for CompaniesPackagesRepoMock {
         /// Create a new companies_packages
-        fn create(&self, payload: NewCompaniesPackages) -> RepoResult<CompaniesPackages> {
-            Ok(CompaniesPackages {
+        fn create(&self, payload: NewCompanyPackage) -> RepoResult<CompanyPackage> {
+            let NewCompanyPackage {
+                company_id,
+                package_id,
+                shipping_rate_source,
+            } = payload;
+
+            let shipping_rate_source = shipping_rate_source.unwrap_or_default();
+            Ok(CompanyPackage {
                 id: CompanyPackageId(1),
-                company_id: payload.company_id,
-                package_id: payload.package_id,
+                company_id,
+                package_id,
+                shipping_rate_source,
             })
         }
 
@@ -803,11 +811,12 @@ pub mod tests {
                 }).collect())
         }
 
-        fn get(&self, id_arg: CompanyPackageId) -> RepoResult<Option<CompaniesPackages>> {
-            Ok(Some(CompaniesPackages {
+        fn get(&self, id_arg: CompanyPackageId) -> RepoResult<Option<CompanyPackage>> {
+            Ok(Some(CompanyPackage {
                 id: id_arg,
                 company_id: CompanyId(1),
                 package_id: PackageId(1),
+                shipping_rate_source: ShippingRateSource::NotAvailable,
             }))
         }
 
@@ -838,11 +847,12 @@ pub mod tests {
         }
 
         /// Delete a companies_packages
-        fn delete(&self, company_id_arg: CompanyId, package_id_arg: PackageId) -> RepoResult<CompaniesPackages> {
-            Ok(CompaniesPackages {
+        fn delete(&self, company_id_arg: CompanyId, package_id_arg: PackageId) -> RepoResult<CompanyPackage> {
+            Ok(CompanyPackage {
                 id: CompanyPackageId(1),
                 company_id: company_id_arg,
                 package_id: package_id_arg,
+                shipping_rate_source: ShippingRateSource::NotAvailable,
             })
         }
     }

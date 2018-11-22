@@ -21,7 +21,6 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 extern crate mime;
-extern crate native_tls;
 extern crate serde_json;
 extern crate sha3;
 extern crate tokio_core;
@@ -46,6 +45,7 @@ extern crate stq_types;
 pub mod config;
 pub mod controller;
 pub mod errors;
+pub mod extras;
 pub mod models;
 pub mod repos;
 pub mod schema;

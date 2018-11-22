@@ -121,14 +121,14 @@ static MOCK_COMPANIES_ENDPOINT: &'static str = "companies";
 static MOCK_PACKAGES_ENDPOINT: &'static str = "packages";
 
 fn create_companies_packages(
-    payload: NewCompaniesPackages,
+    payload: NewCompanyPackage,
     core: &mut tokio_core::reactor::Core,
     http_client: &HttpClientHandle,
     base_url: String,
     user_id: Option<UserId>,
-) -> Result<CompaniesPackages, client::Error> {
+) -> Result<CompanyPackage, client::Error> {
     let body: String = serde_json::to_string(&payload).unwrap().to_string();
-    let create_result = core.run(http_client.request_with_auth_header::<CompaniesPackages>(
+    let create_result = core.run(http_client.request_with_auth_header::<CompanyPackage>(
         Method::Post,
         format!("{}/{}", base_url, MOCK_COMPANIES_PACKAGES_ENDPOINT),
         Some(body),
@@ -175,13 +175,15 @@ fn create_package(
 }
 
 pub fn create_delivery_objects(
-    payload: (NewCompany, NewPackages),
+    payload: (NewCompany, NewPackages, ShippingRateSource),
     core: &mut tokio_core::reactor::Core,
     http_client: &HttpClientHandle,
     base_url: String,
     user_id: Option<UserId>,
 ) -> (PackageId, CompanyId, CompanyPackageId) {
-    let (new_company, new_package) = payload;
+    let (new_company, new_package, shipping_rate_source) = payload;
+    let shipping_rate_source = Some(shipping_rate_source);
+
     let create_result = create_package(new_package, core, http_client, base_url.clone(), user_id);
     assert!(create_result.is_ok(), "Can not create package");
     let package_id = create_result.unwrap().id;
@@ -191,9 +193,10 @@ pub fn create_delivery_objects(
     assert!(create_result.is_ok(), "Can not create company");
     let company_id = create_result.unwrap().id;
 
-    let new_company_package = NewCompaniesPackages {
+    let new_company_package = NewCompanyPackage {
         company_id: company_id.clone(),
         package_id: package_id.clone(),
+        shipping_rate_source,
     };
 
     let create_result = create_companies_packages(new_company_package, core, http_client, base_url.clone(), user_id);
@@ -212,7 +215,7 @@ pub fn delete_deliveries_objects(
 ) {
     let (package_id, company_id, _companies_package_id) = ids;
 
-    let delete_result = core.run(http_client.request_with_auth_header::<CompaniesPackages>(
+    let delete_result = core.run(http_client.request_with_auth_header::<CompanyPackage>(
         Method::Delete,
         format!(
             "{}/{}/{}/{}/{}",

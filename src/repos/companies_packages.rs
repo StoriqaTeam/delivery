@@ -16,7 +16,11 @@ use models::authorization::*;
 use repos::legacy_acl::*;
 use repos::types::RepoResult;
 
-use models::{AvailablePackages, CompaniesPackages, Company, CompanyRaw, Country, NewCompaniesPackages, Packages, PackagesRaw};
+use extras::option::transpose;
+use models::{
+    AvailablePackages, CompaniesPackagesRaw, Company, CompanyPackage, CompanyRaw, Country, NewCompaniesPackagesRaw, NewCompanyPackage,
+    Packages, PackagesRaw,
+};
 use repos::*;
 use schema::companies::dsl as DslCompanies;
 use schema::companies_packages::dsl::*;
@@ -25,7 +29,7 @@ use schema::packages::dsl as DslPackages;
 /// Companies packages repository for handling companies_packages model
 pub trait CompaniesPackagesRepo {
     /// Create a new companies_packages
-    fn create(&self, payload: NewCompaniesPackages) -> RepoResult<CompaniesPackages>;
+    fn create(&self, payload: NewCompanyPackage) -> RepoResult<CompanyPackage>;
 
     /// Getting available packages satisfying the constraints
     fn get_available_packages(
@@ -37,7 +41,7 @@ pub trait CompaniesPackagesRepo {
     ) -> RepoResult<Vec<AvailablePackages>>;
 
     /// Returns company package by id
-    fn get(&self, id: CompanyPackageId) -> RepoResult<Option<CompaniesPackages>>;
+    fn get(&self, id: CompanyPackageId) -> RepoResult<Option<CompanyPackage>>;
     /// Returns companies by package id
     fn get_companies(&self, id: PackageId) -> RepoResult<Vec<Company>>;
 
@@ -45,18 +49,18 @@ pub trait CompaniesPackagesRepo {
     fn get_packages(&self, id: CompanyId) -> RepoResult<Vec<Packages>>;
 
     /// Delete a companies_packages
-    fn delete(&self, company_id_arg: CompanyId, package_id_arg: PackageId) -> RepoResult<CompaniesPackages>;
+    fn delete(&self, company_id_arg: CompanyId, package_id_arg: PackageId) -> RepoResult<CompanyPackage>;
 }
 
 /// Implementation of CompaniesPackagesRepo trait
 pub struct CompaniesPackagesRepoImpl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> {
     pub db_conn: &'a T,
-    pub acl: Box<Acl<Resource, Action, Scope, FailureError, CompaniesPackages>>,
+    pub acl: Box<Acl<Resource, Action, Scope, FailureError, CompanyPackage>>,
     pub countries: Country,
 }
 
 impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> CompaniesPackagesRepoImpl<'a, T> {
-    pub fn new(db_conn: &'a T, acl: Box<Acl<Resource, Action, Scope, FailureError, CompaniesPackages>>, countries: Country) -> Self {
+    pub fn new(db_conn: &'a T, acl: Box<Acl<Resource, Action, Scope, FailureError, CompanyPackage>>, countries: Country) -> Self {
         Self { db_conn, acl, countries }
     }
 }
@@ -64,26 +68,37 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> CompaniesPackagesRepo
     for CompaniesPackagesRepoImpl<'a, T>
 {
-    fn create(&self, payload: NewCompaniesPackages) -> RepoResult<CompaniesPackages> {
+    fn create(&self, payload: NewCompanyPackage) -> RepoResult<CompanyPackage> {
         debug!("create new companies_packages {:?}.", payload);
-        let query = diesel::insert_into(companies_packages).values(&payload);
+        let record = NewCompaniesPackagesRaw::from_model(payload.clone())?;
+
+        let query = diesel::insert_into(companies_packages).values(&record);
         query
-            .get_result::<CompaniesPackages>(self.db_conn)
+            .get_result::<CompaniesPackagesRaw>(self.db_conn)
             .map_err(From::from)
-            .and_then(|record| {
-                acl::check(&*self.acl, Resource::CompaniesPackages, Action::Create, self, Some(&record)).and_then(|_| Ok(record))
+            .and_then(CompaniesPackagesRaw::to_model)
+            .and_then(|company_package| {
+                acl::check(
+                    &*self.acl,
+                    Resource::CompaniesPackages,
+                    Action::Create,
+                    self,
+                    Some(&company_package),
+                )?;
+                Ok(company_package)
             }).map_err(|e: FailureError| e.context(format!("create new companies_packages {:?}.", payload)).into())
     }
 
-    fn get(&self, id_arg: CompanyPackageId) -> RepoResult<Option<CompaniesPackages>> {
+    fn get(&self, id_arg: CompanyPackageId) -> RepoResult<Option<CompanyPackage>> {
         debug!("get companies_packages by id: {}.", id_arg);
 
         acl::check(&*self.acl, Resource::CompaniesPackages, Action::Read, self, None)?;
         let query = companies_packages.filter(id.eq(id_arg));
         query
-            .get_result(self.db_conn)
+            .get_result::<CompaniesPackagesRaw>(self.db_conn)
             .optional()
             .map_err(move |e| e.context(format!("get companies_packages id: {}.", id_arg)).into())
+            .and_then(|record| transpose(record.map(CompaniesPackagesRaw::to_model)))
     }
 
     /// Getting available packages satisfying the constraints
@@ -110,7 +125,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             .order(DslCompanies::label);
 
         query
-            .get_results::<(CompaniesPackages, CompanyRaw, PackagesRaw)>(self.db_conn)
+            .get_results::<(CompaniesPackagesRaw, CompanyRaw, PackagesRaw)>(self.db_conn)
             .map_err(From::from)
             .and_then(|results| {
                 let mut data = vec![];
@@ -153,7 +168,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         let query = companies_packages.filter(package_id.eq(id_arg)).inner_join(DslCompanies::companies);
 
         query
-            .get_results::<(CompaniesPackages, CompanyRaw)>(self.db_conn)
+            .get_results::<(CompaniesPackagesRaw, CompanyRaw)>(self.db_conn)
             .map_err(From::from)
             .and_then(|results| {
                 let mut data = vec![];
@@ -174,7 +189,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         let query = companies_packages.filter(company_id.eq(id_arg)).inner_join(DslPackages::packages);
 
         query
-            .get_results::<(CompaniesPackages, PackagesRaw)>(self.db_conn)
+            .get_results::<(CompaniesPackagesRaw, PackagesRaw)>(self.db_conn)
             .map_err(From::from)
             .and_then(|results| {
                 let mut data = vec![];
@@ -188,7 +203,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             }).map_err(move |e: FailureError| e.context(format!("get companies_packages company_id: {}.", id_arg)).into())
     }
 
-    fn delete(&self, company_id_arg: CompanyId, package_id_arg: PackageId) -> RepoResult<CompaniesPackages> {
+    fn delete(&self, company_id_arg: CompanyId, package_id_arg: PackageId) -> RepoResult<CompanyPackage> {
         debug!(
             "delete companies_packages by company_id: {}, package_id: {}.",
             company_id_arg, package_id_arg
@@ -197,19 +212,21 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         acl::check(&*self.acl, Resource::CompaniesPackages, Action::Delete, self, None)?;
         let filtered = companies_packages.filter(company_id.eq(company_id_arg).and(package_id.eq(package_id_arg)));
         let query = diesel::delete(filtered);
-        query.get_result(self.db_conn).map_err(move |e| {
-            e.context(format!(
-                "delete companies_packages company_id: {}, package_id: {}.",
-                company_id_arg, package_id_arg
-            )).into()
-        })
+        query
+            .get_result::<CompaniesPackagesRaw>(self.db_conn)
+            .map_err(move |e| {
+                e.context(format!(
+                    "delete companies_packages company_id: {}, package_id: {}.",
+                    company_id_arg, package_id_arg
+                )).into()
+            }).and_then(CompaniesPackagesRaw::to_model)
     }
 }
 
-impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> CheckScope<Scope, CompaniesPackages>
+impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> CheckScope<Scope, CompanyPackage>
     for CompaniesPackagesRepoImpl<'a, T>
 {
-    fn is_in_scope(&self, _user_id: UserId, scope: &Scope, _obj: Option<&CompaniesPackages>) -> bool {
+    fn is_in_scope(&self, _user_id: UserId, scope: &Scope, _obj: Option<&CompanyPackage>) -> bool {
         match *scope {
             Scope::All => true,
             Scope::Owned => false,

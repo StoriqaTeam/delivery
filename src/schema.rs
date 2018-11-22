@@ -15,6 +15,9 @@ table! {
         id -> Int4,
         company_id -> Int4,
         package_id -> Int4,
+        shipping_rate_source -> Varchar,
+        shipping_rates -> Nullable<Jsonb>,
+        dimensional_factor -> Nullable<Float8>,
     }
 }
 
