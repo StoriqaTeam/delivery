@@ -154,7 +154,7 @@ impl<
 
             // POST /companies_packages
             (Post, Some(Route::CompaniesPackages)) => serialize_future(
-                parse_body::<NewCompaniesPackages>(req.body())
+                parse_body::<NewCompanyPackage>(req.body())
                     .map_err(|e| {
                         e.context("Parsing body failed, target: NewCompaniesPackages")
                             .context(Error::Parse)

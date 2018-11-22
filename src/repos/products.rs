@@ -16,7 +16,7 @@ use stq_types::{BaseProductId, CompanyPackageId, ShippingId, UserId};
 use models::authorization::*;
 use models::countries::Country;
 use models::{
-    AvailablePackageForUser, CompaniesPackages, CompanyRaw, NewProducts, NewProductsRaw, PackagesRaw, Products, ProductsRaw,
+    AvailablePackageForUser, CompaniesPackagesRaw, CompanyRaw, NewProducts, NewProductsRaw, PackagesRaw, Products, ProductsRaw,
     ShippingVariant, UpdateProducts, UserRole,
 };
 
@@ -162,7 +162,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             .order(DslPackages::id);
 
         query
-            .get_results::<(ProductsRaw, (CompaniesPackages, PackagesRaw))>(self.db_conn)
+            .get_results::<(ProductsRaw, (CompaniesPackagesRaw, PackagesRaw))>(self.db_conn)
             .map_err(From::from)
             .and_then(|results| {
                 let mut data = vec![];
@@ -206,7 +206,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             ).order(DslCompanies::label);
 
         query
-            .get_results::<(ProductsRaw, (CompaniesPackages, CompanyRaw, PackagesRaw))>(self.db_conn)
+            .get_results::<(ProductsRaw, (CompaniesPackagesRaw, CompanyRaw, PackagesRaw))>(self.db_conn)
             .map_err(From::from)
             .and_then(|results| {
                 let available_packages = results
@@ -277,7 +277,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             ).order(DslCompanies::label);
 
         query
-            .get_result::<(ProductsRaw, (CompaniesPackages, CompanyRaw, PackagesRaw))>(self.db_conn)
+            .get_result::<(ProductsRaw, (CompaniesPackagesRaw, CompanyRaw, PackagesRaw))>(self.db_conn)
             .optional()
             .map_err(From::from)
             .and_then(|result| {
@@ -322,7 +322,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             ).order(DslCompanies::label);
 
         query
-            .get_result::<(ProductsRaw, (CompaniesPackages, CompanyRaw, PackagesRaw))>(self.db_conn)
+            .get_result::<(ProductsRaw, (CompaniesPackagesRaw, CompanyRaw, PackagesRaw))>(self.db_conn)
             .optional()
             .map_err(From::from)
             .and_then(|result| {
