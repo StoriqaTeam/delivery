@@ -16,8 +16,7 @@ table! {
         company_id -> Int4,
         package_id -> Int4,
         shipping_rate_source -> Varchar,
-        shipping_rates -> Nullable<Jsonb>,
-        dimensional_factor -> Nullable<Float8>,
+        dimensional_factor -> Nullable<Int4>,
     }
 }
 
@@ -36,10 +35,10 @@ table! {
     packages (id) {
         id -> Int4,
         name -> Varchar,
-        max_size -> Float8,
-        min_size -> Float8,
-        max_weight -> Float8,
-        min_weight -> Float8,
+        max_size -> Int4,
+        min_size -> Int4,
+        max_weight -> Int4,
+        min_weight -> Int4,
         deliveries_to -> Jsonb,
     }
 }
@@ -76,6 +75,16 @@ table! {
 }
 
 table! {
+    shipping_rates (id) {
+        id -> Int4,
+        company_package_id -> Int4,
+        from_alpha3 -> Varchar,
+        to_alpha3 -> Varchar,
+        rates -> Jsonb,
+    }
+}
+
+table! {
     user_addresses (id) {
         id -> Int4,
         user_id -> Int4,
@@ -98,6 +107,7 @@ table! {
 joinable!(companies_packages -> companies (company_id));
 joinable!(companies_packages -> packages (package_id));
 joinable!(products -> companies_packages (company_package_id));
+joinable!(shipping_rates -> companies_packages (company_package_id));
 
 allow_tables_to_appear_in_same_query!(
     companies,
@@ -107,5 +117,6 @@ allow_tables_to_appear_in_same_query!(
     pickups,
     products,
     roles,
+    shipping_rates,
     user_addresses,
 );

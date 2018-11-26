@@ -12,7 +12,7 @@ use stq_cache::cache::CacheSingle;
 use stq_types::{self, Alpha3, CountryLabel, UserId};
 
 use models::authorization::*;
-use models::{Country, NewCountry, RawCountry};
+use models::{get_country, Country, NewCountry, RawCountry};
 use repos::acl;
 use repos::legacy_acl::{Acl, CheckScope};
 use repos::types::RepoResult;
@@ -227,18 +227,6 @@ pub fn get_parent_country(country: &Country, child_code: &Alpha3, stack_level: i
         Some(country.clone())
     } else {
         None
-    }
-}
-
-pub fn get_country(country: &Country, country_id: &Alpha3) -> Option<Country> {
-    if country.alpha3 == *country_id {
-        Some(country.clone())
-    } else {
-        country
-            .children
-            .iter()
-            .filter_map(|country_child| get_country(country_child, country_id))
-            .next()
     }
 }
 

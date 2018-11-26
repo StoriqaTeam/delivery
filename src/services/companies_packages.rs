@@ -18,7 +18,7 @@ pub trait CompaniesPackagesService {
     fn create_company_package(&self, payload: NewCompanyPackage) -> ServiceFuture<CompanyPackage>;
 
     /// Returns available packages supported by the country
-    fn get_available_packages(&self, country: Alpha3, size: f64, weight: f64) -> ServiceFuture<Vec<AvailablePackages>>;
+    fn get_available_packages(&self, country: Alpha3, size: u32, weight: u32) -> ServiceFuture<Vec<AvailablePackages>>;
 
     /// Returns company package by id
     fn get_company_package(&self, id: CompanyPackageId) -> ServiceFuture<Option<CompanyPackage>>;
@@ -94,7 +94,7 @@ impl<
     }
 
     /// Returns list of companies_packages supported by the country
-    fn get_available_packages(&self, deliveries_from: Alpha3, size: f64, weight: f64) -> ServiceFuture<Vec<AvailablePackages>> {
+    fn get_available_packages(&self, deliveries_from: Alpha3, size: u32, weight: u32) -> ServiceFuture<Vec<AvailablePackages>> {
         let repo_factory = self.static_context.repo_factory.clone();
         let user_id = self.dynamic_context.user_id;
 

@@ -165,7 +165,7 @@ impl<
             // GET /available_packages
             (Get, Some(Route::AvailablePackages)) => {
                 if let (Some(country), Some(size), Some(weight)) =
-                    parse_query!(req.query().unwrap_or_default(), "country" => Alpha3, "size" => f64, "weight" => f64)
+                    parse_query!(req.query().unwrap_or_default(), "country" => Alpha3, "size" => u32, "weight" => u32)
                 {
                     serialize_future(service.get_available_packages(country, size, weight))
                 } else {

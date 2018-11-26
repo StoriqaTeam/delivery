@@ -134,10 +134,10 @@ pub mod tests {
     pub fn create_new_packages(name: String) -> NewPackages {
         NewPackages {
             name,
-            max_size: 0f64,
-            min_size: 0f64,
-            max_weight: 0f64,
-            min_weight: 0f64,
+            max_size: 0,
+            min_size: 0,
+            max_weight: 0,
+            min_weight: 0,
             deliveries_to: vec![],
         }
     }
