@@ -3,13 +3,16 @@ use diesel::connection::AnsiTransactionManager;
 use diesel::pg::Pg;
 use diesel::Connection;
 use failure::Error as FailureError;
+use validator::Validate;
 
 use r2d2::ManageConnection;
 
 use stq_types::{Alpha3, BaseProductId, CompanyPackageId, ShippingId};
 
+use errors::Error;
 use models::{
-    AvailablePackageForUser, AvailableShippingForUser, NewProducts, NewShipping, Products, Shipping, ShippingProducts, UpdateProducts,
+    AvailablePackageForUser, AvailableShippingForUser, NewProductValidation, NewProducts, NewShipping, Products, Shipping,
+    ShippingProducts, UpdateProducts,
 };
 use repos::countries::create_tree_used_countries;
 use repos::products::ProductsWithAvailableCountries;
@@ -17,9 +20,6 @@ use repos::ReposFactory;
 use services::types::{Service, ServiceFuture};
 
 pub trait ProductsService {
-    /// Creates new products
-    fn create_products(&self, payload: NewProducts) -> ServiceFuture<Products>;
-
     /// Delete and Insert shipping values
     fn upsert(&self, base_product_id: BaseProductId, payload: NewShipping) -> ServiceFuture<Shipping>;
 
@@ -60,20 +60,6 @@ impl<
         F: ReposFactory<T>,
     > ProductsService for Service<T, M, F>
 {
-    fn create_products(&self, payload: NewProducts) -> ServiceFuture<Products> {
-        let repo_factory = self.static_context.repo_factory.clone();
-        let user_id = self.dynamic_context.user_id;
-
-        self.spawn_on_pool(move |conn| {
-            let products_repo = repo_factory.create_products_repo(&*conn, user_id);
-            conn.transaction::<Products, FailureError, _>(move || {
-                products_repo
-                    .create(payload)
-                    .map_err(|e| e.context("Service Products, create endpoint error occured.").into())
-            })
-        })
-    }
-
     fn upsert(&self, base_product_id: BaseProductId, payload: NewShipping) -> ServiceFuture<Shipping> {
         let repo_factory = self.static_context.repo_factory.clone();
         let user_id = self.dynamic_context.user_id;
@@ -83,11 +69,42 @@ impl<
                 let products_repo = repo_factory.create_products_repo(&*conn, user_id);
                 let pickups_repo = repo_factory.create_pickups_repo(&*conn, user_id);
                 let countries_repo = repo_factory.create_countries_repo(&*conn, user_id);
+                let companies_repo = repo_factory.create_companies_repo(&*conn, user_id);
+                let packages_repo = repo_factory.create_packages_repo(&*conn, user_id);
+                let company_packages_repo = repo_factory.create_companies_packages_repo(&*conn, user_id);
                 let pickup = payload.pickup.clone();
+
                 products_repo
                     .delete(base_product_id)
-                    .and_then(|_| products_repo.create_many(payload.items))
-                    .and_then(|_| products_repo.get_products_countries(base_product_id))
+                    .and_then(|_| {
+                        payload
+                            .items
+                            .clone()
+                            .into_iter()
+                            .map(|new_product| {
+                                let company_package = company_packages_repo.get(new_product.company_package_id)?.ok_or(Error::Validate(
+                                    validation_errors!({
+                                        "company_package_id": ["company_package_id" => "Company package not found"]
+                                    }),
+                                ))?;
+                                let company = companies_repo
+                                    .find(company_package.company_id)?
+                                    .ok_or(format_err!("Company with id = {} not found", company_package.company_id))?;
+                                let package = packages_repo
+                                    .find(company_package.package_id)?
+                                    .ok_or(format_err!("Package with id = {} not found", company_package.package_id))?;
+
+                                NewProductValidation {
+                                    product: new_product.clone(),
+                                    company,
+                                    package,
+                                }.validate()
+                                .map(|_| new_product)
+                                .map_err(|e| FailureError::from(Error::Validate(e)))
+                            }).collect::<Result<Vec<NewProducts>, _>>()?;
+
+                        products_repo.create_many(payload.items)
+                    }).and_then(|_| products_repo.get_products_countries(base_product_id))
                     .and_then(|products_with_countries| {
                         countries_repo.get_all().map(|countries| {
                             // getting all countries

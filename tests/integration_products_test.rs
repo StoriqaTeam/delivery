@@ -37,6 +37,11 @@ fn create_shipping(
         price: None,
         shipping: ShippingVariant::Local,
         deliveries_to,
+        measurements: Some(ShipmentMeasurements {
+            volume_cubic_cm: 100,
+            weight_g: 20,
+        }),
+        delivery_from: None,
     };
 
     let new_pickup = NewPickups {
@@ -92,11 +97,11 @@ fn create_company(name: String) -> NewCompany {
 fn create_package(name: String) -> NewPackages {
     NewPackages {
         name,
-        max_size: 0f64,
-        min_size: 0f64,
-        max_weight: 0f64,
-        min_weight: 0f64,
-        deliveries_to: vec![],
+        max_size: 1_000_000,
+        min_size: 0,
+        max_weight: 10_000,
+        min_weight: 0,
+        deliveries_to: vec![Alpha3("BRA".to_string()), Alpha3("USA".to_string()), Alpha3("RUS".to_string())],
     }
 }
 

@@ -60,7 +60,7 @@ fn get_url_request(base_url: String) -> String {
     format!("{}/{}", base_url, MOCK_COMPANIES_PACKAGES_ENDPOINT)
 }
 
-fn get_url_request_available_packages(base_url: String, country: Alpha3, size: f64, weight: f64) -> String {
+fn get_url_request_available_packages(base_url: String, country: Alpha3, size: u32, weight: u32) -> String {
     format!(
         "{}/available_packages?country={}&size={}&weight={}",
         base_url, country.0, size, weight
@@ -81,10 +81,10 @@ fn create_company(name: String) -> NewCompany {
 fn create_package(name: String) -> NewPackages {
     NewPackages {
         name,
-        max_size: 0f64,
-        min_size: 0f64,
-        max_weight: 0f64,
-        min_weight: 0f64,
+        max_size: 0,
+        min_size: 0,
+        max_weight: 0,
+        min_weight: 0,
         deliveries_to: vec![Alpha3("USA".to_string()), Alpha3("CHN".to_string())],
     }
 }
@@ -167,7 +167,7 @@ fn test_companies_packages_superuser_crud(core: &mut tokio_core::reactor::Core, 
     );
     let read_result = core.run(http_client.request_with_auth_header::<Vec<AvailablePackages>>(
         Method::Get,
-        get_url_request_available_packages(base_url.clone(), country_search, 0f64, 0f64),
+        get_url_request_available_packages(base_url.clone(), country_search, 0, 0),
         None,
         Some(user_id.to_string()),
     ));
@@ -256,7 +256,7 @@ fn test_companies_packages_regular_user_crud(core: &mut tokio_core::reactor::Cor
     );
     let read_result = core.run(http_client.request_with_auth_header::<Vec<AvailablePackages>>(
         Method::Get,
-        get_url_request_available_packages(base_url.clone(), country_search, 0f64, 0f64),
+        get_url_request_available_packages(base_url.clone(), country_search, 0, 0),
         None,
         Some(user_id.to_string()),
     ));
@@ -349,7 +349,7 @@ fn test_companies_packages_unauthorized(core: &mut tokio_core::reactor::Core, ht
     println!("unauthorized - run search available packages by country {:?}", country_search);
     let read_result = core.run(http_client.request_with_auth_header::<Vec<AvailablePackages>>(
         Method::Get,
-        get_url_request_available_packages(base_url.clone(), country_search, 0f64, 0f64),
+        get_url_request_available_packages(base_url.clone(), country_search, 0, 0),
         None,
         Some(super_user_id.to_string()),
     ));

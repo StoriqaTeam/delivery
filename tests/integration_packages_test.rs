@@ -21,10 +21,10 @@ static MOCK_PACKAGES_ENDPOINT: &'static str = "packages";
 fn create_update_package(name: &str) -> UpdatePackages {
     UpdatePackages {
         name: Some(name.to_string()),
-        max_size: Some(0f64),
-        min_size: Some(0f64),
-        max_weight: Some(0f64),
-        min_weight: Some(0f64),
+        max_size: Some(0),
+        min_size: Some(0),
+        max_weight: Some(0),
+        min_weight: Some(0),
         deliveries_to: Some(vec![]),
     }
 }
@@ -38,10 +38,10 @@ fn create_package(
 ) -> Result<Packages, client::Error> {
     let new = NewPackages {
         name,
-        max_size: 0f64,
-        min_size: 0f64,
-        max_weight: 0f64,
-        min_weight: 0f64,
+        max_size: 0,
+        min_size: 0,
+        max_weight: 0,
+        min_weight: 0,
         deliveries_to: vec![],
     };
 

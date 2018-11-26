@@ -76,3 +76,18 @@ impl<'a> From<&'a RawCountry> for Country {
         }
     }
 }
+
+pub fn get_country(country: &Country, country_id: &Alpha3) -> Option<Country> {
+    if country.alpha3 == *country_id {
+        Some(country.clone())
+    } else {
+        get_country_from_forest(country.children.iter(), country_id)
+    }
+}
+
+pub fn get_country_from_forest<'a, C>(countries: C, country_id: &Alpha3) -> Option<Country>
+where
+    C: Iterator<Item = &'a Country>,
+{
+    countries.filter_map(|country| get_country(country, country_id)).next()
+}

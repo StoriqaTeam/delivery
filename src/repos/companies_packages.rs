@@ -18,8 +18,8 @@ use repos::types::RepoResult;
 
 use extras::option::transpose;
 use models::{
-    AvailablePackages, CompaniesPackagesRaw, Company, CompanyPackage, CompanyRaw, Country, NewCompaniesPackagesRaw, NewCompanyPackage,
-    Packages, PackagesRaw,
+    get_country, AvailablePackages, CompaniesPackagesRaw, Company, CompanyPackage, CompanyRaw, Country, NewCompaniesPackagesRaw,
+    NewCompanyPackage, Packages, PackagesRaw,
 };
 use repos::*;
 use schema::companies::dsl as DslCompanies;
@@ -35,13 +35,14 @@ pub trait CompaniesPackagesRepo {
     fn get_available_packages(
         &self,
         company_id_args: Vec<CompanyId>,
-        size: f64,
-        weight: f64,
+        size: u32,
+        weight: u32,
         deliveries_from: Alpha3,
     ) -> RepoResult<Vec<AvailablePackages>>;
 
     /// Returns company package by id
     fn get(&self, id: CompanyPackageId) -> RepoResult<Option<CompanyPackage>>;
+
     /// Returns companies by package id
     fn get_companies(&self, id: PackageId) -> RepoResult<Vec<Company>>;
 
@@ -70,7 +71,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 {
     fn create(&self, payload: NewCompanyPackage) -> RepoResult<CompanyPackage> {
         debug!("create new companies_packages {:?}.", payload);
-        let record = NewCompaniesPackagesRaw::from_model(payload.clone())?;
+        let record = NewCompaniesPackagesRaw::from(payload.clone());
 
         let query = diesel::insert_into(companies_packages).values(&record);
         query
@@ -105,10 +106,13 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     fn get_available_packages(
         &self,
         company_id_args: Vec<CompanyId>,
-        size: f64,
-        weight: f64,
+        size: u32,
+        weight: u32,
         deliveries_from: Alpha3,
     ) -> RepoResult<Vec<AvailablePackages>> {
+        let size = size as i32;
+        let weight = weight as i32;
+
         debug!(
             "Find in packages with companies: {:?}, size: {}, weight: {}.",
             company_id_args, size, weight

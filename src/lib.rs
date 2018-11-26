@@ -31,7 +31,6 @@ extern crate validator;
 extern crate validator_derive;
 #[macro_use]
 extern crate sentry;
-
 extern crate stq_cache;
 #[macro_use]
 extern crate stq_http;
@@ -46,6 +45,8 @@ pub mod config;
 pub mod controller;
 pub mod errors;
 pub mod extras;
+#[macro_use]
+pub mod macros;
 pub mod models;
 pub mod repos;
 pub mod schema;

@@ -713,10 +713,10 @@ pub mod tests {
             Ok(vec![Packages {
                 id: PackageId(1),
                 name: "package1".to_string(),
-                max_size: 0f64,
-                min_size: 0f64,
-                max_weight: 0f64,
-                min_weight: 0f64,
+                max_size: 0,
+                min_size: 0,
+                max_weight: 0,
+                min_weight: 0,
                 deliveries_to: vec![],
             }])
         }
@@ -725,10 +725,10 @@ pub mod tests {
             Ok(vec![Packages {
                 id: PackageId(1),
                 name: "package1".to_string(),
-                max_size: 0f64,
-                min_size: 0f64,
-                max_weight: 0f64,
-                min_weight: 0f64,
+                max_size: 0,
+                min_size: 0,
+                max_weight: 0,
+                min_weight: 0,
                 deliveries_to: vec![],
             }])
         }
@@ -737,10 +737,10 @@ pub mod tests {
             Ok(Some(Packages {
                 id: id_arg,
                 name: "package1".to_string(),
-                max_size: 0f64,
-                min_size: 0f64,
-                max_weight: 0f64,
-                min_weight: 0f64,
+                max_size: 0,
+                min_size: 0,
+                max_weight: 0,
+                min_weight: 0,
                 deliveries_to: vec![],
             }))
         }
@@ -761,10 +761,10 @@ pub mod tests {
             Ok(Packages {
                 id: id_arg,
                 name: "package1".to_string(),
-                max_size: 0f64,
-                min_size: 0f64,
-                max_weight: 0f64,
-                min_weight: 0f64,
+                max_size: 0,
+                min_size: 0,
+                max_weight: 0,
+                min_weight: 0,
                 deliveries_to: vec![],
             })
         }
@@ -795,8 +795,8 @@ pub mod tests {
         fn get_available_packages(
             &self,
             company_id_args: Vec<CompanyId>,
-            _size: f64,
-            _weight: f64,
+            _size: u32,
+            _weight: u32,
             _deliveries_from: Alpha3,
         ) -> RepoResult<Vec<AvailablePackages>> {
             Ok(company_id_args
@@ -838,10 +838,10 @@ pub mod tests {
             Ok(vec![Packages {
                 id: PackageId(1),
                 name: "package1".to_string(),
-                max_size: 0f64,
-                min_size: 0f64,
-                max_weight: 0f64,
-                min_weight: 0f64,
+                max_size: 0,
+                min_size: 0,
+                max_weight: 0,
+                min_weight: 0,
                 deliveries_to: vec![],
             }])
         }
