@@ -1,17 +1,36 @@
 //! CompaniesPackages Service, presents CRUD operations
+
 use diesel::connection::AnsiTransactionManager;
 use diesel::pg::Pg;
 use diesel::Connection;
-
-use r2d2::ManageConnection;
-
 use failure::Error as FailureError;
-
+use r2d2::ManageConnection;
+use stq_static_resources::Currency;
 use stq_types::{Alpha3, CompanyId, CompanyPackageId, PackageId};
+use validator::Validate;
 
-use models::{AvailablePackages, Company, CompanyPackage, NewCompanyPackage, Packages};
+use errors::Error;
+use models::{
+    AvailablePackages, Company, CompanyPackage, NewCompanyPackage, PackageValidation, Packages, ShipmentMeasurements, ShippingRateSource,
+    ShippingValidation,
+};
 use repos::ReposFactory;
 use services::types::{Service, ServiceFuture};
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct GetDeliveryPrice {
+    pub company_package_id: CompanyPackageId,
+    pub delivery_from: Alpha3,
+    pub delivery_to: Alpha3,
+    pub volume: u32,
+    pub weight: u32,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct DeliveryPrice {
+    pub currency: Currency,
+    pub value: f64,
+}
 
 pub trait CompaniesPackagesService {
     /// Create a new companies_packages
@@ -31,6 +50,9 @@ pub trait CompaniesPackagesService {
 
     /// Delete a companies_packages
     fn delete_company_package(&self, company_id: CompanyId, package_id: PackageId) -> ServiceFuture<CompanyPackage>;
+
+    /// Get delivery price
+    fn get_delivery_price(&self, payload: GetDeliveryPrice) -> ServiceFuture<Option<DeliveryPrice>>;
 }
 
 impl<
@@ -123,6 +145,85 @@ impl<
             companies_packages_repo
                 .delete(company_id, package_id)
                 .map_err(|e| e.context("Service CompaniesPackages, delete endpoint error occured.").into())
+        })
+    }
+
+    /// Get delivery price
+    fn get_delivery_price(&self, payload: GetDeliveryPrice) -> ServiceFuture<Option<DeliveryPrice>> {
+        let repo_factory = self.static_context.repo_factory.clone();
+        let user_id = self.dynamic_context.user_id;
+        
+        let GetDeliveryPrice {
+            company_package_id,
+            volume,
+            weight,
+            delivery_from,
+            delivery_to,
+        } = payload;
+
+        let measurements = ShipmentMeasurements { volume_cubic_cm: volume, weight_g: weight };
+
+        self.spawn_on_pool(move |conn| {
+            let companies_repo = repo_factory.create_companies_repo(&*conn, user_id);
+            let packages_repo = repo_factory.create_packages_repo(&*conn, user_id);
+            let companies_packages_repo = repo_factory.create_companies_packages_repo(&*conn, user_id);
+            let shipping_rates_repo = repo_factory.create_shipping_rates_repo(&*conn, user_id);
+
+            let run = move || {
+                let company_package = companies_packages_repo
+                    .get(company_package_id)?
+                    .ok_or(Error::Validate(validation_errors!({
+                        "company_package": ["company_package" => "Company package not found"]
+                    })))?;
+
+                let delivery_price = match company_package.shipping_rate_source.clone() {
+                    ShippingRateSource::NotAvailable => None,
+                    ShippingRateSource::Static { dimensional_factor } => {
+                        let company = companies_repo
+                            .find(company_package.company_id)?
+                            .ok_or(format_err!("Company with id {} not found", company_package.company_id))?;
+
+                        let package = packages_repo
+                            .find(company_package.package_id)?
+                            .ok_or(format_err!("Package with id {} not found", company_package.package_id))?;
+
+                        PackageValidation {
+                            measurements: measurements.clone(),
+                            package: package.clone(),
+                        }.validate()
+                        .map_err(Error::Validate)?;
+
+                        let currency = company.currency;
+
+                        let shipping_available = ShippingValidation {
+                            delivery_from: Some(delivery_from.clone()),
+                            deliveries_to: vec![delivery_to.clone()],
+                            company,
+                            package,
+                        }.validate()
+                        .is_ok();
+
+                        if !shipping_available {
+                            None
+                        } else {
+                            shipping_rates_repo
+                                .get_rates(company_package_id, delivery_from, delivery_to)?
+                                .and_then(|rates|
+                                    rates
+                                        .calculate_delivery_price(measurements, dimensional_factor)
+                                        .map(|price| DeliveryPrice { currency, value: price })
+                                )
+                        }
+                    }
+                };
+
+                Ok(delivery_price)
+            };
+
+            run().map_err(|e: FailureError| {
+                e.context("Service CompaniesPackages, get_delivery_price endpoint error occurred.")
+                    .into()
+            })
         })
     }
 }

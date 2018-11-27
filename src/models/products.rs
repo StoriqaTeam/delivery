@@ -126,27 +126,46 @@ impl Validate for NewProducts {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct NewProductValidation {
-    pub product: NewProducts,
+pub struct PackageValidation {
+    pub measurements: ShipmentMeasurements,
+    pub package: Packages,
+}
+
+impl Validate for PackageValidation {
+    fn validate(&self) -> Result<(), ValidationErrors> {
+        let PackageValidation {
+            ref measurements,
+            ref package,
+        } = self;
+
+        package.within_limits(*measurements).map_err(|err| {
+            let mut validation_error = ValidationError::new("measurements");
+            validation_error.add_param("measurements".into(), &err);
+
+            let mut validation_errors = ValidationErrors::new();
+            validation_errors.add("shipment", validation_error);
+
+            validation_errors
+        })
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ShippingValidation {
+    pub delivery_from: Option<Alpha3>,
+    pub deliveries_to: Vec<Alpha3>,
     pub company: Company,
     pub package: Packages,
 }
 
-impl Validate for NewProductValidation {
+impl Validate for ShippingValidation {
     fn validate(&self) -> Result<(), ValidationErrors> {
-        let NewProductValidation {
-            ref product,
-            ref package,
-            ref company,
-        } = self;
-        product.validate()?;
-
-        let NewProducts {
-            ref measurements,
+        let ShippingValidation {
             delivery_from,
             ref deliveries_to,
-            ..
-        } = product;
+            ref company,
+            ref package,
+        } = self;
 
         if let Some(delivery_from) = delivery_from {
             if get_country_from_forest(company.deliveries_from.iter(), delivery_from).is_none() {
@@ -167,8 +186,6 @@ impl Validate for NewProductValidation {
                 }
             }).collect::<Vec<_>>();
 
-        println!("{:?}", unavailable_destinations);
-
         if !unavailable_destinations.is_empty() {
             let unavailable_destinations = unavailable_destinations.as_slice().join(", ");
             let msg = format!(
@@ -180,19 +197,32 @@ impl Validate for NewProductValidation {
             }))?
         }
 
-        if let Some(measurements) = measurements {
-            package.within_limits(*measurements).map_err(|err| {
-                let mut validation_error = ValidationError::new("measurements");
-                validation_error.add_param("measurements".into(), &err);
+        Ok(())
+    }
+}
 
-                let mut validation_errors = ValidationErrors::new();
-                validation_errors.add("shipment", validation_error);
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct NewProductValidation {
+    pub product: NewProducts,
+    pub package: Option<PackageValidation>,
+    pub shipping: ShippingValidation,
+}
 
-                validation_errors
-            })?;
+impl Validate for NewProductValidation {
+    fn validate(&self) -> Result<(), ValidationErrors> {
+        let NewProductValidation {
+            ref product,
+            ref package,
+            ref shipping,
+        } = self;
+
+        product.validate()?;
+
+        if let Some(ref package) = package {
+            package.validate()?;
         }
 
-        Ok(())
+        shipping.validate()
     }
 }
 

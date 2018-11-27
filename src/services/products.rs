@@ -11,8 +11,8 @@ use stq_types::{Alpha3, BaseProductId, CompanyPackageId, ShippingId};
 
 use errors::Error;
 use models::{
-    AvailablePackageForUser, AvailableShippingForUser, NewProductValidation, NewProducts, NewShipping, Products, Shipping,
-    ShippingProducts, UpdateProducts,
+    AvailablePackageForUser, AvailableShippingForUser, NewProductValidation, NewProducts, NewShipping, PackageValidation, Products,
+    Shipping, ShippingProducts, ShippingValidation, UpdateProducts,
 };
 use repos::countries::create_tree_used_countries;
 use repos::products::ProductsWithAvailableCountries;
@@ -94,10 +94,20 @@ impl<
                                     .find(company_package.package_id)?
                                     .ok_or(format_err!("Package with id = {} not found", company_package.package_id))?;
 
+                                let package_validation = new_product.measurements.clone().map(|measurements| PackageValidation {
+                                    measurements,
+                                    package: package.clone(),
+                                });
+
                                 NewProductValidation {
                                     product: new_product.clone(),
-                                    company,
-                                    package,
+                                    package: package_validation,
+                                    shipping: ShippingValidation {
+                                        delivery_from: new_product.delivery_from.clone(),
+                                        deliveries_to: new_product.deliveries_to.clone(),
+                                        company,
+                                        package,
+                                    },
                                 }.validate()
                                 .map(|_| new_product)
                                 .map_err(|e| FailureError::from(Error::Validate(e)))
