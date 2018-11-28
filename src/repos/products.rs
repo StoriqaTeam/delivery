@@ -207,46 +207,38 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 
         query
             .get_results::<(ProductsRaw, (CompaniesPackagesRaw, CompanyRaw, PackagesRaw))>(self.db_conn)
-            .map_err(From::from)
-            .and_then(|results| {
+            .map(|results| {
                 let available_packages = results
-                    .iter()
+                    .into_iter()
                     .map(|result| {
                         let (product_raw, (companies_package, company_raw, package_raw)) = result;
-                        product_raw.get_deliveries_to().and_then(|used_codes| {
-                            let deliveries_to = create_tree_used_countries(&self.countries, &used_codes);
+                        AvailablePackageForUser {
+                            id: companies_package.id,
+                            shipping_id: product_raw.id,
+                            name: get_company_package_name(&company_raw.label, &package_raw.name),
+                            logo: company_raw.logo.clone(),
+                            price: product_raw.price,
+                            shipping_variant: product_raw.shipping.clone(),
+                            store_id: product_raw.store_id,
+                            base_product_id: product_raw.base_product_id,
+                        }
+                    }).collect::<Vec<_>>();
 
-                            Ok(AvailablePackageForUser {
-                                id: companies_package.id,
-                                shipping_id: product_raw.id,
-                                name: get_company_package_name(&company_raw.label, &package_raw.name),
-                                logo: company_raw.logo.clone(),
-                                price: product_raw.price,
-                                shipping_variant: product_raw.shipping.clone(),
-                                store_id: product_raw.store_id,
-                                base_product_id: product_raw.base_product_id,
-                                deliveries_to,
-                            })
-                        })
-                    }).collect::<RepoResult<Vec<_>>>();
+                let local_package_ids = available_packages
+                    .iter()
+                    .filter_map(|package| {
+                        if package.shipping_variant.clone() == ShippingVariant::Local {
+                            Some(package.id)
+                        } else {
+                            None
+                        }
+                    }).collect::<Vec<_>>();
 
-                available_packages.map(|packages| {
-                    let local_package_ids = packages
-                        .iter()
-                        .filter_map(|package| {
-                            if package.shipping_variant.clone() == ShippingVariant::Local {
-                                Some(package.id)
-                            } else {
-                                None
-                            }
-                        }).collect::<Vec<_>>();
-
-                    packages
-                        .into_iter()
-                        .filter(|package| {
-                            package.shipping_variant.clone() == ShippingVariant::Local || !local_package_ids.contains(&package.id)
-                        }).collect::<Vec<_>>()
-                })
+                available_packages
+                    .into_iter()
+                    .filter(|package| {
+                        package.shipping_variant.clone() == ShippingVariant::Local || !local_package_ids.contains(&package.id)
+                    }).collect::<Vec<_>>()
             }).map_err(move |e| {
                 FailureError::from(e)
                     .context(format!(
@@ -280,28 +272,20 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             .get_result::<(ProductsRaw, (CompaniesPackagesRaw, CompanyRaw, PackagesRaw))>(self.db_conn)
             .optional()
             .map_err(From::from)
-            .and_then(|result| {
-                if let Some(result) = result {
+            .map(|result| {
+                result.map(|result| {
                     let (product_raw, (companies_package, company_raw, package_raw)) = result;
-                    product_raw.get_deliveries_to().and_then(|used_codes| {
-                        let deliveries_to = create_tree_used_countries(&self.countries, &used_codes);
-                        let available_package = AvailablePackageForUser {
-                            id: companies_package.id,
-                            shipping_id: product_raw.id,
-                            name: get_company_package_name(&company_raw.label, &package_raw.name),
-                            logo: company_raw.logo,
-                            price: product_raw.price,
-                            shipping_variant: product_raw.shipping,
-                            store_id: product_raw.store_id,
-                            base_product_id: product_raw.base_product_id,
-                            deliveries_to,
-                        };
-
-                        Ok(Some(available_package))
-                    })
-                } else {
-                    Ok(None)
-                }
+                    AvailablePackageForUser {
+                        id: companies_package.id,
+                        shipping_id: product_raw.id,
+                        name: get_company_package_name(&company_raw.label, &package_raw.name),
+                        logo: company_raw.logo,
+                        price: product_raw.price,
+                        shipping_variant: product_raw.shipping,
+                        store_id: product_raw.store_id,
+                        base_product_id: product_raw.base_product_id,
+                    }
+                })
             }).map_err(move |e: FailureError| {
                 e.context(format!(
                     "Get available package for base product: {} with select company package id: {} failure.",
@@ -325,28 +309,20 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             .get_result::<(ProductsRaw, (CompaniesPackagesRaw, CompanyRaw, PackagesRaw))>(self.db_conn)
             .optional()
             .map_err(From::from)
-            .and_then(|result| {
-                if let Some(result) = result {
+            .map(|result| {
+                result.map(|result| {
                     let (product_raw, (companies_package, company_raw, package_raw)) = result;
-                    product_raw.get_deliveries_to().and_then(|used_codes| {
-                        let deliveries_to = create_tree_used_countries(&self.countries, &used_codes);
-                        let available_package = AvailablePackageForUser {
-                            id: companies_package.id,
-                            shipping_id: product_raw.id,
-                            name: get_company_package_name(&company_raw.label, &package_raw.name),
-                            logo: company_raw.logo,
-                            price: product_raw.price,
-                            shipping_variant: product_raw.shipping,
-                            store_id: product_raw.store_id,
-                            base_product_id: product_raw.base_product_id,
-                            deliveries_to,
-                        };
-
-                        Ok(Some(available_package))
-                    })
-                } else {
-                    Ok(None)
-                }
+                    AvailablePackageForUser {
+                        id: companies_package.id,
+                        shipping_id: product_raw.id,
+                        name: get_company_package_name(&company_raw.label, &package_raw.name),
+                        logo: company_raw.logo,
+                        price: product_raw.price,
+                        shipping_variant: product_raw.shipping,
+                        store_id: product_raw.store_id,
+                        base_product_id: product_raw.base_product_id,
+                    }
+                })
             }).map_err(move |e: FailureError| {
                 e.context(format!("Get available package for shipping id: {} failure.", shipping_id_arg))
                     .into()
