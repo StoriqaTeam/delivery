@@ -163,8 +163,8 @@ impl<
             ),
 
             // GET /companies_packages/<company_package_id>/price
-            (Get, Some(Route::CompanyPackageDeliveryPrice { company_package_id })) =>
-                if let(Some(delivery_from), Some(delivery_to), Some(volume), Some(weight)) = parse_query!(
+            (Get, Some(Route::CompanyPackageDeliveryPrice { company_package_id })) => {
+                if let (Some(delivery_from), Some(delivery_to), Some(volume), Some(weight)) = parse_query!(
                     req.query().unwrap_or_default(),
                     "from" => Alpha3,
                     "to" => Alpha3,
@@ -186,6 +186,7 @@ impl<
                             .into(),
                     ))
                 }
+            }
 
             // GET /available_packages
             (Get, Some(Route::AvailablePackages)) => {

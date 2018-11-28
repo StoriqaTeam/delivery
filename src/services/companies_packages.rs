@@ -123,11 +123,63 @@ impl<
         self.spawn_on_pool(move |conn| {
             let companies_repo = repo_factory.create_companies_repo(&*conn, user_id);
             let companies_packages_repo = repo_factory.create_companies_packages_repo(&*conn, user_id);
+            let shipping_rates_repo = repo_factory.create_shipping_rates_repo(&*conn, user_id);
+
             companies_repo
                 .find_deliveries_from(deliveries_from.clone())
-                .map(|companies| companies.into_iter().map(|company| company.id).collect())
-                .and_then(|companies_ids| {
-                    companies_packages_repo.get_available_packages(companies_ids, size, weight, deliveries_from.clone())
+                .and_then(|companies| {
+                    let companies_ids = companies.into_iter().map(|company| company.id).collect();
+                    companies_packages_repo
+                        .get_available_packages(companies_ids, size, weight, deliveries_from.clone())?
+                        .into_iter()
+                        .map(|pkg| {
+                            let deliveries_to = pkg.deliveries_to.iter().map(|country| country.alpha3.clone()).collect::<Vec<_>>();
+
+                            match pkg.shipping_rate_source {
+                                ShippingRateSource::NotAvailable => Ok((pkg, None)),
+                                ShippingRateSource::Static { dimensional_factor } => shipping_rates_repo
+                                    .get_multiple_rates(pkg.id, deliveries_from.clone(), deliveries_to)
+                                    .map(move |rates| (pkg, Some((dimensional_factor, rates)))),
+                            }
+                        }).collect::<Result<Vec<_>, _>>()
+                        .map(|pairs| {
+                            pairs
+                                .into_iter()
+                                .filter_map(|(mut pkg, rates)| {
+                                    match rates {
+                                        // If the company-package does not have static shipping rates,
+                                        // it is available for fixed price delivery
+                                        None => Some(pkg),
+                                        // If the company-package has static shipping rates,
+                                        // they are also used to determine whether the delivery is avaliable
+                                        Some((dimensional_factor, rates)) => {
+                                            let serviced_countries = rates
+                                                .into_iter()
+                                                .filter_map(|rates| {
+                                                    let measurements = ShipmentMeasurements {
+                                                        volume_cubic_cm: size,
+                                                        weight_g: weight,
+                                                    };
+                                                    rates
+                                                        .calculate_delivery_price(measurements, dimensional_factor)
+                                                        .map(move |_| rates.to_alpha3)
+                                                }).collect::<Vec<_>>();
+
+                                            pkg.deliveries_to.retain(|country| {
+                                                serviced_countries
+                                                    .iter()
+                                                    .any(|serviced_country_alpha3| country.alpha3 == *serviced_country_alpha3)
+                                            });
+
+                                            if pkg.deliveries_to.is_empty() {
+                                                None
+                                            } else {
+                                                Some(pkg)
+                                            }
+                                        }
+                                    }
+                                }).collect::<Vec<_>>()
+                        })
                 }).map_err(|e| {
                     e.context("Service CompaniesPackages, find_deliveries_from endpoint error occured.")
                         .into()
@@ -152,7 +204,7 @@ impl<
     fn get_delivery_price(&self, payload: GetDeliveryPrice) -> ServiceFuture<Option<DeliveryPrice>> {
         let repo_factory = self.static_context.repo_factory.clone();
         let user_id = self.dynamic_context.user_id;
-        
+
         let GetDeliveryPrice {
             company_package_id,
             volume,
@@ -161,7 +213,10 @@ impl<
             delivery_to,
         } = payload;
 
-        let measurements = ShipmentMeasurements { volume_cubic_cm: volume, weight_g: weight };
+        let measurements = ShipmentMeasurements {
+            volume_cubic_cm: volume,
+            weight_g: weight,
+        };
 
         self.spawn_on_pool(move |conn| {
             let companies_repo = repo_factory.create_companies_repo(&*conn, user_id);
@@ -208,11 +263,11 @@ impl<
                         } else {
                             shipping_rates_repo
                                 .get_rates(company_package_id, delivery_from, delivery_to)?
-                                .and_then(|rates|
+                                .and_then(|rates| {
                                     rates
                                         .calculate_delivery_price(measurements, dimensional_factor)
                                         .map(|price| DeliveryPrice { currency, value: price })
-                                )
+                                })
                         }
                     }
                 };

@@ -176,6 +176,7 @@ pub struct AvailablePackages {
     pub name: String,
     pub logo: String,
     pub deliveries_to: Vec<Country>,
+    pub shipping_rate_source: ShippingRateSource,
     pub currency: Currency,
     pub local_available: bool,
 }

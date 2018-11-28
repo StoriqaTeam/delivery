@@ -1,6 +1,7 @@
 //! Repo for shipping_rates table. ShippingRates contains rates for every available shipping direction for company-package
 
 use diesel::connection::AnsiTransactionManager;
+use diesel::pg::expression::dsl::any;
 use diesel::pg::Pg;
 use diesel::prelude::*;
 use diesel::query_dsl::RunQueryDsl;
@@ -20,7 +21,19 @@ use schema::shipping_rates::dsl as DslShippingRates;
 
 /// Repository for static shipping rates
 pub trait ShippingRatesRepo {
-    fn get_rates(&self, company_package_id: CompanyPackageId, delivery_from: Alpha3, delivery_to: Alpha3) -> RepoResult<Option<ShippingRates>>;
+    fn get_multiple_rates(
+        &self,
+        company_package_id: CompanyPackageId,
+        delivery_from: Alpha3,
+        deliveries_to: Vec<Alpha3>,
+    ) -> RepoResult<Vec<ShippingRates>>;
+
+    fn get_rates(
+        &self,
+        company_package_id: CompanyPackageId,
+        delivery_from: Alpha3,
+        delivery_to: Alpha3,
+    ) -> RepoResult<Option<ShippingRates>>;
 }
 
 pub struct ShippingRatesRepoImpl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> {
@@ -37,7 +50,40 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> ShippingRatesRepo
     for ShippingRatesRepoImpl<'a, T>
 {
-    fn get_rates(&self, company_package_id: CompanyPackageId, delivery_from: Alpha3, delivery_to: Alpha3) -> RepoResult<Option<ShippingRates>> {
+    fn get_multiple_rates(
+        &self,
+        company_package_id: CompanyPackageId,
+        delivery_from: Alpha3,
+        deliveries_to: Vec<Alpha3>,
+    ) -> RepoResult<Vec<ShippingRates>> {
+        acl::check(&*self.acl, Resource::ShippingRates, Action::Read, self, None)?;
+
+        let query = DslShippingRates::shipping_rates
+            .filter(
+                DslShippingRates::company_package_id
+                    .eq(company_package_id)
+                    .and(DslShippingRates::from_alpha3.eq(delivery_from.clone()))
+                    .and(DslShippingRates::to_alpha3.eq(any(deliveries_to.clone()))),
+            ).order(DslShippingRates::id.desc());
+
+        query
+            .get_results::<ShippingRatesRaw>(self.db_conn)
+            .map_err(FailureError::from)
+            .and_then(|rates| rates.into_iter().map(ShippingRatesRaw::to_model).collect::<Result<Vec<_>, _>>())
+            .map_err(|e| {
+                e.context(format!(
+                    "error occurred in get_multiple_rates for CompanyPackage with id = {}, {} -> {:?}",
+                    company_package_id, delivery_from, deliveries_to,
+                )).into()
+            })
+    }
+
+    fn get_rates(
+        &self,
+        company_package_id: CompanyPackageId,
+        delivery_from: Alpha3,
+        delivery_to: Alpha3,
+    ) -> RepoResult<Option<ShippingRates>> {
         acl::check(&*self.acl, Resource::ShippingRates, Action::Read, self, None)?;
 
         let query = DslShippingRates::shipping_rates

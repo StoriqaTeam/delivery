@@ -816,6 +816,9 @@ pub mod tests {
                     name: "name".to_string(),
                     logo: "logo".to_string(),
                     deliveries_to: vec![],
+                    shipping_rate_source: ShippingRateSource::Static {
+                        dimensional_factor: Some(1),
+                    },
                     local_available: false,
                     currency: Currency::STQ,
                 }).collect())
@@ -960,7 +963,39 @@ pub mod tests {
     pub struct ShippingRatesRepoMock;
 
     impl ShippingRatesRepo for ShippingRatesRepoMock {
-        fn get_rates(&self, company_package_id: CompanyPackageId, delivery_from: Alpha3, delivery_to: Alpha3) -> RepoResult<Option<ShippingRates>> {
+        fn get_multiple_rates(
+            &self,
+            company_package_id: CompanyPackageId,
+            delivery_from: Alpha3,
+            deliveries_to: Vec<Alpha3>,
+        ) -> RepoResult<Vec<ShippingRates>> {
+            Ok(deliveries_to
+                .into_iter()
+                .enumerate()
+                .map(|(i, delivery_to)| ShippingRates {
+                    id: ShippingRatesId(i as i32 + 1),
+                    company_package_id,
+                    from_alpha3: delivery_from.clone(),
+                    to_alpha3: delivery_to,
+                    rates: vec![
+                        ShippingRate {
+                            weight_g: 500,
+                            price: 999.0,
+                        },
+                        ShippingRate {
+                            weight_g: 1000,
+                            price: 1499.0,
+                        },
+                    ],
+                }).collect::<Vec<_>>())
+        }
+
+        fn get_rates(
+            &self,
+            company_package_id: CompanyPackageId,
+            delivery_from: Alpha3,
+            delivery_to: Alpha3,
+        ) -> RepoResult<Option<ShippingRates>> {
             Ok(Some(ShippingRates {
                 id: ShippingRatesId(1),
                 company_package_id,
