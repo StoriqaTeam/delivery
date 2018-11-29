@@ -12,7 +12,7 @@ use validator::Validate;
 use errors::Error;
 use models::{
     get_countries_from_forest_by, AvailablePackages, Company, CompanyPackage, Country, NewCompanyPackage, PackageValidation, Packages,
-    ShipmentMeasurements, ShippingRateSource, ShippingValidation,
+    ShipmentMeasurements, ShippingRateSource, ShippingRates, ShippingValidation,
 };
 use repos::ReposFactory;
 use services::types::{Service, ServiceFuture};
@@ -146,45 +146,11 @@ impl<
                                     .map(move |rates| (pkg, Some((dimensional_factor, rates)))),
                             }
                         }).collect::<Result<Vec<_>, _>>()
-                        .map(|pairs| {
-                            pairs
+                        .map(|package_rates| {
+                            package_rates
                                 .into_iter()
-                                .filter_map(|(mut pkg, rates)| {
-                                    match rates {
-                                        // If the company-package does not have static shipping rates,
-                                        // it is available for fixed price delivery
-                                        None => Some(pkg),
-                                        // If the company-package has static shipping rates,
-                                        // they are also used to determine whether the delivery is avaliable
-                                        Some((dimensional_factor, rates)) => {
-                                            let serviced_dest_countries = rates
-                                                .into_iter()
-                                                .filter_map(|rates| {
-                                                    let measurements = ShipmentMeasurements {
-                                                        volume_cubic_cm: size,
-                                                        weight_g: weight,
-                                                    };
-                                                    rates
-                                                        .calculate_delivery_price(measurements, dimensional_factor)
-                                                        .map(move |_| rates.to_alpha3)
-                                                }).collect::<Vec<_>>();
-
-                                            let available_dest_countries =
-                                                get_countries_from_forest_by(pkg.deliveries_to.iter(), |country| {
-                                                    serviced_dest_countries
-                                                        .iter()
-                                                        .any(|serviced_country_alpha3| country.alpha3 == *serviced_country_alpha3)
-                                                });
-
-                                            if available_dest_countries.is_empty() {
-                                                None
-                                            } else {
-                                                pkg.deliveries_to = available_dest_countries;
-                                                Some(pkg)
-                                            }
-                                        }
-                                    }
-                                }).collect::<Vec<_>>()
+                                .filter_map(|(pkg, rates)| determine_package_availability(rates, size, weight, pkg))
+                                .collect::<Vec<_>>()
                         })
                 }).map_err(|e| {
                     e.context("Service CompaniesPackages, find_deliveries_from endpoint error occured.")
@@ -286,5 +252,46 @@ impl<
                     .into()
             })
         })
+    }
+}
+
+fn determine_package_availability(
+    rates: Option<(Option<u32>, Vec<ShippingRates>)>,
+    volume: u32,
+    weight: u32,
+    mut pkg: AvailablePackages,
+) -> Option<AvailablePackages> {
+    match rates {
+        // If the company-package does not have static shipping rates,
+        // it is available for fixed price delivery
+        None => Some(pkg),
+        // If the company-package has static shipping rates,
+        // they are also used to determine whether the delivery is avaliable
+        Some((dimensional_factor, rates)) => {
+            let serviced_dest_countries = rates
+                .into_iter()
+                .filter_map(|rates| {
+                    let measurements = ShipmentMeasurements {
+                        volume_cubic_cm: volume,
+                        weight_g: weight,
+                    };
+                    rates
+                        .calculate_delivery_price(measurements, dimensional_factor)
+                        .map(move |_| rates.to_alpha3)
+                }).collect::<Vec<_>>();
+
+            let available_dest_countries = get_countries_from_forest_by(pkg.deliveries_to.iter(), |country| {
+                serviced_dest_countries
+                    .iter()
+                    .any(|serviced_country_alpha3| country.alpha3 == *serviced_country_alpha3)
+            });
+
+            if available_dest_countries.is_empty() {
+                None
+            } else {
+                pkg.deliveries_to = available_dest_countries;
+                Some(pkg)
+            }
+        }
     }
 }

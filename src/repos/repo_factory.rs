@@ -369,7 +369,7 @@ pub mod tests {
         fn get_available_package_for_user(
             &self,
             _base_product_id_arg: BaseProductId,
-            _package_id_arg: CompanyPackageId
+            _package_id_arg: CompanyPackageId,
         ) -> RepoResult<Option<AvailablePackageForUser>> {
             Ok(None)
         }
