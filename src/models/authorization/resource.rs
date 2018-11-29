@@ -9,6 +9,7 @@ pub enum Resource {
     Packages,
     Pickups,
     Products,
+    ShippingRates,
     UserAddresses,
     UserRoles,
 }
@@ -22,6 +23,7 @@ impl fmt::Display for Resource {
             Resource::Packages => write!(f, "packages"),
             Resource::Pickups => write!(f, "pickups"),
             Resource::Products => write!(f, "products"),
+            Resource::ShippingRates => write!(f, "shipping rates"),
             Resource::UserAddresses => write!(f, "user addresses"),
             Resource::UserRoles => write!(f, "user roles"),
         }

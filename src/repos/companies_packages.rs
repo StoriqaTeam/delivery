@@ -122,10 +122,10 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             .filter(company_id.eq_any(&company_id_args))
             .inner_join(DslCompanies::companies)
             .inner_join(DslPackages::packages)
-            .filter(DslPackages::max_size.le(size))
-            .filter(DslPackages::min_size.ge(size))
-            .filter(DslPackages::max_weight.le(size))
-            .filter(DslPackages::min_weight.ge(size))
+            .filter(DslPackages::max_size.ge(size))
+            .filter(DslPackages::min_size.le(size))
+            .filter(DslPackages::max_weight.ge(weight))
+            .filter(DslPackages::min_weight.le(weight))
             .order(DslCompanies::label);
 
         query
@@ -136,6 +136,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 
                 for result in results {
                     let (companies_package, company_raw, package_raw) = result;
+                    let company_package = companies_package.to_model()?;
                     let used_codes = package_raw.get_deliveries_to()?;
 
                     let local_available = used_codes.iter().any(|country_code| {
@@ -147,10 +148,11 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                     let package = package_raw.to_packages(&self.countries)?;
 
                     data.push(AvailablePackages {
-                        id: companies_package.id,
+                        id: company_package.id,
                         name: get_company_package_name(&company_raw.label, &package.name),
                         logo: company_raw.logo,
                         deliveries_to: package.deliveries_to,
+                        shipping_rate_source: company_package.shipping_rate_source,
                         currency: company_raw.currency,
                         local_available,
                     });

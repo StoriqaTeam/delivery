@@ -52,8 +52,14 @@ pub enum Route {
     CompaniesByPackageId {
         package_id: PackageId,
     },
+    CompanyPackageDeliveryPrice {
+        company_package_id: CompanyPackageId,
+    },
     AvailablePackages,
     AvailablePackagesForUser {
+        base_product_id: BaseProductId,
+    },
+    AvailablePackagesForUserV2 {
         base_product_id: BaseProductId,
     },
     AvailablePackageForUser {
@@ -61,6 +67,9 @@ pub enum Route {
         company_package_id: CompanyPackageId,
     },
     AvailablePackageForUserByShippingId {
+        shipping_id: ShippingId,
+    },
+    AvailablePackageForUserByShippingIdV2 {
         shipping_id: ShippingId,
     },
     UsersAddresses,
@@ -162,6 +171,12 @@ pub fn create_route_parser() -> RouteParser<Route> {
             .and_then(|string_id| string_id.parse().ok())
             .map(|company_package_id| Route::CompaniesPackagesById { company_package_id })
     });
+    route_parser.add_route_with_params(r"^/companies_packages/(\d+)/price$", |params| {
+        params
+            .get(0)
+            .and_then(|string_id| string_id.parse().ok())
+            .map(|company_package_id| Route::CompanyPackageDeliveryPrice { company_package_id })
+    });
 
     route_parser.add_route_with_params(r"^/companies/(\d+)/packages$", |params| {
         params
@@ -183,11 +198,18 @@ pub fn create_route_parser() -> RouteParser<Route> {
             .map(|package_id| Route::CompaniesByPackageId { package_id })
     });
     route_parser.add_route(r"^/available_packages$", || Route::AvailablePackages);
+
     route_parser.add_route_with_params(r"^/available_packages_for_user/(\d+)$", |params| {
         params
             .get(0)
             .and_then(|string_id| string_id.parse().ok())
             .map(|base_product_id| Route::AvailablePackagesForUser { base_product_id })
+    });
+    route_parser.add_route_with_params(r"^/v2/available_packages_for_user/(\d+)$", |params| {
+        params
+            .get(0)
+            .and_then(|string_id| string_id.parse().ok())
+            .map(|base_product_id| Route::AvailablePackagesForUserV2 { base_product_id })
     });
 
     route_parser.add_route_with_params(
@@ -205,6 +227,11 @@ pub fn create_route_parser() -> RouteParser<Route> {
     route_parser.add_route_with_params(r"^/available_packages_for_user/by_shipping_id/(\d+)$", |params| {
         let shipping_id = ShippingId(params.get(0)?.parse().ok()?);
         Some(Route::AvailablePackageForUserByShippingId { shipping_id })
+    });
+
+    route_parser.add_route_with_params(r"^/v2/available_packages_for_user/by_shipping_id/(\d+)$", |params| {
+        let shipping_id = ShippingId(params.get(0)?.parse().ok()?);
+        Some(Route::AvailablePackageForUserByShippingIdV2 { shipping_id })
     });
 
     // /users/addresses route

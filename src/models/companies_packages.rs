@@ -47,34 +47,6 @@ impl Validate for ShipmentMeasurements {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct ShippingRates {
-    dimensional_factor: Option<u32>,
-    rates: Vec<ShippingRate>,
-}
-
-impl ShippingRates {
-    pub fn calculate_delivery_price(self, measurements: ShipmentMeasurements) -> Option<f64> {
-        let billable_weight_g = measurements.calculate_billable_weight(self.dimensional_factor);
-        super::calculate_delivery_price(billable_weight_g, self.rates)
-    }
-}
-
-pub fn calculate_delivery_price(billable_weight_g: u32, mut rates: Vec<ShippingRate>) -> Option<f64> {
-    rates.sort_unstable_by_key(|rate| rate.weight_g);
-
-    rates
-        .into_iter()
-        .find(|rate| rate.weight_g >= billable_weight_g)
-        .map(|rate| rate.price)
-}
-
-#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
-pub struct ShippingRate {
-    weight_g: u32,
-    price: f64,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum ShippingRateSource {
     NotAvailable,
     Static { dimensional_factor: Option<u32> },
@@ -204,6 +176,7 @@ pub struct AvailablePackages {
     pub name: String,
     pub logo: String,
     pub deliveries_to: Vec<Country>,
+    pub shipping_rate_source: ShippingRateSource,
     pub currency: Currency,
     pub local_available: bool,
 }
@@ -216,7 +189,6 @@ pub struct AvailablePackageForUser {
     pub logo: String,
     pub price: Option<ProductPrice>,
     pub shipping_variant: ShippingVariant,
-    pub deliveries_to: Vec<Country>,
     pub base_product_id: BaseProductId,
     pub store_id: StoreId,
 }
@@ -225,179 +197,4 @@ pub struct AvailablePackageForUser {
 pub struct AvailableShippingForUser {
     pub packages: Vec<AvailablePackageForUser>,
     pub pickups: Option<Pickups>,
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn calculate_billable_weight_dimensional_weight_is_chosen() {
-        let dimensional_factor = Some(5);
-        let measurements = ShipmentMeasurements {
-            volume_cubic_cm: 1000,
-            weight_g: 12,
-        };
-
-        let expected_billable_weight = 1000 / 5;
-
-        assert_eq!(expected_billable_weight, measurements.calculate_billable_weight(dimensional_factor));
-    }
-
-    #[test]
-    fn calculate_billable_weight_physical_weight_is_chosen() {
-        let dimensional_factor = Some(5);
-        let measurements = ShipmentMeasurements {
-            volume_cubic_cm: 10,
-            weight_g: 12,
-        };
-
-        let expected_billable_weight = 12;
-
-        assert_eq!(expected_billable_weight, measurements.calculate_billable_weight(dimensional_factor));
-    }
-
-    #[test]
-    fn calculate_billable_weight_dimensional_weight_rounds_up() {
-        let dimensional_factor = Some(6);
-        let measurements = ShipmentMeasurements {
-            volume_cubic_cm: 1000,
-            weight_g: 12,
-        };
-
-        let expected_billable_weight = 1000 / 6 + 1;
-
-        assert_eq!(expected_billable_weight, measurements.calculate_billable_weight(dimensional_factor));
-    }
-
-    #[test]
-    fn calculate_billable_weight_no_dimensional_factor_physical_weight_is_chosen() {
-        let dimensional_factor = None;
-        let measurements = ShipmentMeasurements {
-            volume_cubic_cm: 1000,
-            weight_g: 12,
-        };
-
-        let expected_billable_weight = 12;
-        assert_eq!(expected_billable_weight, measurements.calculate_billable_weight(dimensional_factor));
-    }
-
-    #[test]
-    fn calculate_billable_weight_zero_dimensional_factor_physical_weight_is_chosen() {
-        let dimensional_factor = Some(0);
-        let measurements = ShipmentMeasurements {
-            volume_cubic_cm: 1000,
-            weight_g: 12,
-        };
-
-        let expected_billable_weight = 12;
-        assert_eq!(expected_billable_weight, measurements.calculate_billable_weight(dimensional_factor));
-    }
-
-    #[test]
-    fn calculate_delivery_price_empty_rates() {
-        assert_eq!(None, calculate_delivery_price(0, vec![]));
-        assert_eq!(None, calculate_delivery_price(1, vec![]));
-    }
-
-    #[test]
-    fn calculate_delivery_price_single_rate() {
-        let rates = vec![ShippingRate {
-            weight_g: 1000,
-            price: 1200.0,
-        }];
-        assert_eq!(Some(1200.0), calculate_delivery_price(0, rates.clone()));
-        assert_eq!(Some(1200.0), calculate_delivery_price(1, rates.clone()));
-        assert_eq!(Some(1200.0), calculate_delivery_price(1000, rates.clone()));
-        assert_eq!(None, calculate_delivery_price(1001, rates.clone()));
-    }
-
-    #[test]
-    fn calculate_delivery_price_common_cases() {
-        let rates = vec![
-            ShippingRate {
-                weight_g: 1000,
-                price: 1200.0,
-            },
-            ShippingRate {
-                weight_g: 500,
-                price: 900.0,
-            },
-            ShippingRate {
-                weight_g: 1500,
-                price: 1400.0,
-            },
-        ];
-
-        assert_eq!(Some(900.0), calculate_delivery_price(0, rates.clone()));
-        assert_eq!(Some(900.0), calculate_delivery_price(1, rates.clone()));
-        assert_eq!(Some(900.0), calculate_delivery_price(499, rates.clone()));
-        assert_eq!(Some(900.0), calculate_delivery_price(500, rates.clone()));
-        assert_eq!(Some(1200.0), calculate_delivery_price(501, rates.clone()));
-        assert_eq!(Some(1200.0), calculate_delivery_price(999, rates.clone()));
-        assert_eq!(Some(1200.0), calculate_delivery_price(1000, rates.clone()));
-        assert_eq!(Some(1400.0), calculate_delivery_price(1001, rates.clone()));
-        assert_eq!(Some(1400.0), calculate_delivery_price(1499, rates.clone()));
-        assert_eq!(Some(1400.0), calculate_delivery_price(1500, rates.clone()));
-        assert_eq!(None, calculate_delivery_price(1501, rates));
-    }
-
-    #[test]
-    fn shipping_rates_calculate_delivery_rates() {
-        let mut shipping_rates = ShippingRates {
-            dimensional_factor: Some(5),
-            rates: vec![
-                ShippingRate {
-                    weight_g: 500,
-                    price: 600.0,
-                },
-                ShippingRate {
-                    weight_g: 1000,
-                    price: 1200.0,
-                },
-            ],
-        };
-
-        assert_eq!(
-            Some(600.0),
-            shipping_rates.clone().calculate_delivery_price(ShipmentMeasurements {
-                volume_cubic_cm: 1000,
-                weight_g: 100
-            }),
-        );
-
-        assert_eq!(
-            Some(1200.0),
-            shipping_rates.clone().calculate_delivery_price(ShipmentMeasurements {
-                volume_cubic_cm: 1000,
-                weight_g: 600
-            }),
-        );
-
-        assert_eq!(
-            Some(1200.0),
-            shipping_rates.clone().calculate_delivery_price(ShipmentMeasurements {
-                volume_cubic_cm: 3000,
-                weight_g: 100
-            }),
-        );
-
-        assert_eq!(
-            None,
-            shipping_rates.clone().calculate_delivery_price(ShipmentMeasurements {
-                volume_cubic_cm: 3000,
-                weight_g: 1001
-            }),
-        );
-
-        shipping_rates.dimensional_factor = None;
-
-        assert_eq!(
-            Some(600.0),
-            shipping_rates.clone().calculate_delivery_price(ShipmentMeasurements {
-                volume_cubic_cm: 9999,
-                weight_g: 1
-            }),
-        );
-    }
 }

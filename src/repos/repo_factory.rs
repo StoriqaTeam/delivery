@@ -17,6 +17,7 @@ pub trait ReposFactory<C: Connection<Backend = Pg, TransactionManager = AnsiTran
     fn create_products_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<ProductsRepo + 'a>;
     fn create_packages_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<PackagesRepo + 'a>;
     fn create_pickups_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<PickupsRepo + 'a>;
+    fn create_shipping_rates_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<ShippingRatesRepo + 'a>;
     fn create_users_addresses_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<UserAddressesRepo + 'a>;
     fn create_user_roles_repo_with_sys_acl<'a>(&self, db_conn: &'a C) -> Box<UserRolesRepo + 'a>;
     fn create_user_roles_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<UserRolesRepo + 'a>;
@@ -123,6 +124,11 @@ where
         Box::new(PickupsRepoImpl::new(db_conn, acl)) as Box<PickupsRepo>
     }
 
+    fn create_shipping_rates_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<ShippingRatesRepo + 'a> {
+        let acl = self.get_acl(db_conn, user_id);
+        Box::new(ShippingRatesRepoImpl::new(db_conn, acl)) as Box<ShippingRatesRepo>
+    }
+
     fn create_users_addresses_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<UserAddressesRepo + 'a> {
         let acl = self.get_acl(db_conn, user_id);
         Box::new(UserAddressesRepoImpl::new(db_conn, acl)) as Box<UserAddressesRepo>
@@ -210,6 +216,10 @@ pub mod tests {
 
         fn create_pickups_repo<'a>(&self, _db_conn: &'a C, _user_id: Option<UserId>) -> Box<PickupsRepo + 'a> {
             Box::new(PickupsRepoMock::default()) as Box<PickupsRepo>
+        }
+
+        fn create_shipping_rates_repo<'a>(&self, _db_conn: &'a C, _user_id: Option<UserId>) -> Box<ShippingRatesRepo + 'a> {
+            Box::new(ShippingRatesRepoMock::default()) as Box<ShippingRatesRepo>
         }
 
         fn create_users_addresses_repo<'a>(&self, _db_conn: &'a C, _user_id: Option<UserId>) -> Box<UserAddressesRepo + 'a> {
@@ -353,7 +363,6 @@ pub mod tests {
                 price: None,
                 store_id: MOCK_STORE_ID,
                 base_product_id: MOCK_BASE_PRODUCT_ID,
-                deliveries_to: vec![],
             }])
         }
 
@@ -365,7 +374,11 @@ pub mod tests {
             Ok(None)
         }
 
-        fn get_available_package_for_user_by_shipping_id(&self, _shipping_id: ShippingId) -> RepoResult<Option<AvailablePackageForUser>> {
+        fn get_available_package_for_user_by_shipping_id(
+            &self,
+            _shipping_id: ShippingId,
+            _delivery_to: Option<Alpha3>,
+        ) -> RepoResult<Option<AvailablePackageForUser>> {
             Ok(None)
         }
 
@@ -806,6 +819,9 @@ pub mod tests {
                     name: "name".to_string(),
                     logo: "logo".to_string(),
                     deliveries_to: vec![],
+                    shipping_rate_source: ShippingRateSource::Static {
+                        dimensional_factor: Some(1),
+                    },
                     local_available: false,
                     currency: Currency::STQ,
                 }).collect())
@@ -943,6 +959,62 @@ pub mod tests {
                 updated_at: SystemTime::now(),
                 country_code: None,
             })
+        }
+    }
+
+    #[derive(Clone, Default)]
+    pub struct ShippingRatesRepoMock;
+
+    impl ShippingRatesRepo for ShippingRatesRepoMock {
+        fn get_multiple_rates(
+            &self,
+            company_package_id: CompanyPackageId,
+            delivery_from: Alpha3,
+            deliveries_to: Vec<Alpha3>,
+        ) -> RepoResult<Vec<ShippingRates>> {
+            Ok(deliveries_to
+                .into_iter()
+                .enumerate()
+                .map(|(i, delivery_to)| ShippingRates {
+                    id: ShippingRatesId(i as i32 + 1),
+                    company_package_id,
+                    from_alpha3: delivery_from.clone(),
+                    to_alpha3: delivery_to,
+                    rates: vec![
+                        ShippingRate {
+                            weight_g: 500,
+                            price: 999.0,
+                        },
+                        ShippingRate {
+                            weight_g: 1000,
+                            price: 1499.0,
+                        },
+                    ],
+                }).collect::<Vec<_>>())
+        }
+
+        fn get_rates(
+            &self,
+            company_package_id: CompanyPackageId,
+            delivery_from: Alpha3,
+            delivery_to: Alpha3,
+        ) -> RepoResult<Option<ShippingRates>> {
+            Ok(Some(ShippingRates {
+                id: ShippingRatesId(1),
+                company_package_id,
+                from_alpha3: delivery_from,
+                to_alpha3: delivery_to,
+                rates: vec![
+                    ShippingRate {
+                        weight_g: 500,
+                        price: 999.0,
+                    },
+                    ShippingRate {
+                        weight_g: 1000,
+                        price: 1499.0,
+                    },
+                ],
+            }))
         }
     }
 
