@@ -7,15 +7,17 @@ use validator::Validate;
 
 use r2d2::ManageConnection;
 
-use stq_types::{Alpha3, BaseProductId, CompanyPackageId, ShippingId};
+use stq_types::{Alpha3, BaseProductId, CompanyPackageId, ProductPrice, ShippingId};
 
 use errors::Error;
 use models::{
     AvailablePackageForUser, AvailableShippingForUser, NewProductValidation, NewProducts, NewShipping, PackageValidation, Products,
-    Shipping, ShippingProducts, ShippingValidation, UpdateProducts,
+    ShipmentMeasurements, Shipping, ShippingProducts, ShippingRateSource, ShippingValidation, UpdateProducts,
 };
+use repos::companies_packages::CompaniesPackagesRepo;
 use repos::countries::create_tree_used_countries;
 use repos::products::ProductsWithAvailableCountries;
+use repos::shipping_rates::ShippingRatesRepo;
 use repos::ReposFactory;
 use services::types::{Service, ServiceFuture};
 
@@ -33,6 +35,16 @@ pub trait ProductsService {
         user_country: Alpha3,
     ) -> ServiceFuture<AvailableShippingForUser>;
 
+    /// find available product delivery to user's country with correct prices
+    fn find_available_shipping_for_user_v2(
+        &self,
+        base_product_id: BaseProductId,
+        delivery_from: Alpha3,
+        delivery_to: Alpha3,
+        volume: u32,
+        weight: u32,
+    ) -> ServiceFuture<AvailableShippingForUser>;
+
     /// Update a product
     fn update_products(
         &self,
@@ -48,8 +60,29 @@ pub trait ProductsService {
         package_id: CompanyPackageId,
     ) -> ServiceFuture<Option<AvailablePackageForUser>>;
 
+    /// Returns available package for user by id with correct price
+    fn get_available_package_for_user_v2(
+        &self,
+        base_product_id: BaseProductId,
+        package_id: CompanyPackageId,
+        delivery_from: Alpha3,
+        delivery_to: Alpha3,
+        volume: u32,
+        weight: u32,
+    ) -> ServiceFuture<Option<AvailablePackageForUser>>;
+
     /// Returns available package for user by shipping id
     fn get_available_package_for_user_by_shipping_id(&self, shipping_id: ShippingId) -> ServiceFuture<Option<AvailablePackageForUser>>;
+
+    /// Returns available package for user by shipping id with correct price
+    fn get_available_package_for_user_by_shipping_id_v2(
+        &self,
+        shipping_id: ShippingId,
+        delivery_from: Alpha3,
+        delivery_to: Alpha3,
+        volume: u32,
+        weight: u32,
+    ) -> ServiceFuture<Option<AvailablePackageForUser>>;
 
     fn delete_products(&self, base_product_id_arg: BaseProductId) -> ServiceFuture<()>;
 }
@@ -202,6 +235,52 @@ impl<
         })
     }
 
+    /// find available product delivery to user's country with correct prices
+    fn find_available_shipping_for_user_v2(
+        &self,
+        base_product_id: BaseProductId,
+        delivery_from: Alpha3,
+        delivery_to: Alpha3,
+        volume: u32,
+        weight: u32,
+    ) -> ServiceFuture<AvailableShippingForUser> {
+        let repo_factory = self.static_context.repo_factory.clone();
+        let user_id = self.dynamic_context.user_id;
+
+        self.spawn_on_pool(move |conn| {
+            let products_repo = repo_factory.create_products_repo(&*conn, user_id);
+            let company_package_repo = repo_factory.create_companies_packages_repo(&*conn, user_id);
+            let shipping_rates_repo = repo_factory.create_shipping_rates_repo(&*conn, user_id);
+            let pickups_repo = repo_factory.create_pickups_repo(&*conn, user_id);
+
+            let run = || {
+                let packages = products_repo
+                    .find_available_to(base_product_id, delivery_to.clone())?
+                    .into_iter()
+                    .map(|pkg| {
+                        with_price_from_rates(
+                            &*company_package_repo,
+                            &*shipping_rates_repo,
+                            delivery_from.clone(),
+                            delivery_to.clone(),
+                            volume,
+                            weight,
+                            pkg,
+                        )
+                    }).collect::<Result<Vec<_>, _>>()?
+                    .into_iter()
+                    .filter_map(|x| x)
+                    .collect::<Vec<_>>();
+
+                pickups_repo
+                    .get(base_product_id)
+                    .map(|pickups| AvailableShippingForUser { packages, pickups })
+            };
+
+            run().map_err(|e: FailureError| e.context("Service Products, find_available_to endpoint error occurred.").into())
+        })
+    }
+
     /// Returns available package for user by id
     fn get_available_package_for_user(
         &self,
@@ -215,11 +294,56 @@ impl<
             let products_repo = repo_factory.create_products_repo(&*conn, user_id);
 
             products_repo
-                .get_available_package_for_user(base_product_id, package_id)
+                .get_available_package_for_user(base_product_id, package_id, None)
                 .map_err(|e| {
                     e.context("Service Products, get_available_package_for_user endpoint error occurred.")
                         .into()
                 })
+        })
+    }
+
+    /// Returns available package for user by id with correct price
+    fn get_available_package_for_user_v2(
+        &self,
+        base_product_id: BaseProductId,
+        company_package_id: CompanyPackageId,
+        delivery_from: Alpha3,
+        delivery_to: Alpha3,
+        volume: u32,
+        weight: u32,
+    ) -> ServiceFuture<Option<AvailablePackageForUser>> {
+        let repo_factory = self.static_context.repo_factory.clone();
+        let user_id = self.dynamic_context.user_id;
+
+        self.spawn_on_pool(move |conn| {
+            let products_repo = repo_factory.create_products_repo(&*conn, user_id);
+            let company_package_repo = repo_factory.create_companies_packages_repo(&*conn, user_id);
+            let shipping_rates_repo = repo_factory.create_shipping_rates_repo(&*conn, user_id);
+
+            let run = || {
+                let pkg_for_user =
+                    products_repo.get_available_package_for_user(base_product_id, company_package_id, Some(delivery_to.clone()))?;
+                let pkg_for_user = match pkg_for_user {
+                    None => {
+                        return Ok(None);
+                    }
+                    Some(pkg) => pkg,
+                };
+                with_price_from_rates(
+                    &*company_package_repo,
+                    &*shipping_rates_repo,
+                    delivery_from,
+                    delivery_to,
+                    volume,
+                    weight,
+                    pkg_for_user,
+                )
+            };
+
+            run().map_err(|e: FailureError| {
+                e.context("Service Products, get_available_package_for_user_v2 endpoint error occurred.")
+                    .into()
+            })
         })
     }
 
@@ -232,11 +356,54 @@ impl<
             let products_repo = repo_factory.create_products_repo(&*conn, user_id);
 
             products_repo
-                .get_available_package_for_user_by_shipping_id(shipping_id)
+                .get_available_package_for_user_by_shipping_id(shipping_id, None)
                 .map_err(|e| {
                     e.context("Service Products, get_available_package_for_user_by_shipping_id endpoint error occurred.")
                         .into()
                 })
+        })
+    }
+
+    /// Returns available package for user by shipping id with correct price
+    fn get_available_package_for_user_by_shipping_id_v2(
+        &self,
+        shipping_id: ShippingId,
+        delivery_from: Alpha3,
+        delivery_to: Alpha3,
+        volume: u32,
+        weight: u32,
+    ) -> ServiceFuture<Option<AvailablePackageForUser>> {
+        let repo_factory = self.static_context.repo_factory.clone();
+        let user_id = self.dynamic_context.user_id;
+
+        self.spawn_on_pool(move |conn| {
+            let products_repo = repo_factory.create_products_repo(&*conn, user_id);
+            let company_package_repo = repo_factory.create_companies_packages_repo(&*conn, user_id);
+            let shipping_rates_repo = repo_factory.create_shipping_rates_repo(&*conn, user_id);
+
+            let run = || {
+                let pkg_for_user = products_repo.get_available_package_for_user_by_shipping_id(shipping_id, Some(delivery_to.clone()))?;
+                let pkg_for_user = match pkg_for_user {
+                    None => {
+                        return Ok(None);
+                    }
+                    Some(pkg) => pkg,
+                };
+                with_price_from_rates(
+                    &*company_package_repo,
+                    &*shipping_rates_repo,
+                    delivery_from,
+                    delivery_to,
+                    volume,
+                    weight,
+                    pkg_for_user,
+                )
+            };
+
+            run().map_err(|e: FailureError| {
+                e.context("Service Products, get_available_package_for_user_by_shipping_id_v2 endpoint error occurred.")
+                    .into()
+            })
         })
     }
 
@@ -271,4 +438,41 @@ impl<
             }).map_err(|e| e.context("Service Products, delete endpoint error occured.").into())
         })
     }
+}
+
+fn with_price_from_rates<'a>(
+    company_package_repo: &'a CompaniesPackagesRepo,
+    shipping_rates_repo: &'a ShippingRatesRepo,
+    delivery_from: Alpha3,
+    delivery_to: Alpha3,
+    volume: u32,
+    weight: u32,
+    mut pkg_for_user: AvailablePackageForUser,
+) -> Result<Option<AvailablePackageForUser>, FailureError> {
+    if pkg_for_user.price.is_some() {
+        return Ok(Some(pkg_for_user));
+    }
+
+    let company_package_id = pkg_for_user.id;
+    let company_package = company_package_repo
+        .get(company_package_id)?
+        .ok_or(format_err!("Company package with id {} not found", company_package_id))?;
+
+    let price = match company_package.shipping_rate_source {
+        ShippingRateSource::NotAvailable => None,
+        ShippingRateSource::Static { dimensional_factor } => shipping_rates_repo
+            .get_rates(company_package_id, delivery_from, delivery_to)?
+            .and_then(|rates| {
+                let measurements = ShipmentMeasurements {
+                    volume_cubic_cm: volume,
+                    weight_g: weight,
+                };
+                rates.calculate_delivery_price(measurements, dimensional_factor).map(ProductPrice)
+            }),
+    };
+
+    Ok(price.map(|price| {
+        pkg_for_user.price = Some(price);
+        pkg_for_user
+    }))
 }

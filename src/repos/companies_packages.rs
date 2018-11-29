@@ -122,10 +122,10 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             .filter(company_id.eq_any(&company_id_args))
             .inner_join(DslCompanies::companies)
             .inner_join(DslPackages::packages)
-            .filter(DslPackages::max_size.le(size))
-            .filter(DslPackages::min_size.ge(size))
-            .filter(DslPackages::max_weight.le(size))
-            .filter(DslPackages::min_weight.ge(size))
+            .filter(DslPackages::max_size.ge(size))
+            .filter(DslPackages::min_size.le(size))
+            .filter(DslPackages::max_weight.ge(weight))
+            .filter(DslPackages::min_weight.le(weight))
             .order(DslCompanies::label);
 
         query

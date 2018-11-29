@@ -61,10 +61,15 @@ pub trait ProductsRepo {
         &self,
         base_product_id_arg: BaseProductId,
         package_id_arg: CompanyPackageId,
+        delivery_to: Option<Alpha3>,
     ) -> RepoResult<Option<AvailablePackageForUser>>;
 
     /// Returns available package for user by shipping id
-    fn get_available_package_for_user_by_shipping_id(&self, shipping_id_arg: ShippingId) -> RepoResult<Option<AvailablePackageForUser>>;
+    fn get_available_package_for_user_by_shipping_id(
+        &self,
+        shipping_id_arg: ShippingId,
+        delivery_to: Option<Alpha3>,
+    ) -> RepoResult<Option<AvailablePackageForUser>>;
 
     /// Delete a products
     fn delete(&self, base_product_id_arg: BaseProductId) -> RepoResult<Vec<Products>>;
@@ -253,20 +258,28 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         &self,
         base_product_id_arg: BaseProductId,
         package_id_arg: CompanyPackageId,
+        delivery_to: Option<Alpha3>,
     ) -> RepoResult<Option<AvailablePackageForUser>> {
         debug!(
             "Get available package for base product: {} with select company package id: {}.",
             base_product_id_arg, package_id_arg
         );
 
-        let query = DslProducts::products
-            .filter(DslProducts::base_product_id.eq(base_product_id_arg))
-            .filter(DslProducts::company_package_id.eq(package_id_arg))
+        let mut query = DslProducts::products
             .inner_join(
                 DslCompaniesPackages::companies_packages
                     .inner_join(DslCompanies::companies)
                     .inner_join(DslPackages::packages),
-            ).order(DslCompanies::label);
+            ).filter(DslProducts::base_product_id.eq(base_product_id_arg))
+            .filter(DslProducts::company_package_id.eq(package_id_arg))
+            .into_boxed();
+
+        if let Some(delivery_to) = delivery_to {
+            let pg_str = get_pg_str_json_array(vec![delivery_to.clone()]);
+            query = query.filter(sql(format!("products.deliveries_to ?| {}", pg_str).as_ref()));
+        };
+
+        let query = query.order(DslCompanies::label);
 
         query
             .get_result::<(ProductsRaw, (CompaniesPackagesRaw, CompanyRaw, PackagesRaw))>(self.db_conn)
@@ -294,16 +307,27 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             })
     }
 
-    fn get_available_package_for_user_by_shipping_id(&self, shipping_id_arg: ShippingId) -> RepoResult<Option<AvailablePackageForUser>> {
+    fn get_available_package_for_user_by_shipping_id(
+        &self,
+        shipping_id_arg: ShippingId,
+        delivery_to: Option<Alpha3>,
+    ) -> RepoResult<Option<AvailablePackageForUser>> {
         debug!("Get available package for shipping id: {}.", shipping_id_arg);
 
-        let query = DslProducts::products
-            .filter(DslProducts::id.eq(shipping_id_arg))
+        let mut query = DslProducts::products
             .inner_join(
                 DslCompaniesPackages::companies_packages
                     .inner_join(DslCompanies::companies)
                     .inner_join(DslPackages::packages),
-            ).order(DslCompanies::label);
+            ).filter(DslProducts::id.eq(shipping_id_arg))
+            .into_boxed();
+
+        if let Some(delivery_to) = delivery_to {
+            let pg_str = get_pg_str_json_array(vec![delivery_to.clone()]);
+            query = query.filter(sql(format!("products.deliveries_to ?| {}", pg_str).as_ref()));
+        };
+
+        let query = query.order(DslCompanies::label);
 
         query
             .get_result::<(ProductsRaw, (CompaniesPackagesRaw, CompanyRaw, PackagesRaw))>(self.db_conn)

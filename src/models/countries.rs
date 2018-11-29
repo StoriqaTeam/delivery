@@ -47,6 +47,10 @@ pub struct Country {
     pub parent: Option<Alpha3>,
 }
 
+impl Country {
+    pub const COUNTRY_LEVEL: i32 = 2;
+}
+
 impl From<RawCountry> for Country {
     fn from(raw: RawCountry) -> Self {
         Self {
@@ -90,4 +94,38 @@ where
     C: Iterator<Item = &'a Country>,
 {
     countries.filter_map(|country| get_country(country, country_id)).next()
+}
+
+pub fn get_countries_by<P>(country: &Country, predicate: P) -> Vec<Country>
+where
+    P: Fn(&Country) -> bool,
+{
+    get_countries_by_inner(country, &predicate, Vec::default())
+}
+
+pub fn get_countries_from_forest_by<'a, C, P>(countries: C, predicate: P) -> Vec<Country>
+where
+    C: Iterator<Item = &'a Country>,
+    P: Fn(&Country) -> bool,
+{
+    get_countries_from_forest_by_inner(countries, &predicate, Vec::default())
+}
+
+fn get_countries_by_inner<P>(country: &Country, predicate: &P, mut vec: Vec<Country>) -> Vec<Country>
+where
+    P: Fn(&Country) -> bool,
+{
+    if predicate(country) {
+        vec.push(country.clone());
+    };
+
+    get_countries_from_forest_by_inner(country.children.iter(), predicate, vec)
+}
+
+fn get_countries_from_forest_by_inner<'a, C, P>(countries: C, predicate: &P, vec: Vec<Country>) -> Vec<Country>
+where
+    C: Iterator<Item = &'a Country>,
+    P: Fn(&Country) -> bool,
+{
+    countries.fold(vec, |vec, country| get_countries_by_inner(country, predicate, vec))
 }

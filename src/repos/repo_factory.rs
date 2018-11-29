@@ -363,7 +363,6 @@ pub mod tests {
                 price: None,
                 store_id: MOCK_STORE_ID,
                 base_product_id: MOCK_BASE_PRODUCT_ID,
-                deliveries_to: vec![],
             }])
         }
 
@@ -371,11 +370,16 @@ pub mod tests {
             &self,
             _base_product_id_arg: BaseProductId,
             _package_id_arg: CompanyPackageId,
+            _delivery_to: Option<Alpha3>,
         ) -> RepoResult<Option<AvailablePackageForUser>> {
             Ok(None)
         }
 
-        fn get_available_package_for_user_by_shipping_id(&self, _shipping_id: ShippingId) -> RepoResult<Option<AvailablePackageForUser>> {
+        fn get_available_package_for_user_by_shipping_id(
+            &self,
+            _shipping_id: ShippingId,
+            _delivery_to: Option<Alpha3>,
+        ) -> RepoResult<Option<AvailablePackageForUser>> {
             Ok(None)
         }
 

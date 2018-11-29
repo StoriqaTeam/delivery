@@ -11,8 +11,8 @@ use validator::Validate;
 
 use errors::Error;
 use models::{
-    AvailablePackages, Company, CompanyPackage, NewCompanyPackage, PackageValidation, Packages, ShipmentMeasurements, ShippingRateSource,
-    ShippingValidation,
+    get_countries_from_forest_by, AvailablePackages, Company, CompanyPackage, Country, NewCompanyPackage, PackageValidation, Packages,
+    ShipmentMeasurements, ShippingRateSource, ShippingValidation,
 };
 use repos::ReposFactory;
 use services::types::{Service, ServiceFuture};
@@ -133,7 +133,11 @@ impl<
                         .get_available_packages(companies_ids, size, weight, deliveries_from.clone())?
                         .into_iter()
                         .map(|pkg| {
-                            let deliveries_to = pkg.deliveries_to.iter().map(|country| country.alpha3.clone()).collect::<Vec<_>>();
+                            let deliveries_to =
+                                get_countries_from_forest_by(pkg.deliveries_to.iter(), |country| country.level == Country::COUNTRY_LEVEL)
+                                    .into_iter()
+                                    .map(|country| country.alpha3)
+                                    .collect::<Vec<_>>();
 
                             match pkg.shipping_rate_source {
                                 ShippingRateSource::NotAvailable => Ok((pkg, None)),
@@ -153,7 +157,7 @@ impl<
                                         // If the company-package has static shipping rates,
                                         // they are also used to determine whether the delivery is avaliable
                                         Some((dimensional_factor, rates)) => {
-                                            let serviced_countries = rates
+                                            let serviced_dest_countries = rates
                                                 .into_iter()
                                                 .filter_map(|rates| {
                                                     let measurements = ShipmentMeasurements {
@@ -165,15 +169,17 @@ impl<
                                                         .map(move |_| rates.to_alpha3)
                                                 }).collect::<Vec<_>>();
 
-                                            pkg.deliveries_to.retain(|country| {
-                                                serviced_countries
-                                                    .iter()
-                                                    .any(|serviced_country_alpha3| country.alpha3 == *serviced_country_alpha3)
-                                            });
+                                            let available_dest_countries =
+                                                get_countries_from_forest_by(pkg.deliveries_to.iter(), |country| {
+                                                    serviced_dest_countries
+                                                        .iter()
+                                                        .any(|serviced_country_alpha3| country.alpha3 == *serviced_country_alpha3)
+                                                });
 
-                                            if pkg.deliveries_to.is_empty() {
+                                            if available_dest_countries.is_empty() {
                                                 None
                                             } else {
+                                                pkg.deliveries_to = available_dest_countries;
                                                 Some(pkg)
                                             }
                                         }
