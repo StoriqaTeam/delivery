@@ -54,21 +54,11 @@ pub trait ProductsService {
     ) -> ServiceFuture<Products>;
 
     /// Returns available package for user by id
+    /// DEPRECATED. Use `get_available_package_for_user_by_shipping_id_v2` instead.
     fn get_available_package_for_user(
         &self,
         base_product_id: BaseProductId,
         package_id: CompanyPackageId,
-    ) -> ServiceFuture<Option<AvailablePackageForUser>>;
-
-    /// Returns available package for user by id with correct price
-    fn get_available_package_for_user_v2(
-        &self,
-        base_product_id: BaseProductId,
-        package_id: CompanyPackageId,
-        delivery_from: Alpha3,
-        delivery_to: Alpha3,
-        volume: u32,
-        weight: u32,
     ) -> ServiceFuture<Option<AvailablePackageForUser>>;
 
     /// Returns available package for user by shipping id
@@ -282,6 +272,7 @@ impl<
     }
 
     /// Returns available package for user by id
+    /// DEPRECATED. Use `get_available_package_for_user_by_shipping_id_v2` instead.
     fn get_available_package_for_user(
         &self,
         base_product_id: BaseProductId,
@@ -294,56 +285,11 @@ impl<
             let products_repo = repo_factory.create_products_repo(&*conn, user_id);
 
             products_repo
-                .get_available_package_for_user(base_product_id, package_id, None)
+                .get_available_package_for_user(base_product_id, package_id)
                 .map_err(|e| {
                     e.context("Service Products, get_available_package_for_user endpoint error occurred.")
                         .into()
                 })
-        })
-    }
-
-    /// Returns available package for user by id with correct price
-    fn get_available_package_for_user_v2(
-        &self,
-        base_product_id: BaseProductId,
-        company_package_id: CompanyPackageId,
-        delivery_from: Alpha3,
-        delivery_to: Alpha3,
-        volume: u32,
-        weight: u32,
-    ) -> ServiceFuture<Option<AvailablePackageForUser>> {
-        let repo_factory = self.static_context.repo_factory.clone();
-        let user_id = self.dynamic_context.user_id;
-
-        self.spawn_on_pool(move |conn| {
-            let products_repo = repo_factory.create_products_repo(&*conn, user_id);
-            let company_package_repo = repo_factory.create_companies_packages_repo(&*conn, user_id);
-            let shipping_rates_repo = repo_factory.create_shipping_rates_repo(&*conn, user_id);
-
-            let run = || {
-                let pkg_for_user =
-                    products_repo.get_available_package_for_user(base_product_id, company_package_id, Some(delivery_to.clone()))?;
-                let pkg_for_user = match pkg_for_user {
-                    None => {
-                        return Ok(None);
-                    }
-                    Some(pkg) => pkg,
-                };
-                with_price_from_rates(
-                    &*company_package_repo,
-                    &*shipping_rates_repo,
-                    delivery_from,
-                    delivery_to,
-                    volume,
-                    weight,
-                    pkg_for_user,
-                )
-            };
-
-            run().map_err(|e: FailureError| {
-                e.context("Service Products, get_available_package_for_user_v2 endpoint error occurred.")
-                    .into()
-            })
         })
     }
 

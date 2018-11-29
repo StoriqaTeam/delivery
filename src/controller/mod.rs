@@ -228,7 +228,11 @@ impl<
                     "weight" => u32
                 ) {
                     serialize_future(service.find_available_shipping_for_user_v2(
-                        base_product_id, delivery_from, delivery_to, volume, weight,
+                        base_product_id,
+                        delivery_from,
+                        delivery_to,
+                        volume,
+                        weight,
                     ))
                 } else {
                     Box::new(future::err(
@@ -242,6 +246,11 @@ impl<
             }
 
             // GET /available_packages_for_user/products/:id/companies_packages/:id
+
+            // DEPRECATED
+            // BaseProductId and CompanyPackageId identifiers do not ensure uniqueness of the requested AvailablePackage.
+            // This means that the endpoint may return varying results for the same query
+            // "GET /v2/available_packages_for_user/by_shipping_id/:id" has to be used instead
             (
                 Get,
                 Some(Route::AvailablePackageForUser {
@@ -249,35 +258,6 @@ impl<
                     company_package_id,
                 }),
             ) => serialize_future(service.get_available_package_for_user(base_product_id, company_package_id)),
-
-            // GET /v2/available_packages_for_user/products/:id/companies_packages/:id
-            (
-                Get,
-                Some(Route::AvailablePackageForUserV2 {
-                    base_product_id,
-                    company_package_id,
-                }),
-            ) => {
-                if let (Some(delivery_from), Some(delivery_to), Some(volume), Some(weight)) = parse_query!(
-                    req.query().unwrap_or_default(),
-                    "delivery_from" => Alpha3,
-                    "delivery_to" => Alpha3,
-                    "volume" => u32,
-                    "weight" => u32
-                ) {
-                    serialize_future(service.get_available_package_for_user_v2(
-                        base_product_id, company_package_id, delivery_from, delivery_to, volume, weight,
-                    ))
-                } else {
-                    Box::new(future::err(
-                        format_err!(
-                            "Parsing query parameters failed, action: get available package for user v2, base product id: {}, company package id: {}",
-                            base_product_id, company_package_id,
-                        ).context(Error::Parse)
-                        .into(),
-                    ))
-                }
-            },
 
             // GET /available_packages_for_user/by_shipping_id/:id
             (Get, Some(Route::AvailablePackageForUserByShippingId { shipping_id })) => {
@@ -294,7 +274,11 @@ impl<
                     "weight" => u32
                 ) {
                     serialize_future(service.get_available_package_for_user_by_shipping_id_v2(
-                        shipping_id, delivery_from, delivery_to, volume, weight,
+                        shipping_id,
+                        delivery_from,
+                        delivery_to,
+                        volume,
+                        weight,
                     ))
                 } else {
                     Box::new(future::err(
