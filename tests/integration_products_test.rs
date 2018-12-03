@@ -83,6 +83,9 @@ fn test_company() {
     test_products_store_manager(&mut core, &http_client, base_url.clone());
 }
 
+#[test]
+fn test_
+
 fn create_company(name: String) -> NewCompany {
     NewCompany {
         name,
@@ -324,3 +327,4 @@ fn test_products_store_manager(core: &mut tokio_core::reactor::Core, http_client
     let delete_result = common::delete_role(user_id.clone(), core, http_client, base_url.clone());
     assert!(delete_result.is_ok());
 }
+

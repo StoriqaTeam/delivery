@@ -74,6 +74,13 @@ fn test_package() {
     test_package_unauthorized(&mut core, &http_client, base_url.clone());
 }
 
+#[test]
+fn test_available_packages_for_user() {
+    let (mut core, http_client) = common::make_utils();
+    let base_url = common::setup();
+    available_packages_for_user(&mut core, &http_client, base_url.clone());
+}
+
 // test package by superuser
 fn test_package_superuser_crud(core: &mut tokio_core::reactor::Core, http_client: &HttpClientHandle, base_url: String) {
     let user_id = UserId(1);
@@ -246,4 +253,23 @@ fn test_package_unauthorized(core: &mut tokio_core::reactor::Core, http_client: 
         Some("1".to_string()),
     ));
     assert!(delete_result.is_ok());
+}
+
+fn available_packages_for_user(core: &mut tokio_core::reactor::Core, http_client: &HttpClientHandle, base_url: String) {
+    let base_product_id = BaseProductId(4);
+    let super_user_id = UserId(1);
+    let user_country = Alpha3("RUS".to_string());
+    let available_packages_for_user_url = format!(
+        "{}/available_packages_for_user/{}?user_country={}",
+        base_url, base_product_id, user_country
+    );
+    let shipping = core
+        .run(http_client.request_with_auth_header::<AvailableShippingForUser>(
+            Method::Get,
+            available_packages_for_user_url,
+            None,
+            Some(super_user_id.to_string()),
+        )).unwrap();
+    assert!(shipping.packages.is_empty());
+    assert!(shipping.pickups.is_none());
 }
