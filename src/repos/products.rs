@@ -4,10 +4,12 @@
 use diesel;
 use diesel::connection::AnsiTransactionManager;
 use diesel::dsl::sql;
+use diesel::pg::types::sql_types::Array;
 use diesel::pg::Pg;
 use diesel::prelude::*;
 use diesel::query_dsl::LoadQuery;
 use diesel::query_dsl::RunQueryDsl;
+use diesel::sql_types::VarChar;
 use diesel::Connection;
 use failure::Error as FailureError;
 
@@ -199,11 +201,11 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             base_product_id_arg, user_country
         );
 
-        let pg_str = get_pg_str_json_array(vec![user_country.clone()]);
+        let pg_countries: Vec<String> = vec![user_country.clone()].into_iter().map(|c| c.0).collect();
 
         let query = DslProducts::products
             .filter(DslProducts::base_product_id.eq(base_product_id_arg))
-            .filter(sql(format!("products.deliveries_to ?| {}", pg_str).as_ref()))
+            .filter(sql("products.deliveries_to ?| ").bind::<Array<VarChar>, _>(pg_countries))
             .inner_join(
                 DslCompaniesPackages::companies_packages
                     .inner_join(DslCompanies::companies)

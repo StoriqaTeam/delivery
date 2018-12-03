@@ -3,10 +3,12 @@
 use diesel;
 use diesel::connection::AnsiTransactionManager;
 use diesel::dsl::sql;
+use diesel::pg::types::sql_types::Array;
 use diesel::pg::Pg;
 use diesel::prelude::*;
 use diesel::query_dsl::LoadQuery;
 use diesel::query_dsl::RunQueryDsl;
+use diesel::sql_types::VarChar;
 use diesel::Connection;
 
 use failure::Error as FailureError;
@@ -79,9 +81,9 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     fn find_deliveries_to(&self, countries: Vec<Alpha3>) -> RepoResult<Vec<Packages>> {
         debug!("Find in packages with country {:?}.", countries);
 
-        let pg_str = get_pg_str_json_array(countries.clone());
+        let pg_countries: Vec<String> = countries.iter().cloned().map(|c| c.0).collect();
 
-        let query = packages.filter(sql(format!("deliveries_to ?| {}", pg_str).as_ref()));
+        let query = packages.filter(sql("deliveries_to ?| ").bind::<Array<VarChar>, _>(pg_countries));
 
         query
             .get_results(self.db_conn)
