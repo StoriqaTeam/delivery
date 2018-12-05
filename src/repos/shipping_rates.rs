@@ -16,11 +16,13 @@ use super::acl;
 use super::types::RepoResult;
 use extras::option;
 use models::authorization::*;
-use models::{ShippingRates, ShippingRatesRaw};
+use models::{NewShippingRates, NewShippingRatesRaw, ShippingRates, ShippingRatesRaw};
 use schema::shipping_rates::dsl as DslShippingRates;
 
 /// Repository for static shipping rates
 pub trait ShippingRatesRepo {
+    fn get_all_rates_from(&self, company_package_id: CompanyPackageId, delivery_from: Alpha3) -> RepoResult<Vec<ShippingRates>>;
+
     fn get_multiple_rates(
         &self,
         company_package_id: CompanyPackageId,
@@ -34,6 +36,10 @@ pub trait ShippingRatesRepo {
         delivery_from: Alpha3,
         delivery_to: Alpha3,
     ) -> RepoResult<Option<ShippingRates>>;
+
+    fn insert_many(&self, shipping_rates: Vec<NewShippingRates>) -> RepoResult<Vec<ShippingRates>>;
+
+    fn delete_all_rates_from(&self, company_package_id: CompanyPackageId, delivery_from: Alpha3) -> RepoResult<Vec<ShippingRates>>;
 }
 
 pub struct ShippingRatesRepoImpl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> {
@@ -50,6 +56,27 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> ShippingRatesRepo
     for ShippingRatesRepoImpl<'a, T>
 {
+    fn get_all_rates_from(&self, company_package_id: CompanyPackageId, delivery_from: Alpha3) -> RepoResult<Vec<ShippingRates>> {
+        acl::check(&*self.acl, Resource::ShippingRates, Action::Read, self, None)?;
+
+        let query = DslShippingRates::shipping_rates.filter(
+            DslShippingRates::company_package_id
+                .eq(company_package_id)
+                .and(DslShippingRates::from_alpha3.eq(delivery_from.clone())),
+        );
+
+        query
+            .get_results::<ShippingRatesRaw>(self.db_conn)
+            .map_err(FailureError::from)
+            .and_then(|rates| rates.into_iter().map(ShippingRatesRaw::to_model).collect::<Result<Vec<_>, _>>())
+            .map_err(|e| {
+                e.context(format!(
+                    "error occurred in get_all_rates_from for CompanyPackage with id = {}, from {}",
+                    company_package_id, delivery_from,
+                )).into()
+            })
+    }
+
     fn get_multiple_rates(
         &self,
         company_package_id: CompanyPackageId,
@@ -58,13 +85,12 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     ) -> RepoResult<Vec<ShippingRates>> {
         acl::check(&*self.acl, Resource::ShippingRates, Action::Read, self, None)?;
 
-        let query = DslShippingRates::shipping_rates
-            .filter(
-                DslShippingRates::company_package_id
-                    .eq(company_package_id)
-                    .and(DslShippingRates::from_alpha3.eq(delivery_from.clone()))
-                    .and(DslShippingRates::to_alpha3.eq(any(deliveries_to.clone()))),
-            ).order(DslShippingRates::id.desc());
+        let query = DslShippingRates::shipping_rates.filter(
+            DslShippingRates::company_package_id
+                .eq(company_package_id)
+                .and(DslShippingRates::from_alpha3.eq(delivery_from.clone()))
+                .and(DslShippingRates::to_alpha3.eq(any(deliveries_to.clone()))),
+        );
 
         query
             .get_results::<ShippingRatesRaw>(self.db_conn)
@@ -105,6 +131,42 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                     company_package_id, delivery_from, delivery_to,
                 )).into()
             })
+    }
+
+    fn delete_all_rates_from(&self, company_package_id: CompanyPackageId, delivery_from: Alpha3) -> RepoResult<Vec<ShippingRates>> {
+        acl::check(&*self.acl, Resource::ShippingRates, Action::Delete, self, None)?;
+
+        let command = diesel::delete(
+            DslShippingRates::shipping_rates.filter(
+                DslShippingRates::company_package_id
+                    .eq(company_package_id)
+                    .and(DslShippingRates::from_alpha3.eq(delivery_from.clone())),
+            ),
+        );
+
+        command
+            .get_results::<ShippingRatesRaw>(self.db_conn)
+            .map_err(From::from)
+            .and_then(|rates| rates.into_iter().map(ShippingRatesRaw::to_model).collect::<RepoResult<Vec<_>>>())
+            .map_err(|e| {
+                e.context(format!(
+                    "error occurred in delete_all_rates_from for CompanyPackage with id = {}, from {}",
+                    company_package_id, delivery_from,
+                )).into()
+            })
+    }
+
+    fn insert_many(&self, shipping_rates: Vec<NewShippingRates>) -> RepoResult<Vec<ShippingRates>> {
+        acl::check(&*self.acl, Resource::ShippingRates, Action::Create, self, None)?;
+
+        let shipping_rates = shipping_rates.into_iter().map(NewShippingRatesRaw::from).collect::<Vec<_>>();
+        let command = diesel::insert_into(DslShippingRates::shipping_rates).values(shipping_rates);
+
+        command
+            .get_results::<ShippingRatesRaw>(self.db_conn)
+            .map_err(From::from)
+            .and_then(|rates| rates.into_iter().map(ShippingRatesRaw::to_model).collect::<RepoResult<Vec<_>>>())
+            .map_err(|e| e.context("error occurred in insert_many").into())
     }
 }
 

@@ -30,7 +30,7 @@ use repos::repo_factory::*;
 use repos::CountrySearch;
 use sentry_integration::log_and_capture_error;
 use services::companies::CompaniesService;
-use services::companies_packages::{CompaniesPackagesService, GetDeliveryPrice};
+use services::companies_packages::{CompaniesPackagesService, GetDeliveryPrice, ReplaceShippingRatesPayload};
 use services::countries::CountriesService;
 use services::packages::PackagesService;
 use services::products::ProductsService;
@@ -160,6 +160,32 @@ impl<
                             .context(Error::Parse)
                             .into()
                     }).and_then(move |new_companies_packages| service.create_company_package(new_companies_packages)),
+            ),
+
+            // GET /companies_packages/<company_package_id>/rates
+            (Get, Some(Route::CompanyPackageRates { company_package_id })) => {
+                if let Some(delivery_from) = parse_query!(
+                    req.query().unwrap_or_default(),
+                    "from" => Alpha3
+                ) {
+                    serialize_future(service.get_shipping_rates(company_package_id, delivery_from))
+                } else {
+                    Box::new(future::err(
+                        format_err!("Parsing query parameters failed, action: get shipping rates")
+                            .context(Error::Parse)
+                            .into(),
+                    ))
+                }
+            }
+
+            // POST /companies_packages/<company_package_id>/rates
+            (Post, Some(Route::CompanyPackageRates { company_package_id })) => serialize_future(
+                parse_body::<ReplaceShippingRatesPayload>(req.body())
+                    .map_err(|e| {
+                        e.context("Parsing body failed, target: ReplaceShippingRatesPayload")
+                            .context(Error::Parse)
+                            .into()
+                    }).and_then(move |payload| service.replace_shipping_rates(company_package_id, payload)),
             ),
 
             // GET /companies_packages/<company_package_id>/price

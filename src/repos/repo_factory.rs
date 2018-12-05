@@ -966,6 +966,18 @@ pub mod tests {
     pub struct ShippingRatesRepoMock;
 
     impl ShippingRatesRepo for ShippingRatesRepoMock {
+        fn get_all_rates_from(&self, _company_package_id: CompanyPackageId, _delivery_from: Alpha3) -> RepoResult<Vec<ShippingRates>> {
+            Ok(vec![])
+        }
+
+        fn insert_many(&self, _shipping_rates: Vec<NewShippingRates>) -> RepoResult<Vec<ShippingRates>> {
+            Ok(vec![])
+        }
+
+        fn delete_all_rates_from(&self, _company_package_id: CompanyPackageId, _delivery_from: Alpha3) -> RepoResult<Vec<ShippingRates>> {
+            Ok(vec![])
+        }
+
         fn get_multiple_rates(
             &self,
             company_package_id: CompanyPackageId,
