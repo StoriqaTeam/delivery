@@ -90,7 +90,7 @@ pub struct NewShippingRatesRaw {
 }
 
 impl NewShippingRatesRaw {
-    pub fn from_batch(batch: NewShippingRatesBatch) -> Vec<Self> {
+    pub fn from_batch(batch: NewShippingRatesBatch) -> Result<Vec<Self>, FailureError> {
         let NewShippingRatesBatch {
             company_package_id,
             delivery_from,
@@ -98,17 +98,21 @@ impl NewShippingRatesRaw {
         } = batch;
         delivery_to_rates
             .into_iter()
-            .map(|(to_alpha3, rates)| NewShippingRatesRaw {
-                company_package_id,
-                from_alpha3: delivery_from.clone(),
-                to_alpha3: to_alpha3.clone(),
-                rates: serde_json::to_value(rates).unwrap(),
+            .map(|(to_alpha3, rates)| {
+                serde_json::to_value(rates)
+                    .map_err(FailureError::from)
+                    .map(|rates| NewShippingRatesRaw {
+                        company_package_id,
+                        from_alpha3: delivery_from.clone(),
+                        to_alpha3: to_alpha3.clone(),
+                        rates,
+                    })
             }).collect()
     }
 }
 
-impl From<NewShippingRates> for NewShippingRatesRaw {
-    fn from(new_shipping_rates: NewShippingRates) -> Self {
+impl NewShippingRatesRaw {
+    pub fn from_model(new_shipping_rates: NewShippingRates) -> Result<Self, FailureError> {
         let NewShippingRates {
             company_package_id,
             from_alpha3,
@@ -116,14 +120,14 @@ impl From<NewShippingRates> for NewShippingRatesRaw {
             rates,
         } = new_shipping_rates;
 
-        let rates = serde_json::to_value(&rates).unwrap();
+        let rates = serde_json::to_value(&rates).map_err(FailureError::from)?;
 
-        NewShippingRatesRaw {
+        Ok(NewShippingRatesRaw {
             company_package_id,
             from_alpha3,
             to_alpha3,
             rates,
-        }
+        })
     }
 }
 

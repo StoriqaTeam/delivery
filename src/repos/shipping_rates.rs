@@ -159,7 +159,11 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     fn insert_many(&self, shipping_rates: Vec<NewShippingRates>) -> RepoResult<Vec<ShippingRates>> {
         acl::check(&*self.acl, Resource::ShippingRates, Action::Create, self, None)?;
 
-        let shipping_rates = shipping_rates.into_iter().map(NewShippingRatesRaw::from).collect::<Vec<_>>();
+        let shipping_rates = shipping_rates
+            .into_iter()
+            .map(NewShippingRatesRaw::from_model)
+            .collect::<Result<Vec<_>, _>>()?;
+
         let command = diesel::insert_into(DslShippingRates::shipping_rates).values(shipping_rates);
 
         command
