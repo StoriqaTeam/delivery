@@ -133,8 +133,8 @@ impl NewShippingRatesRaw {
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ZonesCsvEntry {
-    pub from: String,
-    pub to: String,
+    pub from: Alpha3,
+    pub to: Alpha3,
     pub zone: u32,
 }
 
@@ -159,17 +159,19 @@ impl ZonesCsvData {
                         if from.len() != 3 || from.chars().any(|c| !c.is_alphabetic()) {
                             Err(format_err!("Invalid ISO alpha 3 country code (row {}, column 1)", row_num))?;
                         }
+                        let from = Alpha3(from.to_string());
 
                         to.make_ascii_uppercase();
                         if to.len() != 3 || to.chars().any(|c| !c.is_alphabetic()) {
                             Err(format_err!("Invalid ISO alpha 3 country code (row {}, column 2)", row_num))?;
                         }
+                        let to = Alpha3(to.to_string());
 
                         let zone = u32::from_str(&zone).map_err(|e| {
                             FailureError::from(e.context(format!("Invalid zone number format (row {}, column 3)", row_num)))
                         })?;
 
-                        if let Some(e) = entries.iter().find(|e| &e.from == from && &e.to == to && e.zone != zone) {
+                        if let Some(e) = entries.iter().find(|e| e.from == from && e.to == to && e.zone != zone) {
                             Err(format_err!(
                                 "Found conflicting entries \"{},{},{}\" and \"{},{},{}\"",
                                 &e.from,
@@ -181,12 +183,8 @@ impl ZonesCsvData {
                             ))?;
                         }
 
-                        if !entries.iter().any(|e| &e.from == from && &e.to == to && e.zone == zone) {
-                            entries.push(ZonesCsvEntry {
-                                from: from.to_string(),
-                                to: to.to_string(),
-                                zone,
-                            });
+                        if !entries.iter().any(|e| e.from == from && e.to == to && e.zone == zone) {
+                            entries.push(ZonesCsvEntry { from, to, zone });
                         }
 
                         Ok(entries)
@@ -299,12 +297,12 @@ impl NewShippingRatesBatch {
                     .get(&zone)
                     .cloned()
                     .ok_or(format_err!("Rates for zone {} were not found in the rate table", zone))
-                    .map(|rates| (Alpha3(to), rates))
+                    .map(|rates| (to, rates))
             }).collect::<Result<Vec<_>, _>>()?;
 
         Ok(NewShippingRatesBatch {
             company_package_id,
-            delivery_from: Alpha3(from),
+            delivery_from: from,
             delivery_to_rates,
         })
     }
@@ -516,8 +514,8 @@ mod tests {
                    ".as_bytes();
 
         let expected_data = ZonesCsvData(vec![ZonesCsvEntry {
-            from: "RUS".to_string(),
-            to: "USA".to_string(),
+            from: Alpha3("RUS".to_string()),
+            to: Alpha3("USA".to_string()),
             zone: 6,
         }]);
 
@@ -535,23 +533,23 @@ mod tests {
 
         let expected_data = ZonesCsvData(vec![
             ZonesCsvEntry {
-                from: "RUS".to_string(),
-                to: "USA".to_string(),
+                from: Alpha3("RUS".to_string()),
+                to: Alpha3("USA".to_string()),
                 zone: 6,
             },
             ZonesCsvEntry {
-                from: "USA".to_string(),
-                to: "SGP".to_string(),
+                from: Alpha3("USA".to_string()),
+                to: Alpha3("SGP".to_string()),
                 zone: 7,
             },
             ZonesCsvEntry {
-                from: "SGP".to_string(),
-                to: "RUS".to_string(),
+                from: Alpha3("SGP".to_string()),
+                to: Alpha3("RUS".to_string()),
                 zone: 6,
             },
             ZonesCsvEntry {
-                from: "USA".to_string(),
-                to: "RUS".to_string(),
+                from: Alpha3("USA".to_string()),
+                to: Alpha3("RUS".to_string()),
                 zone: 8,
             },
         ]);
