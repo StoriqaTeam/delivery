@@ -11,8 +11,9 @@ use validator::Validate;
 
 use errors::Error;
 use models::{
-    get_countries_from_forest_by, AvailablePackages, Company, CompanyPackage, Country, NewCompanyPackage, PackageValidation, Packages,
-    ShipmentMeasurements, ShippingRateSource, ShippingRates, ShippingValidation,
+    get_countries_from_forest_by, AvailablePackages, Company, CompanyPackage, Country, NewCompanyPackage, NewShippingRates,
+    NewShippingRatesBatch, PackageValidation, Packages, RatesCsvData, ShipmentMeasurements, ShippingRateSource, ShippingRates,
+    ShippingValidation, ZonesCsvData,
 };
 use repos::ReposFactory;
 use services::types::{Service, ServiceFuture};
@@ -30,6 +31,12 @@ pub struct GetDeliveryPrice {
 pub struct DeliveryPrice {
     pub currency: Currency,
     pub value: f64,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct ReplaceShippingRatesPayload {
+    pub rates_csv_base64: String,
+    pub zones_csv_base64: String,
 }
 
 pub trait CompaniesPackagesService {
@@ -53,6 +60,16 @@ pub trait CompaniesPackagesService {
 
     /// Get delivery price
     fn get_delivery_price(&self, payload: GetDeliveryPrice) -> ServiceFuture<Option<DeliveryPrice>>;
+
+    /// Get shipping rates for the particular "from" country in the company package
+    fn get_shipping_rates(&self, company_package_id: CompanyPackageId, delivery_from: Alpha3) -> ServiceFuture<Vec<ShippingRates>>;
+
+    /// Replace shipping rates for the particular "from" country in the company package
+    fn replace_shipping_rates(
+        &self,
+        company_package_id: CompanyPackageId,
+        payload: ReplaceShippingRatesPayload,
+    ) -> ServiceFuture<Vec<ShippingRates>>;
 }
 
 impl<
@@ -249,6 +266,95 @@ impl<
 
             run().map_err(|e: FailureError| {
                 e.context("Service CompaniesPackages, get_delivery_price endpoint error occurred.")
+                    .into()
+            })
+        })
+    }
+
+    /// Get shipping rates for the particular "from" country in the company package
+    fn get_shipping_rates(&self, company_package_id: CompanyPackageId, delivery_from: Alpha3) -> ServiceFuture<Vec<ShippingRates>> {
+        let repo_factory = self.static_context.repo_factory.clone();
+        let user_id = self.dynamic_context.user_id;
+
+        self.spawn_on_pool(move |conn| {
+            let shipping_rates_repo = repo_factory.create_shipping_rates_repo(&*conn, user_id);
+            shipping_rates_repo
+                .get_all_rates_from(company_package_id, delivery_from)
+                .map_err(|e| {
+                    e.context("Service CompaniesPackages, get_shipping_rates endpoint error occured.")
+                        .into()
+                })
+        })
+    }
+
+    /// Replace shipping rates for the particular "from" country in the company package
+    fn replace_shipping_rates(
+        &self,
+        company_package_id: CompanyPackageId,
+        payload: ReplaceShippingRatesPayload,
+    ) -> ServiceFuture<Vec<ShippingRates>> {
+        let repo_factory = self.static_context.repo_factory.clone();
+        let user_id = self.dynamic_context.user_id;
+
+        self.spawn_on_pool(move |conn| {
+            let ReplaceShippingRatesPayload {
+                rates_csv_base64,
+                zones_csv_base64,
+            } = payload;
+
+            let rates = base64::decode(&rates_csv_base64)
+                .map_err(|_| {
+                    let errors = validation_errors!({ "payload": ["rates_csv_base64" => "Failed to decode base64 rates CSV"] });
+                    Error::Validate(errors).into()
+                }).and_then(|csv| {
+                    RatesCsvData::parse_csv(csv.as_slice()).map_err(|e| {
+                        let errors = validation_errors!({ "payload": ["rates_csv_base64" => e.to_string()] });
+                        FailureError::from(Error::Validate(errors))
+                    })
+                })?;
+
+            let zones = base64::decode(&zones_csv_base64)
+                .map_err(|_| {
+                    let errors = validation_errors!({ "payload": ["zones_csv_base64" => "Failed to decode base64 zones CSV"] });
+                    Error::Validate(errors).into()
+                }).and_then(|csv| {
+                    ZonesCsvData::parse_csv(csv.as_slice()).map_err(|e| {
+                        let errors = validation_errors!({ "payload": ["zones_csv_base64" => e.to_string()] });
+                        FailureError::from(Error::Validate(errors))
+                    })
+                })?;
+
+            let NewShippingRatesBatch {
+                company_package_id,
+                delivery_from,
+                delivery_to_rates,
+            } = NewShippingRatesBatch::try_from_csv_data(company_package_id, zones, rates).map_err(|e| {
+                let errors = validation_errors!({ "payload": ["payload" => e.to_string()] });
+                FailureError::from(Error::Validate(errors))
+            })?;
+
+            let new_shipping_rates = delivery_to_rates
+                .into_iter()
+                .map(|(to_alpha3, rates)| NewShippingRates {
+                    company_package_id: company_package_id.clone(),
+                    from_alpha3: delivery_from.clone(),
+                    to_alpha3,
+                    rates,
+                }).collect::<Vec<_>>();
+
+            let companies_packages_repo = repo_factory.create_companies_packages_repo(&*conn, user_id);
+            let shipping_rates_repo = repo_factory.create_shipping_rates_repo(&*conn, user_id);
+
+            companies_packages_repo
+                .get(company_package_id)
+                .map_err(|e| FailureError::from(e.context("Service CompaniesPackages, replace_shipping_rates endpoint error occured.")))?
+                .ok_or(format_err!("Company package with id = {} not found", company_package_id))?;
+
+            conn.transaction::<Vec<ShippingRates>, FailureError, _>(move || {
+                shipping_rates_repo.delete_all_rates_from(company_package_id, delivery_from)?;
+                shipping_rates_repo.insert_many(new_shipping_rates)
+            }).map_err(|e| {
+                e.context("Service CompaniesPackages, replace_shipping_rates endpoint error occured.")
                     .into()
             })
         })
