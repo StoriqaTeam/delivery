@@ -824,7 +824,8 @@ pub mod tests {
                     },
                     local_available: false,
                     currency: Currency::STQ,
-                }).collect())
+                })
+                .collect())
         }
 
         fn get(&self, id_arg: CompanyPackageId) -> RepoResult<Option<CompanyPackage>> {
@@ -1002,7 +1003,8 @@ pub mod tests {
                             price: 1499.0,
                         },
                     ],
-                }).collect::<Vec<_>>())
+                })
+                .collect::<Vec<_>>())
         }
 
         fn get_rates(

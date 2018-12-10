@@ -84,7 +84,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                     acl::check(&*self.acl, Resource::Companies, Action::Read, self, Some(&company))?;
                 }
                 Ok(results)
-            }).map_err(|e: FailureError| e.context("Find in companies error occured").into())
+            })
+            .map_err(|e: FailureError| e.context("Find in companies error occured").into())
     }
 
     /// Find specific company by ID
@@ -103,7 +104,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                     Ok(Some(company))
                 }
                 None => Ok(None),
-            }).map_err(|e: FailureError| e.context(format!("Find company with id: {} error occured", id_arg)).into())
+            })
+            .map_err(|e: FailureError| e.context(format!("Find company with id: {} error occured", id_arg)).into())
     }
 
     /// Returns list of companies supported by the country
@@ -121,7 +123,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                     acl::check(&*self.acl, Resource::Companies, Action::Read, self, Some(&result))?;
                 }
                 Ok(results)
-            }).map_err(|e: FailureError| {
+            })
+            .map_err(|e: FailureError| {
                 e.context(format!("Find in companies with country {:?} error occured", country))
                     .into()
             })
@@ -146,7 +149,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                     .get_result::<CompanyRaw>(self.db_conn)
                     .map_err(From::from)
                     .and_then(|v| Company::from_raw(v, &self.countries))
-            }).map_err(|e: FailureError| e.context(format!("Updating company payload {:?} failed.", payload)).into())
+            })
+            .map_err(|e: FailureError| e.context(format!("Updating company payload {:?} failed.", payload)).into())
     }
 
     fn delete(&self, id_arg: CompanyId) -> RepoResult<Company> {

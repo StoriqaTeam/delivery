@@ -269,7 +269,8 @@ fn available_packages_for_user(core: &mut tokio_core::reactor::Core, http_client
             available_packages_for_user_url,
             None,
             Some(super_user_id.to_string()),
-        )).unwrap();
+        ))
+        .unwrap();
     assert!(shipping.packages.is_empty());
     assert!(shipping.pickups.is_none());
 }

@@ -63,7 +63,8 @@ impl ShippingRatesRaw {
                 FailureError::from(e)
                     .context(format!("Could not parse JSON with rates for ShippingRates with id = {}", id))
                     .into()
-            }).map(|rates| ShippingRates {
+            })
+            .map(|rates| ShippingRates {
                 id,
                 company_package_id,
                 from_alpha3,
@@ -107,7 +108,8 @@ impl NewShippingRatesRaw {
                         to_alpha3: to_alpha3.clone(),
                         rates,
                     })
-            }).collect()
+            })
+            .collect()
     }
 }
 
@@ -298,7 +300,8 @@ impl NewShippingRatesBatch {
                     .cloned()
                     .ok_or(format_err!("Rates for zone {} were not found in the rate table", zone))
                     .map(|rates| (to, rates))
-            }).collect::<Result<Vec<_>, _>>()?;
+            })
+            .collect::<Result<Vec<_>, _>>()?;
 
         Ok(NewShippingRatesBatch {
             company_package_id,
@@ -511,7 +514,8 @@ mod tests {
     fn zones_parse_csv_small() {
         let csv = "From,To,Zone\n\
                    RUS,USA,6\n\
-                   ".as_bytes();
+                   "
+        .as_bytes();
 
         let expected_data = ZonesCsvData(vec![ZonesCsvEntry {
             from: Alpha3("RUS".to_string()),
@@ -529,7 +533,8 @@ mod tests {
                    USA,SGP,7\n\
                    SGP,RUS,6\n\
                    USA,RUS,8\n\
-                   ".as_bytes();
+                   "
+        .as_bytes();
 
         let expected_data = ZonesCsvData(vec![
             ZonesCsvEntry {
@@ -562,7 +567,8 @@ mod tests {
         let csv = "From,To,Zone\n\
                    RUS,USA,6\n\
                    RUS,USA,7\n\
-                   ".as_bytes();
+                   "
+        .as_bytes();
 
         ZonesCsvData::parse_csv(csv).unwrap_err();
     }
@@ -579,7 +585,8 @@ mod tests {
         let csv = "Weight,Zone\n\
                    ,6\n\
                    0.5,1234.56\n\
-                   ".as_bytes();
+                   "
+        .as_bytes();
 
         let expected_data = RatesCsvData(HashMap::from_iter(vec![(
             6,
@@ -599,7 +606,8 @@ mod tests {
                    0.5,1,1.2,1.33\n\
                    1,2,2.2,2.33\n\
                    9.99,3,3.2,3.33\n\
-                   ".as_bytes();
+                   "
+        .as_bytes();
 
         let expected_data = RatesCsvData(HashMap::from_iter(vec![
             (
@@ -658,7 +666,8 @@ mod tests {
                    ,1,2\n\
                    1,1.1,1.2\n\
                    2,2.1,\n\
-                   ".as_bytes();
+                   "
+        .as_bytes();
 
         RatesCsvData::parse_csv(csv).unwrap_err();
     }

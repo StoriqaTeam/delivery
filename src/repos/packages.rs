@@ -74,7 +74,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             .and_then(|p| p.to_packages(&self.countries))
             .and_then(|packages_| {
                 acl::check(&*self.acl, Resource::Packages, Action::Create, self, Some(&packages_)).and_then(|_| Ok(packages_))
-            }).map_err(|e: FailureError| e.context(format!("create new packages_ {:?}.", payload)).into())
+            })
+            .map_err(|e: FailureError| e.context(format!("create new packages_ {:?}.", payload)).into())
     }
 
     /// Returns list of packages supported by the country
@@ -93,12 +94,14 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                     .into_iter()
                     .map(|packages_raw| packages_raw.to_packages(&self.countries))
                     .collect()
-            }).and_then(|packages_res: Vec<Packages>| {
+            })
+            .and_then(|packages_res: Vec<Packages>| {
                 for packages_ in &packages_res {
                     acl::check(&*self.acl, Resource::Packages, Action::Read, self, Some(&packages_))?;
                 }
                 Ok(packages_res)
-            }).map_err(|e: FailureError| {
+            })
+            .map_err(|e: FailureError| {
                 e.context(format!("Find in packages with country {:?} error occured", countries))
                     .into()
             })
@@ -119,7 +122,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                     acl::check(&*self.acl, Resource::Packages, Action::Read, self, Some(&package))?;
                 }
                 Ok(results)
-            }).map_err(|e: FailureError| e.context("Find in packages error occured").into())
+            })
+            .map_err(|e: FailureError| e.context("Find in packages error occured").into())
     }
 
     /// Find specific package by ID
@@ -138,7 +142,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                     Ok(Some(package))
                 }
                 None => Ok(None),
-            }).map_err(|e: FailureError| e.context(format!("Find package with id: {} error occured", id_arg)).into())
+            })
+            .map_err(|e: FailureError| e.context(format!("Find package with id: {} error occured", id_arg)).into())
     }
 
     fn update(&self, id_arg: PackageId, payload: UpdatePackages) -> RepoResult<Packages> {
@@ -156,7 +161,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                     .get_result::<PackagesRaw>(self.db_conn)
                     .map_err(From::from)
                     .and_then(|packages_: PackagesRaw| packages_.to_packages(&self.countries))
-            }).map_err(|e: FailureError| e.context(format!("Updating packages payload {:?} failed.", payload)).into())
+            })
+            .map_err(|e: FailureError| e.context(format!("Updating packages payload {:?} failed.", payload)).into())
     }
 
     fn delete(&self, id_arg: PackageId) -> RepoResult<Packages> {

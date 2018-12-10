@@ -34,12 +34,12 @@ impl Validate for ShipmentMeasurements {
         const MAX_REASONABLE_VOLUME_CUBIC_CM: u32 = 2_000_000;
         const MAX_REASONABLE_WEIGHT_G: u32 = 100_000;
 
-        if !(self.volume_cubic_cm > 0 && self.volume_cubic_cm <= MAX_REASONABLE_VOLUME_CUBIC_CM) {
-            Err(validation_errors!({ "volume_cubic_cm": ["volume_cubic_cm" => "Volume must be in range 0 < x <= 2 000 000 cm^3"] }))?;
+        if self.volume_cubic_cm > MAX_REASONABLE_VOLUME_CUBIC_CM {
+            Err(validation_errors!({ "volume_cubic_cm": ["volume_cubic_cm" => "Volume must be in range 0 <= x <= 2 000 000 cm^3"] }))?;
         }
 
-        if !(self.weight_g > 0 && self.weight_g <= MAX_REASONABLE_WEIGHT_G) {
-            Err(validation_errors!({ "weight_g": ["weight_g" => "Weight must be in range 0 < x <= 100 000 g"] }))?;
+        if self.weight_g > MAX_REASONABLE_WEIGHT_G {
+            Err(validation_errors!({ "weight_g": ["weight_g" => "Weight must be in range 0 <= x <= 100 000 g"] }))?;
         }
 
         Ok(())
@@ -107,18 +107,20 @@ impl CompaniesPackagesRaw {
                     package_id,
                     shipping_rate_source: ShippingRateSource::Static { dimensional_factor: None },
                 }),
-                Some(dimensional_factor) => if dimensional_factor < 0 {
-                    Err(format_err!("Negative dimensional factor value for CompanyPackage with id = {}", id))
-                } else {
-                    Ok(CompanyPackage {
-                        id,
-                        company_id,
-                        package_id,
-                        shipping_rate_source: ShippingRateSource::Static {
-                            dimensional_factor: Some(dimensional_factor as u32),
-                        },
-                    })
-                },
+                Some(dimensional_factor) => {
+                    if dimensional_factor < 0 {
+                        Err(format_err!("Negative dimensional factor value for CompanyPackage with id = {}", id))
+                    } else {
+                        Ok(CompanyPackage {
+                            id,
+                            company_id,
+                            package_id,
+                            shipping_rate_source: ShippingRateSource::Static {
+                                dimensional_factor: Some(dimensional_factor as u32),
+                            },
+                        })
+                    }
+                }
             },
             ShippingRateSourceRaw::OnDemand => Err(format_err!(
                 "CompanyPackages with on-demand sources of shipping rates \

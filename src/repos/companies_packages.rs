@@ -87,7 +87,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                     Some(&company_package),
                 )?;
                 Ok(company_package)
-            }).map_err(|e: FailureError| e.context(format!("create new companies_packages {:?}.", payload)).into())
+            })
+            .map_err(|e: FailureError| e.context(format!("create new companies_packages {:?}.", payload)).into())
     }
 
     fn get(&self, id_arg: CompanyPackageId) -> RepoResult<Option<CompanyPackage>> {
@@ -159,11 +160,13 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 }
 
                 Ok(data)
-            }).map_err(|e: FailureError| {
+            })
+            .map_err(|e: FailureError| {
                 e.context(format!(
                     "Find in packages with  companies: {:?}, size: {}, weight: {} error occured",
                     company_id_args, size, weight
-                )).into()
+                ))
+                .into()
             })
     }
 
@@ -185,7 +188,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 }
 
                 Ok(data)
-            }).map_err(move |e: FailureError| e.context(format!("get companies_packages package_id: {}.", id_arg)).into())
+            })
+            .map_err(move |e: FailureError| e.context(format!("get companies_packages package_id: {}.", id_arg)).into())
     }
 
     /// Returns packages by company id
@@ -206,7 +210,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 }
 
                 Ok(data)
-            }).map_err(move |e: FailureError| e.context(format!("get companies_packages company_id: {}.", id_arg)).into())
+            })
+            .map_err(move |e: FailureError| e.context(format!("get companies_packages company_id: {}.", id_arg)).into())
     }
 
     fn delete(&self, company_id_arg: CompanyId, package_id_arg: PackageId) -> RepoResult<CompanyPackage> {
@@ -224,8 +229,10 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 e.context(format!(
                     "delete companies_packages company_id: {}, package_id: {}.",
                     company_id_arg, package_id_arg
-                )).into()
-            }).and_then(CompaniesPackagesRaw::to_model)
+                ))
+                .into()
+            })
+            .and_then(CompaniesPackagesRaw::to_model)
     }
 }
 

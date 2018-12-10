@@ -103,7 +103,8 @@ where
                     Ok(Some(country))
                 }
                 None => Ok(None),
-            }).map_err(|e: FailureError| e.context(format!("Get countries by search: {:?}.", search)).into())
+            })
+            .map_err(|e: FailureError| e.context(format!("Get countries by search: {:?}.", search)).into())
     }
 
     /// Creates new country
@@ -135,7 +136,8 @@ where
                         .ok_or_else(|| format_err!("Could not create countries tree"))?;
                     self.cache.set(&root);
                     Ok(root)
-                }).map_err(|e: FailureError| e.context("Get all countries error occured").into())
+                })
+                .map_err(|e: FailureError| e.context("Get all countries error occured").into())
         }
     }
 
@@ -147,7 +149,8 @@ where
                 let countries_ = countries.load::<RawCountry>(self.db_conn)?;
                 let all_countries = countries_.into_iter().map(Country::from).collect();
                 Ok(all_countries)
-            }).map_err(|e: FailureError| e.context("Get all flatten countries error occured").into())
+            })
+            .map_err(|e: FailureError| e.context("Get all flatten countries error occured").into())
     }
 }
 

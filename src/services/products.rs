@@ -131,13 +131,16 @@ impl<
                                         company,
                                         package,
                                     },
-                                }.validate()
+                                }
+                                .validate()
                                 .map(|_| new_product)
                                 .map_err(|e| FailureError::from(Error::Validate(e)))
-                            }).collect::<Result<Vec<NewProducts>, _>>()?;
+                            })
+                            .collect::<Result<Vec<NewProducts>, _>>()?;
 
                         products_repo.create_many(payload.items)
-                    }).and_then(|_| products_repo.get_products_countries(base_product_id))
+                    })
+                    .and_then(|_| products_repo.get_products_countries(base_product_id))
                     .and_then(|products_with_countries| {
                         countries_repo.get_all().map(|countries| {
                             // getting all countries
@@ -149,9 +152,11 @@ impl<
                                     let deliveries_to = create_tree_used_countries(&countries, &product.deliveries_to);
 
                                     ShippingProducts { product, deliveries_to }
-                                }).collect::<Vec<ShippingProducts>>()
+                                })
+                                .collect::<Vec<ShippingProducts>>()
                         })
-                    }).and_then(|products| {
+                    })
+                    .and_then(|products| {
                         if let Some(pickup) = pickup {
                             pickups_repo
                                 .delete(base_product_id)
@@ -159,12 +164,14 @@ impl<
                                 .map(Some)
                         } else {
                             Ok(None)
-                        }.map(|pickups| Shipping {
+                        }
+                        .map(|pickups| Shipping {
                             items: products,
                             pickup: pickups,
                         })
                     })
-            }).map_err(|e: FailureError| e.context("Service Products, upsert endpoint error occured.").into())
+            })
+            .map_err(|e: FailureError| e.context("Service Products, upsert endpoint error occured.").into())
         })
     }
 
@@ -189,14 +196,17 @@ impl<
                                 // at first - take all package deliveries to country labels and make Vec of Country
                                 let deliveries_to = create_tree_used_countries(&countries, &product.deliveries_to);
                                 ShippingProducts { product, deliveries_to }
-                            }).collect::<Vec<ShippingProducts>>()
+                            })
+                            .collect::<Vec<ShippingProducts>>()
                     })
-                }).and_then(|products| {
+                })
+                .and_then(|products| {
                     pickups_repo.get(base_product_id).map(|pickups| Shipping {
                         items: products,
                         pickup: pickups,
                     })
-                }).map_err(|e| {
+                })
+                .map_err(|e| {
                     e.context("Service Products, get_by_base_product_id endpoint error occurred.")
                         .into()
                 })
@@ -221,7 +231,8 @@ impl<
                     pickups_repo
                         .get(base_product_id)
                         .map(|pickups| AvailableShippingForUser { packages, pickups })
-                }).map_err(|e| e.context("Service Products, find_available_to endpoint error occurred.").into())
+                })
+                .map_err(|e| e.context("Service Products, find_available_to endpoint error occurred.").into())
         })
     }
 
@@ -257,7 +268,8 @@ impl<
                             weight,
                             pkg,
                         )
-                    }).collect::<Result<Vec<_>, _>>()?
+                    })
+                    .collect::<Result<Vec<_>, _>>()?
                     .into_iter()
                     .filter_map(|x| x)
                     .collect::<Vec<_>>();
@@ -381,7 +393,8 @@ impl<
                 products_repo
                     .delete(base_product_id_arg)
                     .and_then(|_| pickups_repo.delete(base_product_id_arg).and_then(|_| Ok(())))
-            }).map_err(|e| e.context("Service Products, delete endpoint error occured.").into())
+            })
+            .map_err(|e| e.context("Service Products, delete endpoint error occured.").into())
         })
     }
 }

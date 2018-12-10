@@ -82,7 +82,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                     acl::check(&*self.acl, Resource::Pickups, Action::Read, self, Some(&result))?;
                 }
                 Ok(results)
-            }).map_err(|e: FailureError| e.context("Find in pickups error occured").into())
+            })
+            .map_err(|e: FailureError| e.context("Find in pickups error occured").into())
     }
 
     /// Getting pickups by base_product_id
@@ -99,7 +100,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                     acl::check(&*self.acl, Resource::Pickups, Action::Read, self, Some(result))?;
                 }
                 Ok(result)
-            }).map_err(|e: FailureError| {
+            })
+            .map_err(|e: FailureError| {
                 e.context(format!("Getting pickups by base_product_id {}", base_product_id_arg))
                     .into()
             })
@@ -114,7 +116,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 let filtered = pickups.filter(base_product_id.eq(base_product_id_arg));
                 let query = diesel::update(filtered).set(&payload);
                 query.get_result::<Pickups>(self.db_conn).map_err(From::from)
-            }).map_err(|e: FailureError| e.context(format!("Updating products payload {:?} failed.", payload)).into())
+            })
+            .map_err(|e: FailureError| e.context(format!("Updating products payload {:?} failed.", payload)).into())
     }
 
     fn delete(&self, base_product_id_arg: BaseProductId) -> RepoResult<Option<Pickups>> {
@@ -130,14 +133,16 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                     acl::check(&*self.acl, Resource::Pickups, Action::Delete, self, Some(pickup_))?;
                 }
                 Ok(pickup_)
-            }).and_then(|_| {
+            })
+            .and_then(|_| {
                 let filtered = pickups.filter(base_product_id.eq(base_product_id_arg));
                 let query = diesel::delete(filtered);
                 query.get_result(self.db_conn).optional().map_err(move |e| {
                     e.context(format!("delete pickups by base_product_id: {}", base_product_id_arg))
                         .into()
                 })
-            }).map_err(|e: FailureError| {
+            })
+            .map_err(|e: FailureError| {
                 e.context(format!("delete pickups by base_product_id: {} failed", base_product_id_arg))
                     .into()
             })
@@ -160,7 +165,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                             user_roles_arg
                                 .iter()
                                 .any(|user_role_arg| user_role_arg.data.clone().map(|data| data == obj.store_id.0).unwrap_or_default())
-                        }).unwrap_or_else(|_: FailureError| false)
+                        })
+                        .unwrap_or_else(|_: FailureError| false)
                 } else {
                     false
                 }

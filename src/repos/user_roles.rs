@@ -87,7 +87,8 @@ where
                     }
 
                     user_roles
-                }).map_err(|e| {
+                })
+                .map_err(|e| {
                     e.context(format!("List user roles for user {} error occured.", user_id_value))
                         .into()
                 })
