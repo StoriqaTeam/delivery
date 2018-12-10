@@ -184,7 +184,8 @@ impl Validate for ShippingValidation {
                 } else {
                     None
                 }
-            }).collect::<Vec<_>>();
+            })
+            .collect::<Vec<_>>();
 
         if !unavailable_destinations.is_empty() {
             let unavailable_destinations = unavailable_destinations.as_slice().join(", ");

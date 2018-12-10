@@ -105,7 +105,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             .and_then(|product| {
                 acl::check(&*self.acl, Resource::Products, Action::Create, self, Some(&product))?;
                 Ok(product)
-            }).map_err(|e: FailureError| e.context(format!("create new products {:?}.", payload)).into())
+            })
+            .map_err(|e: FailureError| e.context(format!("create new products {:?}.", payload)).into())
     }
 
     fn create_many(&self, payload: Vec<NewProducts>) -> RepoResult<Vec<Products>> {
@@ -130,7 +131,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 new_products.sort_by(|a, b| a.id.cmp(&b.id));
 
                 Ok(new_products)
-            }).map_err(|e: FailureError| e.context(format!("create many new products {:?}.", payload)).into())
+            })
+            .map_err(|e: FailureError| e.context(format!("create many new products {:?}.", payload)).into())
     }
 
     fn get_by_base_product_id(&self, base_product_id_arg: BaseProductId) -> RepoResult<Vec<Products>> {
@@ -150,7 +152,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                     new_products.push(product);
                 }
                 Ok(new_products)
-            }).map_err(|e: FailureError| {
+            })
+            .map_err(|e: FailureError| {
                 e.context(format!("Getting products with base_product_id {:?} failed.", base_product_id_arg))
                     .into()
             })
@@ -186,11 +189,13 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                     data.push(element);
                 }
                 Ok(data)
-            }).map_err(|e: FailureError| {
+            })
+            .map_err(|e: FailureError| {
                 e.context(format!(
                     "Find in available countries for delivery by base_product_id: {:?} error occured",
                     base_product_id_arg
-                )).into()
+                ))
+                .into()
             })
     }
 
@@ -210,7 +215,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 DslCompaniesPackages::companies_packages
                     .inner_join(DslCompanies::companies)
                     .inner_join(DslPackages::packages),
-            ).order(DslCompanies::label);
+            )
+            .order(DslCompanies::label);
 
         query
             .get_results::<(ProductsRaw, (CompaniesPackagesRaw, CompanyRaw, PackagesRaw))>(self.db_conn)
@@ -229,7 +235,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                             store_id: product_raw.store_id,
                             base_product_id: product_raw.base_product_id,
                         }
-                    }).collect::<Vec<_>>();
+                    })
+                    .collect::<Vec<_>>();
 
                 let local_package_ids = available_packages
                     .iter()
@@ -239,19 +246,23 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                         } else {
                             None
                         }
-                    }).collect::<Vec<_>>();
+                    })
+                    .collect::<Vec<_>>();
 
                 available_packages
                     .into_iter()
                     .filter(|package| {
                         package.shipping_variant.clone() == ShippingVariant::Local || !local_package_ids.contains(&package.id)
-                    }).collect::<Vec<_>>()
-            }).map_err(move |e| {
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .map_err(move |e| {
                 FailureError::from(e)
                     .context(format!(
                         "Find available product {} delivery to users country {} failure.",
                         base_product_id_arg, user_country
-                    )).into()
+                    ))
+                    .into()
             })
     }
 
@@ -272,7 +283,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 DslCompaniesPackages::companies_packages
                     .inner_join(DslCompanies::companies)
                     .inner_join(DslPackages::packages),
-            ).filter(DslProducts::base_product_id.eq(base_product_id_arg))
+            )
+            .filter(DslProducts::base_product_id.eq(base_product_id_arg))
             .filter(DslProducts::company_package_id.eq(package_id_arg))
             .order(DslCompanies::label);
 
@@ -294,11 +306,13 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                         base_product_id: product_raw.base_product_id,
                     }
                 })
-            }).map_err(move |e: FailureError| {
+            })
+            .map_err(move |e: FailureError| {
                 e.context(format!(
                     "Get available package for base product: {} with select company package id: {} failure.",
                     base_product_id_arg, package_id_arg
-                )).into()
+                ))
+                .into()
             })
     }
 
@@ -314,7 +328,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 DslCompaniesPackages::companies_packages
                     .inner_join(DslCompanies::companies)
                     .inner_join(DslPackages::packages),
-            ).filter(DslProducts::id.eq(shipping_id_arg))
+            )
+            .filter(DslProducts::id.eq(shipping_id_arg))
             .into_boxed();
 
         if let Some(delivery_to) = delivery_to {
@@ -342,7 +357,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                         base_product_id: product_raw.base_product_id,
                     }
                 })
-            }).map_err(move |e: FailureError| {
+            })
+            .map_err(move |e: FailureError| {
                 e.context(format!("Get available package for shipping id: {} failure.", shipping_id_arg))
                     .into()
             })
@@ -360,7 +376,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             DslProducts::products
                 .filter(DslProducts::base_product_id.eq(base_product_id_arg))
                 .filter(DslProducts::company_package_id.eq(company_package_id_arg)),
-        ).and_then(|products_: ProductsRaw| products_.to_products())
+        )
+        .and_then(|products_: ProductsRaw| products_.to_products())
         .and_then(|product: Products| acl::check(&*self.acl, Resource::Products, Action::Update, self, Some(&product)))
         .and_then(|_| {
             let filter = DslProducts::products
@@ -369,7 +386,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 
             let query = diesel::update(filter).set(&payload);
             query.get_result::<ProductsRaw>(self.db_conn).map_err(From::from)
-        }).and_then(|products_| products_.to_products())
+        })
+        .and_then(|products_| products_.to_products())
         .map_err(|e: FailureError| e.context(format!("Updating products payload {:?} failed.", payload)).into())
     }
 
@@ -390,7 +408,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                     delete_products.push(product);
                 }
                 Ok(delete_products)
-            }).map_err(|e: FailureError| {
+            })
+            .map_err(|e: FailureError| {
                 e.context(format!("Delete products with base product id {:?} failed.", base_product_id_arg))
                     .into()
             })
@@ -413,7 +432,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                             user_roles_arg
                                 .iter()
                                 .any(|user_role_arg| user_role_arg.data.clone().map(|data| data == obj.store_id.0).unwrap_or_default())
-                        }).unwrap_or_else(|_: FailureError| false)
+                        })
+                        .unwrap_or_else(|_: FailureError| false)
                 } else {
                     false
                 }

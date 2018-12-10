@@ -162,14 +162,16 @@ impl<
                                     .get_multiple_rates(pkg.id, deliveries_from.clone(), deliveries_to)
                                     .map(move |rates| (pkg, Some((dimensional_factor, rates)))),
                             }
-                        }).collect::<Result<Vec<_>, _>>()
+                        })
+                        .collect::<Result<Vec<_>, _>>()
                         .map(|package_rates| {
                             package_rates
                                 .into_iter()
                                 .filter_map(|(pkg, rates)| determine_package_availability(rates, size, weight, pkg))
                                 .collect::<Vec<_>>()
                         })
-                }).map_err(|e| {
+                })
+                .map_err(|e| {
                     e.context("Service CompaniesPackages, find_deliveries_from endpoint error occured.")
                         .into()
                 })
@@ -234,7 +236,8 @@ impl<
                         PackageValidation {
                             measurements: measurements.clone(),
                             package: package.clone(),
-                        }.validate()
+                        }
+                        .validate()
                         .map_err(Error::Validate)?;
 
                         let currency = company.currency;
@@ -244,7 +247,8 @@ impl<
                             deliveries_to: vec![delivery_to.clone()],
                             company,
                             package,
-                        }.validate()
+                        }
+                        .validate()
                         .is_ok();
 
                         if !shipping_available {
@@ -306,7 +310,8 @@ impl<
                 .map_err(|_| {
                     let errors = validation_errors!({ "payload": ["rates_csv_base64" => "Failed to decode base64 rates CSV"] });
                     Error::Validate(errors).into()
-                }).and_then(|csv| {
+                })
+                .and_then(|csv| {
                     RatesCsvData::parse_csv(csv.as_slice()).map_err(|e| {
                         let errors = validation_errors!({ "payload": ["rates_csv_base64" => e.to_string()] });
                         FailureError::from(Error::Validate(errors))
@@ -317,7 +322,8 @@ impl<
                 .map_err(|_| {
                     let errors = validation_errors!({ "payload": ["zones_csv_base64" => "Failed to decode base64 zones CSV"] });
                     Error::Validate(errors).into()
-                }).and_then(|csv| {
+                })
+                .and_then(|csv| {
                     ZonesCsvData::parse_csv(csv.as_slice()).map_err(|e| {
                         let errors = validation_errors!({ "payload": ["zones_csv_base64" => e.to_string()] });
                         FailureError::from(Error::Validate(errors))
@@ -340,7 +346,8 @@ impl<
                     from_alpha3: delivery_from.clone(),
                     to_alpha3,
                     rates,
-                }).collect::<Vec<_>>();
+                })
+                .collect::<Vec<_>>();
 
             let companies_packages_repo = repo_factory.create_companies_packages_repo(&*conn, user_id);
             let shipping_rates_repo = repo_factory.create_shipping_rates_repo(&*conn, user_id);
@@ -353,7 +360,8 @@ impl<
             conn.transaction::<Vec<ShippingRates>, FailureError, _>(move || {
                 shipping_rates_repo.delete_all_rates_from(company_package_id, delivery_from)?;
                 shipping_rates_repo.insert_many(new_shipping_rates)
-            }).map_err(|e| {
+            })
+            .map_err(|e| {
                 e.context("Service CompaniesPackages, replace_shipping_rates endpoint error occured.")
                     .into()
             })
@@ -384,7 +392,8 @@ fn determine_package_availability(
                     rates
                         .calculate_delivery_price(measurements, dimensional_factor)
                         .map(move |_| rates.to_alpha3)
-                }).collect::<Vec<_>>();
+                })
+                .collect::<Vec<_>>();
 
             let available_dest_countries = get_countries_from_forest_by(pkg.deliveries_to.iter(), |country| {
                 serviced_dest_countries

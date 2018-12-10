@@ -97,9 +97,11 @@ impl<
                         e.context(format!(
                             "Parsing body failed, target: NewShipping, base_product_id: {}",
                             base_product_id
-                        )).context(Error::Parse)
+                        ))
+                        .context(Error::Parse)
                         .into()
-                    }).and_then(move |new_shipping| service.upsert(base_product_id, new_shipping)),
+                    })
+                    .and_then(move |new_shipping| service.upsert(base_product_id, new_shipping)),
             ),
 
             // GET /products/<base_product_id>
@@ -121,9 +123,11 @@ impl<
                         e.context(format!(
                             "Parsing body failed, target: UpdateProducts, base_product_id: {}, company_package_id: {}",
                             base_product_id, company_package_id
-                        )).context(Error::Parse)
+                        ))
+                        .context(Error::Parse)
                         .into()
-                    }).and_then(move |update_products| service.update_products(base_product_id, company_package_id, update_products)),
+                    })
+                    .and_then(move |update_products| service.update_products(base_product_id, company_package_id, update_products)),
             ),
 
             // POST /companies
@@ -146,7 +150,8 @@ impl<
                         e.context(format!("Parsing body failed, target: UpdateCompany, company id: {}", company_id))
                             .context(Error::Parse)
                             .into()
-                    }).and_then(move |update_company| service.update_company(company_id, update_company)),
+                    })
+                    .and_then(move |update_company| service.update_company(company_id, update_company)),
             ),
 
             // DELETE /companies/<company_id>
@@ -159,7 +164,8 @@ impl<
                         e.context("Parsing body failed, target: NewCompaniesPackages")
                             .context(Error::Parse)
                             .into()
-                    }).and_then(move |new_companies_packages| service.create_company_package(new_companies_packages)),
+                    })
+                    .and_then(move |new_companies_packages| service.create_company_package(new_companies_packages)),
             ),
 
             // GET /companies_packages/<company_package_id>/rates
@@ -185,7 +191,8 @@ impl<
                         e.context("Parsing body failed, target: ReplaceShippingRatesPayload")
                             .context(Error::Parse)
                             .into()
-                    }).and_then(move |payload| service.replace_shipping_rates(company_package_id, payload)),
+                    })
+                    .and_then(move |payload| service.replace_shipping_rates(company_package_id, payload)),
             ),
 
             // GET /companies_packages/<company_package_id>/price
@@ -238,7 +245,8 @@ impl<
                         format_err!(
                             "Parsing query parameters failed, action: get available packages for user, base product id: {}",
                             base_product_id
-                        ).context(Error::Parse)
+                        )
+                        .context(Error::Parse)
                         .into(),
                     ))
                 }
@@ -265,7 +273,8 @@ impl<
                         format_err!(
                             "Parsing query parameters failed, action: get available packages for user v2, base product id: {}",
                             base_product_id
-                        ).context(Error::Parse)
+                        )
+                        .context(Error::Parse)
                         .into(),
                     ))
                 }
@@ -311,7 +320,8 @@ impl<
                         format_err!(
                             "Parsing query parameters failed, action: get available package for user v2, shipping id: {}",
                             shipping_id
-                        ).context(Error::Parse)
+                        )
+                        .context(Error::Parse)
                         .into(),
                     ))
                 }
@@ -368,7 +378,8 @@ impl<
                                 format_err!("Validation failed, target: NewCountry")
                                     .context(Error::Validate(e))
                                     .into()
-                            }).into_future()
+                            })
+                            .into_future()
                             .and_then(move |_| service.create_country(new_country))
                     }),
             ),
@@ -393,7 +404,8 @@ impl<
                         e.context(format!("Parsing body failed, target: UpdatePackages, package id: {}", package_id))
                             .context(Error::Parse)
                             .into()
-                    }).and_then(move |update_package| service.update_package(package_id, update_package)),
+                    })
+                    .and_then(move |update_package| service.update_package(package_id, update_package)),
             ),
 
             // DELETE /packages/<package_id>
@@ -409,14 +421,16 @@ impl<
                         e.context("Parsing body failed, target: NewUserAddress")
                             .context(Error::Parse)
                             .into()
-                    }).and_then(move |new_address| {
+                    })
+                    .and_then(move |new_address| {
                         new_address
                             .validate()
                             .map_err(|e| {
                                 format_err!("Validation failed, target: NewUserAddress")
                                     .context(Error::Validate(e))
                                     .into()
-                            }).into_future()
+                            })
+                            .into_future()
                             .and_then(move |_| service.create_address(new_address))
                     }),
             ),
@@ -428,16 +442,19 @@ impl<
                         e.context(format!(
                             "Parsing body failed, target: UpdateUserAddress, user address id: {}",
                             user_address_id
-                        )).context(Error::Parse)
+                        ))
+                        .context(Error::Parse)
                         .into()
-                    }).and_then(move |new_address| {
+                    })
+                    .and_then(move |new_address| {
                         new_address
                             .validate()
                             .map_err(|e| {
                                 format_err!("Validation failed, target: UpdateUserAddress")
                                     .context(Error::Validate(e))
                                     .into()
-                            }).into_future()
+                            })
+                            .into_future()
                             .and_then(move |_| service.update_address(user_address_id, new_address))
                     }),
             ),
@@ -451,7 +468,8 @@ impl<
                     .context(Error::NotFound)
                     .into(),
             )),
-        }.map_err(|err| {
+        }
+        .map_err(|err| {
             let wrapper = ErrorMessageWrapper::<Error>::from(&err);
             if wrapper.inner.code == 500 {
                 log_and_capture_error(&err);

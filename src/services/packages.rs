@@ -66,7 +66,8 @@ impl<
                     let mut countries_list = vec![];
                     get_all_parent_codes(&countries, &country, &mut countries_list);
                     packages_repo.find_deliveries_to(countries_list)
-                }).map_err(|e| e.context("Service Packages, find_deliveries_to endpoint error occured.").into())
+                })
+                .map_err(|e| e.context("Service Packages, find_deliveries_to endpoint error occured.").into())
         })
     }
 

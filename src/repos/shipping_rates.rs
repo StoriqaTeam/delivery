@@ -73,7 +73,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 e.context(format!(
                     "error occurred in get_all_rates_from for CompanyPackage with id = {}, from {}",
                     company_package_id, delivery_from,
-                )).into()
+                ))
+                .into()
             })
     }
 
@@ -100,7 +101,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 e.context(format!(
                     "error occurred in get_multiple_rates for CompanyPackage with id = {}, {} -> {:?}",
                     company_package_id, delivery_from, deliveries_to,
-                )).into()
+                ))
+                .into()
             })
     }
 
@@ -118,7 +120,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                     .eq(company_package_id)
                     .and(DslShippingRates::from_alpha3.eq(delivery_from.clone()))
                     .and(DslShippingRates::to_alpha3.eq(delivery_to.clone())),
-            ).order(DslShippingRates::id.desc());
+            )
+            .order(DslShippingRates::id.desc());
 
         query
             .get_result::<ShippingRatesRaw>(self.db_conn)
@@ -129,7 +132,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 e.context(format!(
                     "error occurred in get_rates for CompanyPackage with id = {}, {} -> {}",
                     company_package_id, delivery_from, delivery_to,
-                )).into()
+                ))
+                .into()
             })
     }
 
@@ -152,7 +156,8 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 e.context(format!(
                     "error occurred in delete_all_rates_from for CompanyPackage with id = {}, from {}",
                     company_package_id, delivery_from,
-                )).into()
+                ))
+                .into()
             })
     }
 
