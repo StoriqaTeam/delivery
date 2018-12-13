@@ -31,15 +31,14 @@ impl ShipmentMeasurements {
 
 impl Validate for ShipmentMeasurements {
     fn validate(&self) -> Result<(), ValidationErrors> {
-        const MAX_REASONABLE_VOLUME_CUBIC_CM: u32 = 2_000_000;
-        const MAX_REASONABLE_WEIGHT_G: u32 = 100_000;
+        const MAX_VALUE: u32 = 1_000_000_000;
 
-        if self.volume_cubic_cm > MAX_REASONABLE_VOLUME_CUBIC_CM {
-            Err(validation_errors!({ "volume_cubic_cm": ["volume_cubic_cm" => "Volume must be in range 0 <= x <= 2 000 000 cm^3"] }))?;
+        if self.volume_cubic_cm > MAX_VALUE {
+            Err(validation_errors!({ "volume_cubic_cm": ["volume_cubic_cm" => "Value is too big"] }))?;
         }
 
-        if self.weight_g > MAX_REASONABLE_WEIGHT_G {
-            Err(validation_errors!({ "weight_g": ["weight_g" => "Weight must be in range 0 <= x <= 100 000 g"] }))?;
+        if self.weight_g > MAX_VALUE {
+            Err(validation_errors!({ "weight_g": ["weight_g" => "Value is too big"] }))?;
         }
 
         Ok(())
