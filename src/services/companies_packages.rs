@@ -219,7 +219,7 @@ impl<
                 let company_package = companies_packages_repo
                     .get(company_package_id)?
                     .ok_or(Error::Validate(validation_errors!({
-                        "company_package": ["company_package" => "Company package not found"]
+                        "company_package": ["company_package" => format!("Company package with id: {} not found", company_package_id)]
                     })))?;
 
                 let delivery_price = match company_package.shipping_rate_source.clone() {

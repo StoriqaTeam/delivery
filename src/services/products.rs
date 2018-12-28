@@ -107,7 +107,7 @@ impl<
                             .map(|new_product| {
                                 let company_package = company_packages_repo.get(new_product.company_package_id)?.ok_or(Error::Validate(
                                     validation_errors!({
-                                        "company_package_id": ["company_package_id" => "Company package not found"]
+                                        "company_package_id": ["company_package_id" => format!("Company package with id: {} not found", new_product.company_package_id)]
                                     }),
                                 ))?;
                                 let company = companies_repo
