@@ -172,6 +172,7 @@ pub mod tests {
     use diesel::ConnectionResult;
     use diesel::QueryResult;
     use diesel::Queryable;
+    use futures::Stream;
     use futures_cpupool::CpuPool;
     use r2d2::ManageConnection;
     use tokio_core::reactor::Handle;
