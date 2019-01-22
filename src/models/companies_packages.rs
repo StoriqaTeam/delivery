@@ -189,6 +189,7 @@ pub struct AvailablePackageForUser {
     pub name: String,
     pub logo: String,
     pub price: Option<ProductPrice>,
+    pub currency: Currency,
     pub shipping_variant: ShippingVariant,
     pub base_product_id: BaseProductId,
     pub store_id: StoreId,
