@@ -1,14 +1,3 @@
-extern crate delivery_lib as lib;
-extern crate futures;
-extern crate hyper;
-extern crate serde_json;
-extern crate stq_http;
-extern crate stq_static_resources;
-extern crate stq_types;
-extern crate tokio_core;
-
-pub mod common;
-
 use hyper::Method;
 
 use stq_http::client::{self, ClientHandle as HttpClientHandle};
@@ -74,8 +63,8 @@ fn get_url_request_by_base_product_id(base_url: String, base_product_id: BasePro
 
 #[test]
 fn test_company() {
-    let (mut core, http_client) = common::make_utils();
-    let base_url = common::setup();
+    let (mut core, http_client) = super::common::make_utils();
+    let base_url = super::common::setup();
 
     test_products_superuser_crud(&mut core, &http_client, base_url.clone());
     test_products_regular_user_crud(&mut core, &http_client, base_url.clone());
@@ -124,7 +113,7 @@ fn test_products_superuser_crud(core: &mut tokio_core::reactor::Core, http_clien
     );
 
     let (package_id, company_id, companies_package_id) =
-        common::create_delivery_objects(payload, core, http_client, base_url.clone(), Some(user_id));
+        super::common::create_delivery_objects(payload, core, http_client, base_url.clone(), Some(user_id));
 
     // upsert
     println!("run upsert products for base_product {}", base_product_id);
@@ -141,7 +130,7 @@ fn test_products_superuser_crud(core: &mut tokio_core::reactor::Core, http_clien
     println!("create shipping {:?}", create_result);
     assert!(create_result.is_ok());
 
-    common::delete_deliveries_objects(
+    super::common::delete_deliveries_objects(
         (package_id.clone(), company_id.clone(), companies_package_id.clone()),
         core,
         http_client,
@@ -167,7 +156,7 @@ fn test_products_regular_user_crud(core: &mut tokio_core::reactor::Core, http_cl
 
     // create user for test acl
     let user_id = UserId(2);
-    let create_role_result = common::create_user_role(user_id.clone(), core, http_client, base_url.clone());
+    let create_role_result = super::common::create_user_role(user_id.clone(), core, http_client, base_url.clone());
     assert!(create_role_result.is_ok());
 
     let countries = vec!["RUS", "USA", "BRA"].into_iter().map(|v| Alpha3(v.to_string())).collect();
@@ -179,7 +168,7 @@ fn test_products_regular_user_crud(core: &mut tokio_core::reactor::Core, http_cl
     );
 
     let (package_id, company_id, companies_package_id) =
-        common::create_delivery_objects(payload, core, http_client, base_url.clone(), Some(super_user_id));
+        super::common::create_delivery_objects(payload, core, http_client, base_url.clone(), Some(super_user_id));
 
     // upsert
     println!("run upsert products for base_product {}", base_product_id);
@@ -196,7 +185,7 @@ fn test_products_regular_user_crud(core: &mut tokio_core::reactor::Core, http_cl
     println!("create shipping {:?}", create_result);
     assert!(create_result.is_err());
 
-    common::delete_deliveries_objects(
+    super::common::delete_deliveries_objects(
         (package_id.clone(), company_id.clone(), companies_package_id.clone()),
         core,
         http_client,
@@ -210,7 +199,7 @@ fn test_products_regular_user_crud(core: &mut tokio_core::reactor::Core, http_cl
     assert!(delete_result.is_ok());
 
     // delete user role
-    let delete_result = common::delete_role(user_id.clone(), core, http_client, base_url.clone());
+    let delete_result = super::common::delete_role(user_id.clone(), core, http_client, base_url.clone());
     assert!(delete_result.is_ok());
 }
 
@@ -233,7 +222,7 @@ fn test_products_unauthorized(core: &mut tokio_core::reactor::Core, http_client:
     );
 
     let (package_id, company_id, companies_package_id) =
-        common::create_delivery_objects(payload, core, http_client, base_url.clone(), Some(super_user_id.clone()));
+        super::common::create_delivery_objects(payload, core, http_client, base_url.clone(), Some(super_user_id.clone()));
 
     // upsert
     println!("run upsert products for base_product {}", base_product_id);
@@ -251,7 +240,7 @@ fn test_products_unauthorized(core: &mut tokio_core::reactor::Core, http_client:
     println!("create shipping {:?}", create_result);
     assert!(create_result.is_err());
 
-    common::delete_deliveries_objects(
+    super::common::delete_deliveries_objects(
         (package_id.clone(), company_id.clone(), companies_package_id.clone()),
         core,
         http_client,
@@ -276,9 +265,9 @@ fn test_products_store_manager(core: &mut tokio_core::reactor::Core, http_client
 
     // create store_manager for test acl
     let user_id = UserId(3);
-    let create_role_result = common::create_user_role(user_id.clone(), core, http_client, base_url.clone());
+    let create_role_result = super::common::create_user_role(user_id.clone(), core, http_client, base_url.clone());
     assert!(create_role_result.is_ok());
-    let create_role_result = common::create_user_store_role(user_id.clone(), store_id, core, http_client, base_url.clone());
+    let create_role_result = super::common::create_user_store_role(user_id.clone(), store_id, core, http_client, base_url.clone());
     assert!(create_role_result.is_ok());
 
     let countries = vec!["RUS", "USA", "BRA"].into_iter().map(|v| Alpha3(v.to_string())).collect();
@@ -290,7 +279,7 @@ fn test_products_store_manager(core: &mut tokio_core::reactor::Core, http_client
     );
 
     let (package_id, company_id, companies_package_id) =
-        common::create_delivery_objects(payload, core, http_client, base_url.clone(), Some(super_user_id));
+        super::common::create_delivery_objects(payload, core, http_client, base_url.clone(), Some(super_user_id));
 
     // upsert
     println!("run upsert products for base_product {}", base_product_id);
@@ -307,7 +296,7 @@ fn test_products_store_manager(core: &mut tokio_core::reactor::Core, http_client
     println!("create shipping {:?}", create_result);
     assert!(create_result.is_ok());
 
-    common::delete_deliveries_objects(
+    super::common::delete_deliveries_objects(
         (package_id.clone(), company_id.clone(), companies_package_id.clone()),
         core,
         http_client,
@@ -321,6 +310,6 @@ fn test_products_store_manager(core: &mut tokio_core::reactor::Core, http_client
     assert!(delete_result.is_ok());
 
     // delete user role
-    let delete_result = common::delete_role(user_id.clone(), core, http_client, base_url.clone());
+    let delete_result = super::common::delete_role(user_id.clone(), core, http_client, base_url.clone());
     assert!(delete_result.is_ok());
 }
