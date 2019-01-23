@@ -1,14 +1,3 @@
-extern crate delivery_lib as lib;
-extern crate futures;
-extern crate hyper;
-extern crate serde_json;
-extern crate stq_http;
-extern crate stq_static_resources;
-extern crate stq_types;
-extern crate tokio_core;
-
-pub mod common;
-
 use hyper::Method;
 
 use lib::models::*;
@@ -67,8 +56,8 @@ fn get_url_request(base_url: String) -> String {
 
 #[test]
 fn test_company() {
-    let (mut core, http_client) = common::make_utils();
-    let base_url = common::setup();
+    let (mut core, http_client) = super::common::make_utils();
+    let base_url = super::common::setup();
 
     test_company_superuser_crud(&mut core, &http_client, base_url.clone());
     test_company_regular_user_crud(&mut core, &http_client, base_url.clone());
@@ -125,7 +114,7 @@ fn test_company_superuser_crud(core: &mut tokio_core::reactor::Core, http_client
 fn test_company_regular_user_crud(core: &mut tokio_core::reactor::Core, http_client: &HttpClientHandle, base_url: String) {
     // create user for test acl
     let user_id = UserId(1123);
-    let create_role_result = common::create_user_role(user_id.clone(), core, http_client, base_url.clone());
+    let create_role_result = super::common::create_user_role(user_id.clone(), core, http_client, base_url.clone());
     assert!(create_role_result.is_ok());
 
     let name = "US UPS".to_string();

@@ -1,14 +1,3 @@
-extern crate delivery_lib as lib;
-extern crate futures;
-extern crate hyper;
-extern crate serde_json;
-extern crate stq_http;
-extern crate stq_static_resources;
-extern crate stq_types;
-extern crate tokio_core;
-
-pub mod common;
-
 use hyper::Method;
 
 use lib::models::*;
@@ -91,8 +80,8 @@ fn create_package(name: String) -> NewPackages {
 
 #[test]
 fn test_companies_packages() {
-    let (mut core, http_client) = common::make_utils();
-    let base_url = common::setup();
+    let (mut core, http_client) = super::common::make_utils();
+    let base_url = super::common::setup();
 
     test_companies_packages_superuser_crud(&mut core, &http_client, base_url.clone());
     test_companies_packages_regular_user_crud(&mut core, &http_client, base_url.clone());
@@ -112,7 +101,7 @@ fn test_companies_packages_superuser_crud(core: &mut tokio_core::reactor::Core, 
     );
 
     let (package_id, company_id, companies_package_id) =
-        common::create_delivery_objects(payload, core, http_client, base_url.clone(), Some(user_id));
+        super::common::create_delivery_objects(payload, core, http_client, base_url.clone(), Some(user_id));
 
     // read search
     println!(
@@ -174,7 +163,7 @@ fn test_companies_packages_superuser_crud(core: &mut tokio_core::reactor::Core, 
     println!("user: {:?} - find available packages {:#?}", user_id, read_result);
     assert!(read_result.is_ok());
 
-    common::delete_deliveries_objects(
+    super::common::delete_deliveries_objects(
         (package_id, company_id, companies_package_id),
         core,
         http_client,
@@ -196,11 +185,11 @@ fn test_companies_packages_regular_user_crud(core: &mut tokio_core::reactor::Cor
     );
 
     let (package_id, company_id, companies_package_id) =
-        common::create_delivery_objects(payload, core, http_client, base_url.clone(), Some(super_user_id.clone()));
+        super::common::create_delivery_objects(payload, core, http_client, base_url.clone(), Some(super_user_id.clone()));
 
     // create user for test acl
     let user_id = UserId(1123);
-    let create_role_result = common::create_user_role(user_id.clone(), core, &http_client, base_url.clone());
+    let create_role_result = super::common::create_user_role(user_id.clone(), core, &http_client, base_url.clone());
     assert!(create_role_result.is_ok());
 
     // create
@@ -273,7 +262,7 @@ fn test_companies_packages_regular_user_crud(core: &mut tokio_core::reactor::Cor
     ));
     assert!(delete_result.is_err());
 
-    common::delete_deliveries_objects(
+    super::common::delete_deliveries_objects(
         (package_id, company_id, companies_package_id),
         core,
         http_client,
@@ -294,7 +283,7 @@ fn test_companies_packages_unauthorized(core: &mut tokio_core::reactor::Core, ht
         ShippingRateSource::NotAvailable,
     );
     let (package_id, company_id, companies_package_id) =
-        common::create_delivery_objects(payload, core, http_client, base_url.clone(), Some(super_user_id.clone()));
+        super::common::create_delivery_objects(payload, core, http_client, base_url.clone(), Some(super_user_id.clone()));
 
     // create
     println!("run create new companies_packages ");
@@ -366,7 +355,7 @@ fn test_companies_packages_unauthorized(core: &mut tokio_core::reactor::Core, ht
     ));
     assert!(delete_result.is_err());
 
-    common::delete_deliveries_objects(
+    super::common::delete_deliveries_objects(
         (package_id, company_id, companies_package_id),
         core,
         http_client,

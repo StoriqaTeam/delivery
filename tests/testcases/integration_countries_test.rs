@@ -1,15 +1,3 @@
-extern crate delivery_lib as lib;
-extern crate futures;
-extern crate hyper;
-extern crate rand;
-extern crate serde_json;
-extern crate stq_http;
-extern crate stq_static_resources;
-extern crate stq_types;
-extern crate tokio_core;
-
-pub mod common;
-
 use hyper::Method;
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
@@ -51,8 +39,8 @@ fn create_country(
 
 #[test]
 fn test_country() {
-    let (mut core, http_client) = common::make_utils();
-    let base_url = common::setup();
+    let (mut core, http_client) = super::common::make_utils();
+    let base_url = super::common::setup();
 
     test_country_superuser_crud(&mut core, &http_client, base_url.clone());
     test_country_regular_user_crud(&mut core, &http_client, base_url.clone());
@@ -91,7 +79,7 @@ fn test_country_regular_user_crud(core: &mut tokio_core::reactor::Core, http_cli
 
     // create user for test acl
     let user_id = UserId(2);
-    let create_role_result = common::create_user_role(user_id.clone(), core, http_client, base_url.clone());
+    let create_role_result = super::common::create_user_role(user_id.clone(), core, http_client, base_url.clone());
     assert!(create_role_result.is_ok());
 
     // create
@@ -114,7 +102,7 @@ fn test_country_regular_user_crud(core: &mut tokio_core::reactor::Core, http_cli
     assert!(read_result.is_ok());
 
     // delete user role
-    let delete_result = common::delete_role(user_id.clone(), core, http_client, base_url.clone());
+    let delete_result = super::common::delete_role(user_id.clone(), core, http_client, base_url.clone());
     assert!(delete_result.is_ok());
 }
 
