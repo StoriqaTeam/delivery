@@ -364,6 +364,7 @@ pub mod tests {
                 name: "UPS-avia".to_string(),
                 logo: "logo".to_string(),
                 price: None,
+                currency: Currency::STQ,
                 store_id: MOCK_STORE_ID,
                 base_product_id: MOCK_BASE_PRODUCT_ID,
             }])
