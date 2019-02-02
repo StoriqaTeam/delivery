@@ -14,6 +14,7 @@ use models::{
     AvailablePackageForUser, AvailableShippingForUser, NewProductValidation, NewProducts, NewShipping, PackageValidation, Products,
     ShipmentMeasurements, Shipping, ShippingProducts, ShippingRateSource, ShippingValidation, UpdateProducts,
 };
+use repos::companies::CompaniesRepo;
 use repos::companies_packages::CompaniesPackagesRepo;
 use repos::countries::create_tree_used_countries;
 use repos::products::ProductsWithAvailableCountries;
@@ -251,6 +252,7 @@ impl<
         self.spawn_on_pool(move |conn| {
             let products_repo = repo_factory.create_products_repo(&*conn, user_id);
             let company_package_repo = repo_factory.create_companies_packages_repo(&*conn, user_id);
+            let company_repo = repo_factory.create_companies_repo(&*conn, user_id);
             let shipping_rates_repo = repo_factory.create_shipping_rates_repo(&*conn, user_id);
             let pickups_repo = repo_factory.create_pickups_repo(&*conn, user_id);
 
@@ -261,6 +263,7 @@ impl<
                     .map(|pkg| {
                         with_price_from_rates(
                             &*company_package_repo,
+                            &*company_repo,
                             &*shipping_rates_repo,
                             delivery_from.clone(),
                             delivery_to.clone(),
@@ -337,6 +340,7 @@ impl<
         self.spawn_on_pool(move |conn| {
             let products_repo = repo_factory.create_products_repo(&*conn, user_id);
             let company_package_repo = repo_factory.create_companies_packages_repo(&*conn, user_id);
+            let company_repo = repo_factory.create_companies_repo(&*conn, user_id);
             let shipping_rates_repo = repo_factory.create_shipping_rates_repo(&*conn, user_id);
 
             let run = || {
@@ -349,6 +353,7 @@ impl<
                 };
                 with_price_from_rates(
                     &*company_package_repo,
+                    &*company_repo,
                     &*shipping_rates_repo,
                     delivery_from,
                     delivery_to,
@@ -401,6 +406,7 @@ impl<
 
 fn with_price_from_rates<'a>(
     company_package_repo: &'a CompaniesPackagesRepo,
+    company_repo: &'a CompaniesRepo,
     shipping_rates_repo: &'a ShippingRatesRepo,
     delivery_from: Alpha3,
     delivery_to: Alpha3,
@@ -408,6 +414,7 @@ fn with_price_from_rates<'a>(
     weight: u32,
     mut pkg_for_user: AvailablePackageForUser,
 ) -> Result<Option<AvailablePackageForUser>, FailureError> {
+    // if price was set by seller in product currency we do not need to do anything
     if pkg_for_user.price.is_some() {
         return Ok(Some(pkg_for_user));
     }
@@ -416,6 +423,10 @@ fn with_price_from_rates<'a>(
     let company_package = company_package_repo
         .get(company_package_id)?
         .ok_or(format_err!("Company package with id {} not found", company_package_id))?;
+
+    let company = company_repo
+        .find(company_package.company_id)?
+        .ok_or(format_err!("Company with id {} not found", company_package.company_id))?;
 
     let price = match company_package.shipping_rate_source {
         ShippingRateSource::NotAvailable => None,
@@ -432,6 +443,7 @@ fn with_price_from_rates<'a>(
 
     Ok(price.map(|price| {
         pkg_for_user.price = Some(price);
+        pkg_for_user.currency = company.currency; // setting currency from company currency
         pkg_for_user
     }))
 }

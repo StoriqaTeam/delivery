@@ -62,6 +62,7 @@ table! {
         price -> Nullable<Float8>,
         deliveries_to -> Jsonb,
         shipping -> Varchar,
+        currency -> Varchar,
     }
 }
 

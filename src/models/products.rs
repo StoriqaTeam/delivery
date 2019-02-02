@@ -3,6 +3,7 @@ use failure::Fail;
 use serde_json;
 use validator::{Validate, ValidationError, ValidationErrors};
 
+use stq_static_resources::Currency;
 use stq_types::{Alpha3, BaseProductId, CompanyPackageId, ProductPrice, ShippingId, StoreId};
 
 use errors::Error;
@@ -25,6 +26,7 @@ pub struct ProductsRaw {
     pub price: Option<ProductPrice>,
     pub deliveries_to: serde_json::Value,
     pub shipping: ShippingVariant,
+    pub currency: Currency,
 }
 
 #[derive(Serialize, Deserialize, Insertable, Clone, Debug)]
@@ -36,6 +38,7 @@ pub struct NewProductsRaw {
     pub price: Option<ProductPrice>,
     pub deliveries_to: serde_json::Value,
     pub shipping: ShippingVariant,
+    pub currency: Currency,
 }
 
 #[derive(Serialize, Deserialize, Insertable, AsChangeset, Clone, Debug)]
@@ -44,6 +47,7 @@ pub struct UpdateProductsRaw {
     pub price: Option<ProductPrice>,
     pub deliveries_to: Option<serde_json::Value>,
     pub shipping: Option<ShippingVariant>,
+    pub currency: Option<Currency>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -55,6 +59,7 @@ pub struct Products {
     pub price: Option<ProductPrice>,
     pub deliveries_to: Vec<Alpha3>,
     pub shipping: ShippingVariant,
+    pub currency: Currency,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -87,6 +92,7 @@ impl ProductsRaw {
             price: self.price,
             deliveries_to,
             shipping: self.shipping,
+            currency: self.currency,
         })
     }
 
@@ -108,6 +114,7 @@ pub struct NewProducts {
     pub shipping: ShippingVariant,
     pub measurements: Option<ShipmentMeasurements>,
     pub delivery_from: Option<Alpha3>,
+    pub currency: Currency,
 }
 
 impl Validate for NewProducts {
@@ -238,6 +245,7 @@ impl NewProducts {
             price: self.price,
             deliveries_to,
             shipping: self.shipping,
+            currency: self.currency,
         })
     }
 }
@@ -247,6 +255,7 @@ pub struct UpdateProducts {
     pub price: Option<ProductPrice>,
     pub deliveries_to: Option<Vec<Alpha3>>,
     pub shipping: Option<ShippingVariant>,
+    pub currency: Option<Currency>,
 }
 
 impl UpdateProducts {
@@ -262,6 +271,7 @@ impl UpdateProducts {
             price: self.price,
             deliveries_to,
             shipping: self.shipping,
+            currency: self.currency,
         })
     }
 }
