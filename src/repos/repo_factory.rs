@@ -307,6 +307,7 @@ pub mod tests {
                 shipping: payload.shipping,
                 price: payload.price,
                 deliveries_to: payload.deliveries_to,
+                currency: payload.currency,
             })
         }
 
@@ -322,6 +323,7 @@ pub mod tests {
                     shipping: item.shipping,
                     price: item.price,
                     deliveries_to: item.deliveries_to,
+                    currency: item.currency,
                 });
             }
 
@@ -338,6 +340,7 @@ pub mod tests {
                 shipping: ShippingVariant::Local,
                 price: None,
                 deliveries_to: vec![],
+                currency: Currency::USD,
             }])
         }
 
@@ -350,6 +353,7 @@ pub mod tests {
                 shipping: ShippingVariant::Local,
                 price: None,
                 deliveries_to: vec![],
+                currency: Currency::USD,
             };
 
             Ok(vec![ProductsWithAvailableCountries(product, vec![])])
@@ -401,6 +405,7 @@ pub mod tests {
                 shipping: payload.shipping.unwrap(),
                 price: payload.price,
                 deliveries_to: payload.deliveries_to.unwrap_or_default(),
+                currency: payload.currency.unwrap_or(Currency::USD),
             })
         }
 
@@ -414,6 +419,7 @@ pub mod tests {
                 shipping: ShippingVariant::Local,
                 price: None,
                 deliveries_to: vec![],
+                currency: Currency::USD,
             }])
         }
     }

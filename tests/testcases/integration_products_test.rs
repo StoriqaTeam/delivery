@@ -31,6 +31,7 @@ fn create_shipping(
             weight_g: 20,
         }),
         delivery_from: None,
+        currency: Currency::USD,
     };
 
     let new_pickup = NewPickups {
