@@ -9,6 +9,7 @@ use diesel::query_dsl::LoadQuery;
 use diesel::query_dsl::RunQueryDsl;
 use diesel::Connection;
 
+use errors::Error;
 use failure::Error as FailureError;
 use failure::Fail;
 
@@ -54,7 +55,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     }
 
     fn execute_query<Ty: Send + 'static, U: LoadQuery<T, Ty> + Send + 'static>(&self, query: U) -> RepoResult<Ty> {
-        query.get_result::<Ty>(self.db_conn).map_err(From::from)
+        query.get_result::<Ty>(self.db_conn).map_err(|e| Error::from(e).into())
     }
 }
 
@@ -64,7 +65,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         let query = diesel::insert_into(pickups).values(&payload);
         query
             .get_result::<Pickups>(self.db_conn)
-            .map_err(From::from)
+            .map_err(|e| Error::from(e).into())
             .and_then(|record| acl::check(&*self.acl, Resource::Pickups, Action::Create, self, Some(&record)).and_then(|_| Ok(record)))
             .map_err(|e: FailureError| e.context(format!("create new pickups {:?}.", payload)).into())
     }
@@ -76,7 +77,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 
         query
             .get_results(self.db_conn)
-            .map_err(From::from)
+            .map_err(|e| Error::from(e).into())
             .and_then(|results: Vec<Pickups>| {
                 for result in &results {
                     acl::check(&*self.acl, Resource::Pickups, Action::Read, self, Some(&result))?;
@@ -94,7 +95,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         query
             .get_result(self.db_conn)
             .optional()
-            .map_err(From::from)
+            .map_err(|e| Error::from(e).into())
             .and_then(|result: Option<Pickups>| {
                 if let Some(ref result) = result {
                     acl::check(&*self.acl, Resource::Pickups, Action::Read, self, Some(result))?;
@@ -115,7 +116,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             .and_then(|_| {
                 let filtered = pickups.filter(base_product_id.eq(base_product_id_arg));
                 let query = diesel::update(filtered).set(&payload);
-                query.get_result::<Pickups>(self.db_conn).map_err(From::from)
+                query.get_result::<Pickups>(self.db_conn).map_err(|e| Error::from(e).into())
             })
             .map_err(|e: FailureError| e.context(format!("Updating products payload {:?} failed.", payload)).into())
     }
@@ -127,7 +128,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         query
             .get_result(self.db_conn)
             .optional()
-            .map_err(From::from)
+            .map_err(|e| Error::from(e).into())
             .and_then(|pickup_: Option<Pickups>| {
                 if let Some(ref pickup_) = pickup_ {
                     acl::check(&*self.acl, Resource::Pickups, Action::Delete, self, Some(pickup_))?;
@@ -160,7 +161,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                     Roles::roles
                         .filter(Roles::user_id.eq(user_id_arg))
                         .get_results::<UserRole>(self.db_conn)
-                        .map_err(From::from)
+                        .map_err(|e| Error::from(e).into())
                         .map(|user_roles_arg| {
                             user_roles_arg
                                 .iter()

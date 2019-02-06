@@ -9,6 +9,7 @@ use diesel::query_dsl::RunQueryDsl;
 use diesel::sql_types::VarChar;
 use diesel::Connection;
 
+use errors::Error;
 use failure::Error as FailureError;
 
 use stq_types::{Alpha3, CompanyId, UserId};
@@ -64,7 +65,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         let query = diesel::insert_into(companies).values(&payload);
         query
             .get_result::<CompanyRaw>(self.db_conn)
-            .map_err(From::from)
+            .map_err(|e| Error::from(e).into())
             .and_then(|v| Company::from_raw(v, &self.countries))
             .and_then(|company| acl::check(&*self.acl, Resource::Companies, Action::Create, self, Some(&company)).and_then(|_| Ok(company)))
             .map_err(|e: FailureError| e.context(format!("create new company {:?}.", payload)).into())
@@ -77,7 +78,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 
         query
             .get_results(self.db_conn)
-            .map_err(From::from)
+            .map_err(|e| Error::from(e).into())
             .and_then(|raws: Vec<CompanyRaw>| raws.into_iter().map(|v| Company::from_raw(v, &self.countries)).collect())
             .and_then(|results: Vec<Company>| {
                 for company in &results {
@@ -96,7 +97,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         query
             .get_result::<CompanyRaw>(self.db_conn)
             .optional()
-            .map_err(From::from)
+            .map_err(|e| Error::from(e).into())
             .and_then(|company_raw: Option<CompanyRaw>| match company_raw {
                 Some(value) => {
                     let company = Company::from_raw(value, &self.countries)?;
@@ -116,7 +117,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 
         query
             .get_results(self.db_conn)
-            .map_err(From::from)
+            .map_err(|e| Error::from(e).into())
             .and_then(|raw: Vec<CompanyRaw>| raw.into_iter().map(|v| Company::from_raw(v, &self.countries)).collect())
             .and_then(|results: Vec<Company>| {
                 for result in &results {
@@ -138,7 +139,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 
         query
             .get_result::<CompanyRaw>(self.db_conn)
-            .map_err(From::from)
+            .map_err(|e| Error::from(e).into())
             .and_then(|v| Company::from_raw(v, &self.countries))
             .and_then(|company: Company| acl::check(&*self.acl, Resource::Companies, Action::Update, self, Some(&company)))
             .and_then(|_| {
@@ -147,7 +148,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 let query = diesel::update(filtered).set(&payload);
                 query
                     .get_result::<CompanyRaw>(self.db_conn)
-                    .map_err(From::from)
+                    .map_err(|e| Error::from(e).into())
                     .and_then(|v| Company::from_raw(v, &self.countries))
             })
             .map_err(|e: FailureError| e.context(format!("Updating company payload {:?} failed.", payload)).into())
@@ -163,7 +164,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 
         query
             .get_result::<CompanyRaw>(self.db_conn)
-            .map_err(From::from)
+            .map_err(|e| Error::from(e).into())
             .and_then(|v| Company::from_raw(v, &self.countries))
             .map_err(move |e| e.context(format!("delete company id: {}.", id_arg)).into())
     }

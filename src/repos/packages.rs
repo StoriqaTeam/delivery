@@ -11,6 +11,7 @@ use diesel::query_dsl::RunQueryDsl;
 use diesel::sql_types::VarChar;
 use diesel::Connection;
 
+use errors::Error;
 use failure::Error as FailureError;
 
 use stq_types::{Alpha3, PackageId, UserId};
@@ -58,7 +59,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     }
 
     fn execute_query<Ty: Send + 'static, U: LoadQuery<T, Ty> + Send + 'static>(&self, query: U) -> RepoResult<Ty> {
-        query.get_result::<Ty>(self.db_conn).map_err(From::from)
+        query.get_result::<Ty>(self.db_conn).map_err(|e| Error::from(e).into())
     }
 }
 
@@ -70,7 +71,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         let query = diesel::insert_into(packages).values(&payload);
         query
             .get_result::<PackagesRaw>(self.db_conn)
-            .map_err(From::from)
+            .map_err(|e| Error::from(e).into())
             .and_then(|p| p.to_packages(&self.countries))
             .and_then(|packages_| {
                 acl::check(&*self.acl, Resource::Packages, Action::Create, self, Some(&packages_)).and_then(|_| Ok(packages_))
@@ -88,7 +89,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 
         query
             .get_results(self.db_conn)
-            .map_err(From::from)
+            .map_err(|e| Error::from(e).into())
             .and_then(|packages_raw: Vec<PackagesRaw>| {
                 packages_raw
                     .into_iter()
@@ -115,7 +116,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 
         query
             .get_results(self.db_conn)
-            .map_err(From::from)
+            .map_err(|e| Error::from(e).into())
             .and_then(|raws: Vec<PackagesRaw>| raws.into_iter().map(|raw| raw.to_packages(&self.countries)).collect())
             .and_then(|results: Vec<Packages>| {
                 for package in &results {
@@ -134,7 +135,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         query
             .get_result::<PackagesRaw>(self.db_conn)
             .optional()
-            .map_err(From::from)
+            .map_err(|e| Error::from(e).into())
             .and_then(|raw: Option<PackagesRaw>| match raw {
                 Some(value) => {
                     let package = value.to_packages(&self.countries)?;
@@ -159,7 +160,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 let query = diesel::update(filtered).set(payload.clone());
                 query
                     .get_result::<PackagesRaw>(self.db_conn)
-                    .map_err(From::from)
+                    .map_err(|e| Error::from(e).into())
                     .and_then(|packages_: PackagesRaw| packages_.to_packages(&self.countries))
             })
             .map_err(|e: FailureError| e.context(format!("Updating packages payload {:?} failed.", payload)).into())
@@ -174,7 +175,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         let query = diesel::delete(filtered);
         query
             .get_result::<PackagesRaw>(self.db_conn)
-            .map_err(From::from)
+            .map_err(|e| Error::from(e).into())
             .and_then(|packages_: PackagesRaw| packages_.to_packages(&self.countries))
             .map_err(move |e| e.context(format!("delete packages id: {}.", id_arg)).into())
     }

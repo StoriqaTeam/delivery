@@ -45,8 +45,8 @@ impl PayloadCarrier for Error {
     }
 }
 
-impl<'a> From<&'a DieselError> for Error {
-    fn from(e: &DieselError) -> Self {
+impl<'a> From<DieselError> for Error {
+    fn from(e: DieselError) -> Self {
         match e {
             DieselError::DatabaseError(DatabaseErrorKind::UniqueViolation, ref info) => {
                 let mut errors = ValidationErrors::new();
