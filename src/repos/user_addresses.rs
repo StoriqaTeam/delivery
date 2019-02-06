@@ -8,6 +8,7 @@ use diesel::pg::Pg;
 use diesel::prelude::*;
 use diesel::query_dsl::RunQueryDsl;
 use diesel::Connection;
+use errors::Error;
 use failure::Error as FailureError;
 
 use stq_types::UserId;
@@ -55,7 +56,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         let query = user_addresses.filter(user_id.eq(user_id_value)).order(id.desc());
         query
             .get_results::<UserAddress>(self.db_conn)
-            .map_err(From::from)
+            .map_err(|e| Error::from(e).into())
             .and_then(|addresses: Vec<UserAddress>| {
                 for item in &addresses {
                     acl::check(&*self.acl, Resource::UserAddresses, Action::Read, self, Some(&item))?;
@@ -63,7 +64,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 Ok(addresses)
             })
             .map_err(|e: FailureError| {
-                e.context(format!("list of user_address for user {} error occured", user_id_value))
+                e.context(format!("list of user_address for user {} error occurred", user_id_value))
                     .into()
             })
     }
@@ -120,7 +121,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         exist_query
             .get_result::<UserAddress>(self.db_conn)
             .optional()
-            .map_err(From::from)
+            .map_err(|e| Error::from(e).into())
             .and_then(|user_address_arg| {
                 if let Some(user_address_arg) = user_address_arg {
                     acl::check(&*self.acl, Resource::UserAddresses, Action::Create, self, Some(&user_address_arg))?;
@@ -146,7 +147,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 }
             })
             .map_err(|e: FailureError| {
-                e.context(format!("Create a new user delivery address {:?} error occured", payload))
+                e.context(format!("Create a new user delivery address {:?} error occurred", payload))
                     .into()
             })
     }
@@ -157,7 +158,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 
         query
             .get_result(self.db_conn)
-            .map_err(From::from)
+            .map_err(|e| Error::from(e).into())
             .and_then(|address_: UserAddress| acl::check(&*self.acl, Resource::UserAddresses, Action::Update, self, Some(&address_)))
             .and_then(|_| {
                 let filter = user_addresses.filter(id.eq(id_arg));
@@ -177,7 +178,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 Ok(updated_address)
             })
             .map_err(|e: FailureError| {
-                e.context(format!("Update address {} with payload {:?} error occured", id_arg, payload))
+                e.context(format!("Update address {} with payload {:?} error occurred", id_arg, payload))
                     .into()
             })
     }
@@ -188,14 +189,14 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 
         query
             .get_result(self.db_conn)
-            .map_err(From::from)
+            .map_err(|e| Error::from(e).into())
             .and_then(|address_: UserAddress| acl::check(&*self.acl, Resource::UserAddresses, Action::Delete, self, Some(&address_)))
             .and_then(|_| {
                 let filtered = user_addresses.filter(id.eq(id_arg));
                 let query = diesel::delete(filtered);
                 query.get_result(self.db_conn).map_err(From::from)
             })
-            .map_err(|e: FailureError| e.context(format!("Delete delivery address {} error occured", id_arg)).into())
+            .map_err(|e: FailureError| e.context(format!("Delete delivery address {} error occurred", id_arg)).into())
     }
 }
 

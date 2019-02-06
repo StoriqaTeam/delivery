@@ -8,6 +8,7 @@ use diesel::pg::Pg;
 use diesel::prelude::*;
 use diesel::query_dsl::RunQueryDsl;
 use diesel::Connection;
+use errors::Error;
 use failure::Error as FailureError;
 use failure::Fail;
 use std::sync::Arc;
@@ -89,7 +90,7 @@ where
                     user_roles
                 })
                 .map_err(|e| {
-                    e.context(format!("List user roles for user {} error occured.", user_id_value))
+                    e.context(format!("List user roles for user {} error occurred.", user_id_value))
                         .into()
                 })
         }
@@ -102,7 +103,7 @@ where
         let query = diesel::insert_into(roles).values(&payload);
         query
             .get_result(self.db_conn)
-            .map_err(|e| e.context(format!("Create a new user role {:?} error occured", payload)).into())
+            .map_err(|e| e.context(format!("Create a new user role {:?} error occurred", payload)).into())
     }
 
     /// Delete roles of a user
@@ -111,9 +112,11 @@ where
         self.roles_cache.remove(user_id_arg);
         let filtered = roles.filter(user_id.eq(user_id_arg));
         let query = diesel::delete(filtered);
-        query
-            .get_results(self.db_conn)
-            .map_err(|e| e.context(format!("Delete user {} roles error occured", user_id_arg)).into())
+        query.get_results(self.db_conn).map_err(|e| {
+            Error::from(e)
+                .context(format!("Delete user {} roles error occurred", user_id_arg))
+                .into()
+        })
     }
 
     /// Delete user roles by id
@@ -123,7 +126,7 @@ where
         let query = diesel::delete(filtered);
         query
             .get_result(self.db_conn)
-            .map_err(|e| e.context(format!("Delete role {} error occured", id_arg)).into())
+            .map_err(|e| Error::from(e).context(format!("Delete role {} error occurred", id_arg)).into())
             .map(|user_role: UserRole| {
                 self.roles_cache.remove(user_role.user_id);
                 user_role

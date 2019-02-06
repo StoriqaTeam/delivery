@@ -6,6 +6,7 @@ use diesel::pg::Pg;
 use diesel::prelude::*;
 use diesel::query_dsl::RunQueryDsl;
 use diesel::Connection;
+use errors::Error;
 use failure::Error as FailureError;
 
 use stq_types::{Alpha3, CompanyPackageId, UserId};
@@ -150,7 +151,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 
         command
             .get_results::<ShippingRatesRaw>(self.db_conn)
-            .map_err(From::from)
+            .map_err(|e| Error::from(e).into())
             .and_then(|rates| rates.into_iter().map(ShippingRatesRaw::to_model).collect::<RepoResult<Vec<_>>>())
             .map_err(|e| {
                 e.context(format!(
@@ -173,7 +174,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 
         command
             .get_results::<ShippingRatesRaw>(self.db_conn)
-            .map_err(From::from)
+            .map_err(|e| Error::from(e).into())
             .and_then(|rates| rates.into_iter().map(ShippingRatesRaw::to_model).collect::<RepoResult<Vec<_>>>())
             .map_err(|e| e.context("error occurred in insert_many").into())
     }

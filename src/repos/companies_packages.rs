@@ -7,6 +7,7 @@ use diesel::prelude::*;
 use diesel::query_dsl::RunQueryDsl;
 use diesel::Connection;
 
+use errors::Error;
 use failure::Error as FailureError;
 use failure::Fail;
 
@@ -76,7 +77,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         let query = diesel::insert_into(companies_packages).values(&record);
         query
             .get_result::<CompaniesPackagesRaw>(self.db_conn)
-            .map_err(From::from)
+            .map_err(|e| Error::from(e).into())
             .and_then(CompaniesPackagesRaw::to_model)
             .and_then(|company_package| {
                 acl::check(
@@ -99,7 +100,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         query
             .get_result::<CompaniesPackagesRaw>(self.db_conn)
             .optional()
-            .map_err(move |e| e.context(format!("get companies_packages id: {}.", id_arg)).into())
+            .map_err(move |e| Error::from(e).context(format!("get companies_packages id: {}.", id_arg)).into())
             .and_then(|record| transpose(record.map(CompaniesPackagesRaw::to_model)))
     }
 
@@ -131,7 +132,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 
         query
             .get_results::<(CompaniesPackagesRaw, CompanyRaw, PackagesRaw)>(self.db_conn)
-            .map_err(From::from)
+            .map_err(|e| Error::from(e).into())
             .and_then(|results| {
                 let mut data = vec![];
 
@@ -178,7 +179,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 
         query
             .get_results::<(CompaniesPackagesRaw, CompanyRaw)>(self.db_conn)
-            .map_err(From::from)
+            .map_err(|e| Error::from(e).into())
             .and_then(|results| {
                 let mut data = vec![];
                 for result in results {
@@ -200,7 +201,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 
         query
             .get_results::<(CompaniesPackagesRaw, PackagesRaw)>(self.db_conn)
-            .map_err(From::from)
+            .map_err(|e| Error::from(e).into())
             .and_then(|results| {
                 let mut data = vec![];
                 for result in results {
@@ -226,11 +227,12 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         query
             .get_result::<CompaniesPackagesRaw>(self.db_conn)
             .map_err(move |e| {
-                e.context(format!(
-                    "delete companies_packages company_id: {}, package_id: {}.",
-                    company_id_arg, package_id_arg
-                ))
-                .into()
+                Error::from(e)
+                    .context(format!(
+                        "delete companies_packages company_id: {}, package_id: {}.",
+                        company_id_arg, package_id_arg
+                    ))
+                    .into()
             })
             .and_then(CompaniesPackagesRaw::to_model)
     }

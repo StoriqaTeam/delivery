@@ -6,6 +6,7 @@ use diesel::prelude::*;
 use diesel::query_dsl::RunQueryDsl;
 use diesel::sql_types::Bool;
 use diesel::Connection;
+use errors::Error;
 use failure::Error as FailureError;
 use std::sync::Arc;
 use stq_cache::cache::CacheSingle;
@@ -94,7 +95,7 @@ where
         query
             .get_result(self.db_conn)
             .optional()
-            .map_err(From::from)
+            .map_err(|e| Error::from(e).into())
             .and_then(|raw_country: Option<RawCountry>| match raw_country {
                 Some(raw_country) => {
                     let country: Country = raw_country.into();
@@ -114,7 +115,7 @@ where
         let query = diesel::insert_into(countries).values(&payload);
         query
             .get_result::<RawCountry>(self.db_conn)
-            .map_err(From::from)
+            .map_err(|e| Error::from(e).into())
             .map(From::from)
             .and_then(|country| acl::check(&*self.acl, Resource::Countries, Action::Create, self, Some(&country)).and_then(|_| Ok(country)))
             .map_err(|e: FailureError| e.context(format!("Create new country: {:?} error occured", payload)).into())

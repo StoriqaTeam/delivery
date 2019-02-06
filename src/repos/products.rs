@@ -11,6 +11,7 @@ use diesel::query_dsl::LoadQuery;
 use diesel::query_dsl::RunQueryDsl;
 use diesel::sql_types::VarChar;
 use diesel::Connection;
+use errors::Error;
 use failure::Error as FailureError;
 
 use stq_types::{BaseProductId, CompanyPackageId, ShippingId, UserId};
@@ -89,7 +90,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     }
 
     fn execute_query<Ty: Send + 'static, U: LoadQuery<T, Ty> + Send + 'static>(&self, query: U) -> RepoResult<Ty> {
-        query.get_result::<Ty>(self.db_conn).map_err(From::from)
+        query.get_result::<Ty>(self.db_conn).map_err(|e| Error::from(e).into())
     }
 }
 
@@ -100,7 +101,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         let query = diesel::insert_into(DslProducts::products).values(&payload);
         query
             .get_result::<ProductsRaw>(self.db_conn)
-            .map_err(From::from)
+            .map_err(|e| Error::from(e).into())
             .and_then(|products_| products_.to_products())
             .and_then(|product| {
                 acl::check(&*self.acl, Resource::Products, Action::Create, self, Some(&product))?;
@@ -119,7 +120,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         let query = diesel::insert_into(DslProducts::products).values(&payload);
         query
             .get_results::<ProductsRaw>(self.db_conn)
-            .map_err(From::from)
+            .map_err(|e| Error::from(e).into())
             .and_then(|products_: Vec<ProductsRaw>| {
                 let mut new_products = vec![];
                 for product in products_ {
@@ -143,7 +144,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 
         query
             .get_results(self.db_conn)
-            .map_err(From::from)
+            .map_err(|e| Error::from(e).into())
             .and_then(|products_: Vec<ProductsRaw>| {
                 let mut new_products = vec![];
                 for product in products_ {
@@ -173,7 +174,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 
         query
             .get_results::<(ProductsRaw, (CompaniesPackagesRaw, PackagesRaw))>(self.db_conn)
-            .map_err(From::from)
+            .map_err(|e| Error::from(e).into())
             .and_then(|results| {
                 let mut data = vec![];
                 for result in results {
@@ -292,7 +293,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         query
             .get_result::<(ProductsRaw, (CompaniesPackagesRaw, CompanyRaw, PackagesRaw))>(self.db_conn)
             .optional()
-            .map_err(From::from)
+            .map_err(|e| Error::from(e).into())
             .map(|result| {
                 result.map(|result| {
                     let (product_raw, (companies_package, company_raw, package_raw)) = result;
@@ -344,7 +345,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         query
             .get_result::<(ProductsRaw, (CompaniesPackagesRaw, CompanyRaw, PackagesRaw))>(self.db_conn)
             .optional()
-            .map_err(From::from)
+            .map_err(|e| Error::from(e).into())
             .map(|result| {
                 result.map(|result| {
                     let (product_raw, (companies_package, company_raw, package_raw)) = result;
@@ -388,7 +389,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 .filter(DslProducts::company_package_id.eq(company_package_id_arg));
 
             let query = diesel::update(filter).set(&payload);
-            query.get_result::<ProductsRaw>(self.db_conn).map_err(From::from)
+            query.get_result::<ProductsRaw>(self.db_conn).map_err(|e| Error::from(e).into())
         })
         .and_then(|products_| products_.to_products())
         .map_err(|e: FailureError| e.context(format!("Updating products payload {:?} failed.", payload)).into())
@@ -402,7 +403,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 
         query
             .get_results(self.db_conn)
-            .map_err(From::from)
+            .map_err(|e| Error::from(e).into())
             .and_then(|products_: Vec<ProductsRaw>| {
                 let mut delete_products = vec![];
                 for product in products_ {
@@ -430,7 +431,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                     Roles::roles
                         .filter(Roles::user_id.eq(user_id_arg))
                         .get_results::<UserRole>(self.db_conn)
-                        .map_err(From::from)
+                        .map_err(|e| Error::from(e).into())
                         .map(|user_roles_arg| {
                             user_roles_arg
                                 .iter()
