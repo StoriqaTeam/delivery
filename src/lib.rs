@@ -49,6 +49,7 @@ pub mod extras;
 pub mod macros;
 pub mod models;
 pub mod repos;
+#[rustfmt::skip]
 pub mod schema;
 pub mod sentry_integration;
 pub mod services;
